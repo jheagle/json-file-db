@@ -1,0 +1,34 @@
+{
+  "path": "exercises",
+  "definition": [
+    {
+      "name": "_id",
+      "type": "string",
+      "optional": false
+    },
+    {
+      "name": "name",
+      "type": "string",
+      "optional": false
+    },
+    {
+      "name": "description",
+      "type": "string",
+      "optional": true
+    }
+  ],
+  "keys": [
+    {
+      "type": "primary",
+      "fields": [
+        "_id"
+      ],
+      "lookup": "pk__id.json"
+    }
+  ],
+  "entries": [
+    "bench_press.json",
+    "deadlift.json",
+    "squat.json"
+  ]
+}

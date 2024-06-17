@@ -1,0 +1,29 @@
+{
+  "browser": {
+    "enabled": true,
+    "name": "jsonFileDb"
+  },
+  "dist": {
+    "main": "dist/index.js"
+  },
+  "readme": {
+    "from": [
+      "dist/**/!(*.min).js"
+    ]
+  },
+  "typescript": {
+    "config": "tsconfig.json",
+    "enabled": true
+  },
+  "test": {
+    "options": {
+      "testMatch": [
+        "**/?(*.)+(spec|test).js?(x)"
+      ]
+    },
+    "path": "src",
+    "watch": "src/**/*.[jt]s"
+  },
+  "relativePath": "http://joshuaheagle.local/projects/workout-planner",
+  "databasePath": "database/"
+}

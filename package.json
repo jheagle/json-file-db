@@ -1,0 +1,45 @@
+{
+  "name": "json-file-db",
+  "version": "1.0.0",
+  "description": "Use json files to manage and read data.",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "gulp build",
+    "dev": "gulp",
+    "htmldocs": "jsdoc -R MAIN.md -c ./.jsdoc.conf.js -d docs",
+    "readme": "gulp readme",
+    "sass": "gulp sass",
+    "test": "gulp testFull",
+    "test:quick": "gulp testQuick",
+    "watch": "gulp watchFull",
+    "watch:test": "gulp watchTest"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jheagle/workout-planner.git"
+  },
+  "keywords": [
+    "database",
+    "filesystem",
+    "json",
+    "data"
+  ],
+  "author": "Joshua Heagle <joshuaheagle@gmail.com>",
+  "license": "GPL-3.0-or-later",
+  "bugs": {
+    "url": "https://github.com/jheagle/workout-planner/issues"
+  },
+  "homepage": "https://github.com/jheagle/workout-planner#readme",
+  "devDependencies": {
+    "gulp": "^5.0.0",
+    "js-build-tools": "^4.0.3",
+    "test-filesystem": "^1.3.5"
+  },
+  "dependencies": {
+    "browser-or-node": "^3.0.0",
+    "json-dom": "github:jheagle/JSON-DOM",
+    "matrix-dom": "github:jheagle/matrix-DOM",
+    "si-funciona": "^2.2.10"
+  }
+}

@@ -1,0 +1,14 @@
+[
+  {
+    "value": 1,
+    "record": ["bench_press.json"]
+  },
+  {
+    "value": 2,
+    "record": ["deadlift.json"]
+  },
+  {
+    "value": 3,
+    "record": ["squat.json"]
+  }
+]

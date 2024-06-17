@@ -1,0 +1,14 @@
+[
+  {
+    "value": 8,
+    "record": ["deadlift_hamstrings.json"]
+  },
+  {
+    "value": 11,
+    "record": ["bench_press_pectorals.json"]
+  },
+  {
+    "value": 12,
+    "record": ["squat_quadriceps.json"]
+  }
+]

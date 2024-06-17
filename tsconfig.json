@@ -1,0 +1,11 @@
+{
+  "files": ["src/**/*.ts"],
+  "compilerOptions": {
+    "noImplicitAny": true,
+    "target": "es6",
+    "moduleResolution": "node",
+    "declaration": true,
+    "outDir": "dist",
+    "declarationMap": true,
+  }
+}
