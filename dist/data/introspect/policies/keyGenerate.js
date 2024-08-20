@@ -43,7 +43,7 @@ const keyGenerate = function (entity_1) {
       let isUnique = false
       while (!isUnique) {
         uuid = crypto.randomUUID()
-        isUnique = (0, _keyUnique.keyUnique)(entity, references, uuid)
+        isUnique = yield (0, _keyUnique.keyUnique)(entity, references, uuid)
       }
       return uuid
     }())

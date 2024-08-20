@@ -12,29 +12,39 @@ afterEach(testHelpers.afterEach)
 
 describe('create', () => {
   test('create a new record', async () => {
-    expect.assertions(2)
+    expect.assertions(3)
     const recordName = 'foo'
-    const result = await create(recordName, [
+    const definition = [
       {
         name: '_id',
         type: 'string',
         optional: false,
-        keys: [
-          {
-            type: 'primary',
-            references: ['self'],
-            autoGenerate: true
-          }
-        ]
+        autoGenerate: true
       },
       {
         name: 'bar',
         type: 'string',
         optional: true,
-        keys: []
+        autoGenerate: false
       }
-    ])
-    expect(testHelpers.fileExists(`${result}.json`)).toBeTruthy()
-    expect(testHelpers.fileExists(`${result}`)).toBeTruthy()
+    ]
+    const keys = [
+      {
+        type: 'primary',
+        fields: [
+          '_id'
+        ],
+        lookup: 'pk__id.json'
+      }
+    ]
+    const result = await create(recordName, definition, keys)
+    expect(result).toEqual({
+      path: recordName,
+      definition: definition,
+      keys: keys,
+      entries: []
+    })
+    expect(testHelpers.fileExists(`${databasePath}${recordName}.json`)).toBeTruthy()
+    expect(testHelpers.fileExists(`${databasePath}${recordName}`)).toBeTruthy()
   })
 })
