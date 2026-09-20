@@ -4,18 +4,20 @@ Object.defineProperty(exports, '__esModule', {
   value: true
 })
 exports.getJoinIndexedList = void 0
-var _siFunciona = _interopRequireDefault(require('si-funciona'))
-var _splitEntityProperty = require('./parsers/splitEntityProperty')
-var _retrieveRecord = require('./retrieveRecord')
-var _getMatchingIndexes = require('./getMatchingIndexes')
-var _matchIndexedJoins = require('./matchIndexedJoins')
-var _restrictIndexedList = require('./restrictIndexedList')
+const _siFunciona = _interopRequireDefault(require('si-funciona'))
+const _splitEntityProperty = require('./parsers/splitEntityProperty')
+const _retrieveRecord = require('./retrieveRecord')
+const _getMatchingIndexes = require('./getMatchingIndexes')
+const _matchIndexedJoins = require('./matchIndexedJoins')
+const _restrictIndexedList = require('./restrictIndexedList')
 function _interopRequireDefault (e) { return e && e.__esModule ? e : { default: e } }
-var __awaiter = void 0 && (void 0).__awaiter || function (thisArg, _arguments, P, generator) {
+const __awaiter = void 0 && (void 0).__awaiter || function (thisArg, _arguments, P, generator) {
   function adopt (value) {
-    return value instanceof P ? value : new P(function (resolve) {
-      resolve(value)
-    })
+    return value instanceof P
+      ? value
+      : new P(function (resolve) {
+        resolve(value)
+      })
   }
   return new (P || (P = Promise))(function (resolve, reject) {
     function fulfilled (value) {

@@ -11,3 +11,4 @@ export type ParsedOffset = number;
  * @returns {string}
  */
 export declare const findOffset: (parsed: ParsedQuery, query: string) => string;
+//# sourceMappingURL=findOffset.d.ts.map

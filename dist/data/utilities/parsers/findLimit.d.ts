@@ -11,3 +11,4 @@ export type ParsedLimit = number;
  * @returns {string}
  */
 export declare const findLimit: (parsed: ParsedQuery, query: string) => string;
+//# sourceMappingURL=findLimit.d.ts.map

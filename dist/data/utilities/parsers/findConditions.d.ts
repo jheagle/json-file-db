@@ -18,3 +18,4 @@ export type ParsedCondition = {
  * @returns {string}
  */
 export declare const findConditions: (parsed: ParsedQuery, query: string) => string;
+//# sourceMappingURL=findConditions.d.ts.map

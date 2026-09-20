@@ -1,6 +1,7 @@
-export declare const where: (dataSet?: any[], { property, joinEntity, comparator, value }?: {
-    property?: string;
-    joinEntity?: any;
-    comparator?: string;
-    value?: any;
-}) => any[];
+export declare const where: (dataSet?: never[], { property, joinEntity, comparator, value }?: {
+    property?: string | undefined;
+    joinEntity?: undefined;
+    comparator?: string | undefined;
+    value?: null | undefined;
+}) => never[];
+//# sourceMappingURL=where.d.ts.map

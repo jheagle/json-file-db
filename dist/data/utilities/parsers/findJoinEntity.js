@@ -4,7 +4,7 @@ Object.defineProperty(exports, '__esModule', {
   value: true
 })
 exports.findJoinEntity = void 0
-var _removeFromQuery = require('./removeFromQuery')
+const _removeFromQuery = require('./removeFromQuery')
 const joinEntityMatch = /\.([a-z0-9_-]+)/i
 /**
  * Extract the main join entity from the query.

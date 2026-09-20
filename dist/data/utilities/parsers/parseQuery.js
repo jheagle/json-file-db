@@ -4,17 +4,17 @@ Object.defineProperty(exports, '__esModule', {
   value: true
 })
 exports.parseQuery = void 0
-var _siFunciona = _interopRequireDefault(require('si-funciona'))
-var _findCommand = require('./findCommand')
-var _findJoinEntity = require('./findJoinEntity')
-var _findSelects = require('./findSelects')
-var _findConditions = require('./findConditions')
-var _findJoinClauses = require('./findJoinClauses')
-var _findMergeJoins = require('./findMergeJoins')
-var _findSortClauses = require('./findSortClauses')
-var _findGroupBy = require('./findGroupBy')
-var _findLimit = require('./findLimit')
-var _findOffset = require('./findOffset')
+const _siFunciona = _interopRequireDefault(require('si-funciona'))
+const _findCommand = require('./findCommand')
+const _findJoinEntity = require('./findJoinEntity')
+const _findSelects = require('./findSelects')
+const _findConditions = require('./findConditions')
+const _findJoinClauses = require('./findJoinClauses')
+const _findMergeJoins = require('./findMergeJoins')
+const _findSortClauses = require('./findSortClauses')
+const _findGroupBy = require('./findGroupBy')
+const _findLimit = require('./findLimit')
+const _findOffset = require('./findOffset')
 function _interopRequireDefault (e) { return e && e.__esModule ? e : { default: e } }
 /**
  * Break a query down into its components.

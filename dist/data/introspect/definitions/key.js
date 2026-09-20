@@ -4,9 +4,9 @@ Object.defineProperty(exports, '__esModule', {
   value: true
 })
 exports.key = void 0
-require('core-js/modules/esnext.async-iterator.map.js')
+require('core-js/modules/esnext.iterator.constructor.js')
 require('core-js/modules/esnext.iterator.map.js')
-var _keyReference = require('./keyReference')
+const _keyReference = require('./keyReference')
 /**
  * Create a field key.
  * @param {keyProperties} properties
@@ -16,13 +16,12 @@ var _keyReference = require('./keyReference')
  * @param {Array<reference>} [properties.references=[]]
  * @returns {keyDefinition}
  */
-const key = function () {
-  let {
-    type = 'index',
-    fields = [],
-    lookup = '',
-    references = []
-  } = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {}
+const key = ({
+  type = 'index',
+  fields = [],
+  lookup = '',
+  references = []
+} = {}) => {
   switch (type) {
     case 'primary':
     case 'index':
@@ -43,9 +42,9 @@ const key = function () {
       throw new Error('Unrecognized key type; must be index, primary, unique, multi, or foreign')
   }
   const keyDefinition = {
-    type: type,
-    fields: fields,
-    lookup: lookup
+    type,
+    fields,
+    lookup
   }
   if (typeof references !== 'undefined' && references.length > 0) {
     keyDefinition.references = references.map(_keyReference.keyReference)

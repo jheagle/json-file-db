@@ -4,7 +4,7 @@ Object.defineProperty(exports, '__esModule', {
   value: true
 })
 exports.findJoinClauses = void 0
-var _removeFromQuery = require('./removeFromQuery')
+const _removeFromQuery = require('./removeFromQuery')
 const joinClauseMatch = /(and)?\s*on\s+([a-z0-9_-]+\.[a-z0-9_-]+)\s+(=|!=|>|<|>=|<=|in|between|like)\s+([a-z0-9_-]+\.[a-z0-9_-]+)/ig
 /**
  * Extract condition clauses from the query.

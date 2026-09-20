@@ -4,7 +4,7 @@ Object.defineProperty(exports, '__esModule', {
   value: true
 })
 exports.findOffset = void 0
-var _removeFromQuery = require('./removeFromQuery')
+const _removeFromQuery = require('./removeFromQuery')
 const offsetMatch = /offset\s*(\d+)/i
 /**
  * Extract the offset clauses from the query.

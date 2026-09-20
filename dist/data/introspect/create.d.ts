@@ -9,3 +9,4 @@ import { fieldProperties } from './definitions/field';
  * @returns {Promise}
  */
 export declare const create: (recordName: string, definition?: fieldProperties[], keys?: keyProperties[]) => Promise<recordDefinition | null>;
+//# sourceMappingURL=create.d.ts.map

@@ -41,3 +41,4 @@ export type ParsedQuery = {
  * @returns {ParsedQuery}
  */
 export declare const parseQuery: (query: string) => ParsedQuery;
+//# sourceMappingURL=parseQuery.d.ts.map

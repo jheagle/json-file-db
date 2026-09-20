@@ -5,15 +5,16 @@ Object.defineProperty(exports, '__esModule', {
   value: true
 })
 exports.retrieveFile = void 0
-var jsEnv = _interopRequireWildcard(require('browser-or-node'))
-var gulpConfig = _interopRequireWildcard(require('js-build-tools/gulp.config'))
-function _getRequireWildcardCache (e) { if (typeof WeakMap !== 'function') return null; var r = new WeakMap(); var t = new WeakMap(); return (_getRequireWildcardCache = function (e) { return e ? t : r })(e) }
-function _interopRequireWildcard (e, r) { if (!r && e && e.__esModule) return e; if (e === null || typeof e !== 'object' && typeof e !== 'function') return { default: e }; var t = _getRequireWildcardCache(r); if (t && t.has(e)) return t.get(e); var n = { __proto__: null }; var a = Object.defineProperty && Object.getOwnPropertyDescriptor; for (var u in e) if (u !== 'default' && {}.hasOwnProperty.call(e, u)) { var i = a ? Object.getOwnPropertyDescriptor(e, u) : null; i && (i.get || i.set) ? Object.defineProperty(n, u, i) : n[u] = e[u] } return n.default = e, t && t.set(e, n), n }
-var __awaiter = void 0 && (void 0).__awaiter || function (thisArg, _arguments, P, generator) {
+const jsEnv = _interopRequireWildcard(require('browser-or-node'))
+const gulpConfig = _interopRequireWildcard(require('js-build-tools/gulp.config'))
+function _interopRequireWildcard (e, t) { if (typeof WeakMap === 'function') var r = new WeakMap(), n = new WeakMap(); return (_interopRequireWildcard = function (e, t) { if (!t && e && e.__esModule) return e; let o; let i; const f = { __proto__: null, default: e }; if (e === null || typeof e !== 'object' && typeof e !== 'function') return f; if (o = t ? n : r) { if (o.has(e)) return o.get(e); o.set(e, f) } for (const t in e) t !== 'default' && {}.hasOwnProperty.call(e, t) && ((i = (o = Object.defineProperty) && Object.getOwnPropertyDescriptor(e, t)) && (i.get || i.set) ? o(f, t, i) : f[t] = e[t]); return f })(e, t) }
+const __awaiter = void 0 && (void 0).__awaiter || function (thisArg, _arguments, P, generator) {
   function adopt (value) {
-    return value instanceof P ? value : new P(function (resolve) {
-      resolve(value)
-    })
+    return value instanceof P
+      ? value
+      : new P(function (resolve) {
+        resolve(value)
+      })
   }
   return new (P || (P = Promise))(function (resolve, reject) {
     function fulfilled (value) {

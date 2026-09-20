@@ -16,3 +16,4 @@ export type ParsedMergeJoin = {
  * @returns {string}
  */
 export declare const findMergeJoins: (parsed: ParsedQuery, query: string) => string;
+//# sourceMappingURL=findMergeJoins.d.ts.map

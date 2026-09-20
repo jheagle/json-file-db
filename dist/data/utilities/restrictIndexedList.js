@@ -4,7 +4,7 @@ Object.defineProperty(exports, '__esModule', {
   value: true
 })
 exports.restrictIndexedList = void 0
-var _splitEntityProperty = require('./parsers/splitEntityProperty')
+const _splitEntityProperty = require('./parsers/splitEntityProperty')
 const restrictIndexedList = (joinClause, filterJoins, indexedClone) => {
   const {
     entity: entityA,

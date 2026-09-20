@@ -4,7 +4,7 @@ Object.defineProperty(exports, '__esModule', {
   value: true
 })
 exports.findSortClauses = void 0
-var _removeFromQuery = require('./removeFromQuery')
+const _removeFromQuery = require('./removeFromQuery')
 const sortMatch = /sort\s+([a-z0-9._-]+\s*(asc|desc)?)+\s*(,\s*[a-z0-9._-]+\s*(asc|desc)?)*/i
 const sortRuleMatch = /(sort)?\s*,?\s*([a-z0-9._-]+)\s*(asc|desc)?/ig
 /**

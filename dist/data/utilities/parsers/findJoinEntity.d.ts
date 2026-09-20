@@ -11,3 +11,4 @@ export type ParsedJoinEntity = string;
  * @returns {string}
  */
 export declare const findJoinEntity: (parsed: ParsedQuery, query: string) => string;
+//# sourceMappingURL=findJoinEntity.d.ts.map

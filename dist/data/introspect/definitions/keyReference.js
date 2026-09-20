@@ -11,14 +11,11 @@ exports.keyReference = void 0
  * @param {string} properties.lookup
  * @returns {reference}
  */
-const keyReference = function () {
-  const {
-    fields = [],
-    lookup = ''
-  } = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {}
-  return {
-    fields: fields,
-    lookup: lookup
-  }
-}
+const keyReference = ({
+  fields = [],
+  lookup = ''
+} = {}) => ({
+  fields,
+  lookup
+})
 exports.keyReference = keyReference

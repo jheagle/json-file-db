@@ -44,3 +44,4 @@ export type keyProperties = {
  * @returns {keyDefinition}
  */
 export declare const key: ({ type, fields, lookup, references }?: keyProperties) => keyDefinition;
+//# sourceMappingURL=key.d.ts.map

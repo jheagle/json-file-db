@@ -15,20 +15,19 @@ exports.field = void 0
  * @param {boolean} [properties.autoGenerate=false]
  * @returns {fieldDefinition}
  */
-const field = function () {
-  const {
-    name = '',
-    type = 'string',
-    optional = false,
-    useDefault = false,
-    defaultValue = '',
-    autoGenerate = false
-  } = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {}
+const field = ({
+  name = '',
+  type = 'string',
+  optional = false,
+  useDefault = false,
+  defaultValue = '',
+  autoGenerate = false
+} = {}) => {
   const returnField = {
-    name: name,
-    type: type,
-    optional: optional,
-    autoGenerate: autoGenerate
+    name,
+    type,
+    optional,
+    autoGenerate
   }
   if (useDefault) {
     returnField.default = defaultValue

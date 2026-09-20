@@ -4,7 +4,7 @@ Object.defineProperty(exports, '__esModule', {
   value: true
 })
 exports.findSelects = void 0
-var _removeFromQuery = require('./removeFromQuery')
+const _removeFromQuery = require('./removeFromQuery')
 const selectClausesMatch = /select\s+([a-z0-9=._-]+\s*(as\s+)?([a-z0-9_-]+)?)+\s*(,\s*[a-z0-9=._-]+\s*(as\s*[a-z0-9_-]+)?)*/i
 const selectClauseMatch = /(select)?\s*,?\s*([a-z0-9=._-]+)\s*(as\s+)?([a-z0-9_-]+)?/ig
 /**

@@ -4,8 +4,8 @@ Object.defineProperty(exports, '__esModule', {
   value: true
 })
 exports.reconcileJoins = void 0
-var _splitEntityProperty = require('./parsers/splitEntityProperty')
-var _reconcileJoin = require('./reconcileJoin')
+const _splitEntityProperty = require('./parsers/splitEntityProperty')
+const _reconcileJoin = require('./reconcileJoin')
 const reconcileJoins = (propertyA, propertyB, dataSet) => {
   const {
     entity: entityA,

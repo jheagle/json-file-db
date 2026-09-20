@@ -1,1 +1,2 @@
-export declare const mergeJoins: (dataSet?: {}, merges?: any[]) => Promise<{}>;
+export declare const mergeJoins: (dataSet?: {}, merges?: never[]) => Promise<{}>;
+//# sourceMappingURL=mergeJoins.d.ts.map

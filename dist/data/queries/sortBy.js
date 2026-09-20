@@ -4,9 +4,7 @@ Object.defineProperty(exports, '__esModule', {
   value: true
 })
 exports.sortBy = void 0
-const sortBy = function () {
-  const dataSet = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : []
-  const sortClauses = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : []
+const sortBy = (dataSet = [], sortClauses = []) => {
   if (!sortClauses.length) {
     return dataSet
   }

@@ -18,3 +18,4 @@ export type ParsedJoinClause = {
  * @returns {string}
  */
 export declare const findJoinClauses: (parsed: ParsedQuery, query: string) => string;
+//# sourceMappingURL=findJoinClauses.d.ts.map

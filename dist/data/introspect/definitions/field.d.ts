@@ -46,3 +46,4 @@ export type fieldProperties = {
  * @returns {fieldDefinition}
  */
 export declare const field: ({ name, type, optional, useDefault, defaultValue, autoGenerate }?: fieldProperties) => fieldDefinition;
+//# sourceMappingURL=field.d.ts.map

@@ -4,7 +4,7 @@ Object.defineProperty(exports, '__esModule', {
   value: true
 })
 exports.findGroupBy = void 0
-var _removeFromQuery = require('./removeFromQuery')
+const _removeFromQuery = require('./removeFromQuery')
 const groupMatch = /group\s+by\s+(,?[a-z0-9._-]+)+/i
 /**
  * Extract the group by clauses from the query.

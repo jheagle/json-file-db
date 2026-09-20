@@ -26,3 +26,4 @@ export type referenceProperties = {
  * @returns {reference}
  */
 export declare const keyReference: ({ fields, lookup }?: referenceProperties) => reference;
+//# sourceMappingURL=keyReference.d.ts.map

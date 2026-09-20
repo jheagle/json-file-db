@@ -1,1 +1,2 @@
 export declare const matchIndexedJoins: (entity: any, indexedClone: any, dataSets: any) => (focusEntity: any, property: any, recordData: any, joinClause: any, filterJoins: any, indexed: any) => Promise<void>;
+//# sourceMappingURL=matchIndexedJoins.d.ts.map

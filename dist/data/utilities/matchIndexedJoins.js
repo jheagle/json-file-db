@@ -4,19 +4,20 @@ Object.defineProperty(exports, '__esModule', {
   value: true
 })
 exports.matchIndexedJoins = void 0
-require('core-js/modules/esnext.async-iterator.reduce.js')
 require('core-js/modules/esnext.iterator.constructor.js')
 require('core-js/modules/esnext.iterator.reduce.js')
-var _siFunciona = _interopRequireDefault(require('si-funciona'))
-var _where = require('../queries/where')
-var _retrieveFile = require('./retrieveFile')
-var _splitEntityProperty = require('./parsers/splitEntityProperty')
+const _siFunciona = _interopRequireDefault(require('si-funciona'))
+const _where = require('../queries/where')
+const _retrieveFile = require('./retrieveFile')
+const _splitEntityProperty = require('./parsers/splitEntityProperty')
 function _interopRequireDefault (e) { return e && e.__esModule ? e : { default: e } }
-var __awaiter = void 0 && (void 0).__awaiter || function (thisArg, _arguments, P, generator) {
+const __awaiter = void 0 && (void 0).__awaiter || function (thisArg, _arguments, P, generator) {
   function adopt (value) {
-    return value instanceof P ? value : new P(function (resolve) {
-      resolve(value)
-    })
+    return value instanceof P
+      ? value
+      : new P(function (resolve) {
+        resolve(value)
+      })
   }
   return new (P || (P = Promise))(function (resolve, reject) {
     function fulfilled (value) {

@@ -16,3 +16,4 @@ export type ParsedSelect = {
  * @returns {string}
  */
 export declare const findSelects: (parsed: ParsedQuery, query: string) => string;
+//# sourceMappingURL=findSelects.d.ts.map

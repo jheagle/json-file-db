@@ -11,3 +11,4 @@ export type ParsedGroupBy = string;
  * @returns {string}
  */
 export declare const findGroupBy: (parsed: ParsedQuery, query: string) => string;
+//# sourceMappingURL=findGroupBy.d.ts.map

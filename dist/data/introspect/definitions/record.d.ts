@@ -44,3 +44,4 @@ export type recordProperties = {
  * @returns {recordDefinition}
  */
 export declare const record: ({ path, definition, keys, entries }?: recordProperties) => recordDefinition;
+//# sourceMappingURL=record.d.ts.map

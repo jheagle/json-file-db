@@ -16,3 +16,4 @@ export type ParsedEntity = string;
  * @returns {string}
  */
 export declare const findCommand: (parsed: ParsedQuery, query: string) => string;
+//# sourceMappingURL=findCommand.d.ts.map

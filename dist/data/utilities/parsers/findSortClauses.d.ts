@@ -16,3 +16,4 @@ export type ParsedSortClause = {
  * @returns {string}
  */
 export declare const findSortClauses: (parsed: ParsedQuery, query: string) => string;
+//# sourceMappingURL=findSortClauses.d.ts.map

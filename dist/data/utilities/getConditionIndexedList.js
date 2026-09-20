@@ -4,17 +4,19 @@ Object.defineProperty(exports, '__esModule', {
   value: true
 })
 exports.getConditionIndexedList = void 0
-var _isEntityProperty = require('./parsers/isEntityProperty')
-var _splitEntityProperty = require('./parsers/splitEntityProperty')
-var _retrieveRecord = require('./retrieveRecord')
-var _where = require('../queries/where')
-var _retrieveFile = require('./retrieveFile')
-var _getMatchingIndexes = require('./getMatchingIndexes')
-var __awaiter = void 0 && (void 0).__awaiter || function (thisArg, _arguments, P, generator) {
+const _isEntityProperty = require('./parsers/isEntityProperty')
+const _splitEntityProperty = require('./parsers/splitEntityProperty')
+const _retrieveRecord = require('./retrieveRecord')
+const _where = require('../queries/where')
+const _retrieveFile = require('./retrieveFile')
+const _getMatchingIndexes = require('./getMatchingIndexes')
+const __awaiter = void 0 && (void 0).__awaiter || function (thisArg, _arguments, P, generator) {
   function adopt (value) {
-    return value instanceof P ? value : new P(function (resolve) {
-      resolve(value)
-    })
+    return value instanceof P
+      ? value
+      : new P(function (resolve) {
+        resolve(value)
+      })
   }
   return new (P || (P = Promise))(function (resolve, reject) {
     function fulfilled (value) {

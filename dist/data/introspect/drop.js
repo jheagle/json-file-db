@@ -8,12 +8,14 @@ Object.defineProperty(exports, '__esModule', {
   value: true
 })
 exports.drop = void 0
-var _retrieveFile = require('../utilities/retrieveFile')
-var __awaiter = void 0 && (void 0).__awaiter || function (thisArg, _arguments, P, generator) {
+const _retrieveFile = require('../utilities/retrieveFile')
+const __awaiter = void 0 && (void 0).__awaiter || function (thisArg, _arguments, P, generator) {
   function adopt (value) {
-    return value instanceof P ? value : new P(function (resolve) {
-      resolve(value)
-    })
+    return value instanceof P
+      ? value
+      : new P(function (resolve) {
+        resolve(value)
+      })
   }
   return new (P || (P = Promise))(function (resolve, reject) {
     function fulfilled (value) {

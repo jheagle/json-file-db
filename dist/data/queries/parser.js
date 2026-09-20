@@ -4,10 +4,9 @@ Object.defineProperty(exports, '__esModule', {
   value: true
 })
 exports.parser = void 0
-var _splitQueries = require('../utilities/parsers/splitQueries')
-var _parseQuery = require('../utilities/parsers/parseQuery')
-const parser = function () {
-  const queries = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : ''
+const _splitQueries = require('../utilities/parsers/splitQueries')
+const _parseQuery = require('../utilities/parsers/parseQuery')
+const parser = (queries = '') => {
   const queryArray = (0, _splitQueries.splitQueries)(queries)
   const parsedQueries = []
   let mergeQuery = ''

@@ -4,26 +4,27 @@ Object.defineProperty(exports, '__esModule', {
   value: true
 })
 exports.runQuery = void 0
-require('core-js/modules/esnext.async-iterator.reduce.js')
 require('core-js/modules/esnext.iterator.constructor.js')
 require('core-js/modules/esnext.iterator.reduce.js')
-var _deleteEntity = require('../queries/deleteEntity')
-var _insertEntity = require('../queries/insertEntity')
-var _readEntity = require('../queries/readEntity')
-var _updateEntity = require('../queries/updateEntity')
-var _joinEntity = require('../queries/joinEntity')
-var _mergeJoins = require('../queries/mergeJoins')
-var _where = require('../queries/where')
-var _sortBy = require('../queries/sortBy')
-var _groupBy = require('../queries/groupBy')
-var _retrieveRecord = require('./retrieveRecord')
-var _getConditionIndexedList = require('./getConditionIndexedList')
-var _getJoinIndexedList = require('./getJoinIndexedList')
-var __awaiter = void 0 && (void 0).__awaiter || function (thisArg, _arguments, P, generator) {
+const _deleteEntity = require('../queries/deleteEntity')
+const _insertEntity = require('../queries/insertEntity')
+const _readEntity = require('../queries/readEntity')
+const _updateEntity = require('../queries/updateEntity')
+const _joinEntity = require('../queries/joinEntity')
+const _mergeJoins = require('../queries/mergeJoins')
+const _where = require('../queries/where')
+const _sortBy = require('../queries/sortBy')
+const _groupBy = require('../queries/groupBy')
+const _retrieveRecord = require('./retrieveRecord')
+const _getConditionIndexedList = require('./getConditionIndexedList')
+const _getJoinIndexedList = require('./getJoinIndexedList')
+const __awaiter = void 0 && (void 0).__awaiter || function (thisArg, _arguments, P, generator) {
   function adopt (value) {
-    return value instanceof P ? value : new P(function (resolve) {
-      resolve(value)
-    })
+    return value instanceof P
+      ? value
+      : new P(function (resolve) {
+        resolve(value)
+      })
   }
   return new (P || (P = Promise))(function (resolve, reject) {
     function fulfilled (value) {
