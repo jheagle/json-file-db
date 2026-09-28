@@ -1,2 +1,2 @@
-export declare const sortBy: (dataSet?: never[], sortClauses?: never[]) => never[];
+export declare const sortBy: (dataSet?: any[], sortClauses?: any[]) => any[];
 //# sourceMappingURL=sortBy.d.ts.map

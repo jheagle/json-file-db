@@ -8,9 +8,8 @@ const _removeFromQuery = require('./removeFromQuery')
 const joinEntityMatch = /\.([a-z0-9_-]+)/i
 /**
  * Extract the main join entity from the query.
- * @param {ParsedQuery} parsed
- * @param {string} query
- * @returns {string}
+ * @param parsed
+ * @param query
  */
 const findJoinEntity = (parsed, query) => {
   const joinEntityFound = query.match(joinEntityMatch)

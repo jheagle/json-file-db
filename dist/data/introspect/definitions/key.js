@@ -9,12 +9,11 @@ require('core-js/modules/esnext.iterator.map.js')
 const _keyReference = require('./keyReference')
 /**
  * Create a field key.
- * @param {keyProperties} properties
- * @param {string} [properties.type='index']
- * @param {Array<fieldName>} [properties.fields=[]]
- * @param {string} [properties.lookup='']
- * @param {Array<reference>} [properties.references=[]]
- * @returns {keyDefinition}
+ * @param properties
+ * @param properties.type
+ * @param properties.fields
+ * @param properties.lookup
+ * @param properties.references
  */
 const key = ({
   type = 'index',

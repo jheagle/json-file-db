@@ -11,36 +11,7 @@ const _where = require('../queries/where')
 const _retrieveFile = require('./retrieveFile')
 const _splitEntityProperty = require('./parsers/splitEntityProperty')
 function _interopRequireDefault (e) { return e && e.__esModule ? e : { default: e } }
-const __awaiter = void 0 && (void 0).__awaiter || function (thisArg, _arguments, P, generator) {
-  function adopt (value) {
-    return value instanceof P
-      ? value
-      : new P(function (resolve) {
-        resolve(value)
-      })
-  }
-  return new (P || (P = Promise))(function (resolve, reject) {
-    function fulfilled (value) {
-      try {
-        step(generator.next(value))
-      } catch (e) {
-        reject(e)
-      }
-    }
-    function rejected (value) {
-      try {
-        step(generator.throw(value))
-      } catch (e) {
-        reject(e)
-      }
-    }
-    function step (result) {
-      result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected)
-    }
-    step((generator = generator.apply(thisArg, _arguments || [])).next())
-  })
-}
-const matchIndexedJoins = (entity, indexedClone, dataSets) => (focusEntity, property, recordData, joinClause, filterJoins, indexed) => __awaiter(void 0, void 0, void 0, function * () {
+const matchIndexedJoins = (entity, indexedClone, dataSets) => async (focusEntity, property, recordData, joinClause, filterJoins, indexed) => {
   const {
     entity: entityA,
     property: propertyA
@@ -77,7 +48,7 @@ const matchIndexedJoins = (entity, indexedClone, dataSets) => (focusEntity, prop
       for (const file of matchedRecord.record) {
         let entityRecord = file
         if (typeof file === 'string') {
-          entityRecord = yield (0, _retrieveFile.retrieveFile)(`${checkProp.entityFirst}/${file}`)
+          entityRecord = await (0, _retrieveFile.retrieveFile)(`${checkProp.entityFirst}/${file}`)
         }
         if (!skipPush) {
           dataSets[checkProp.entityFirst].push(entityRecord)
@@ -86,5 +57,5 @@ const matchIndexedJoins = (entity, indexedClone, dataSets) => (focusEntity, prop
       }
     }
   }
-})
+}
 exports.matchIndexedJoins = matchIndexedJoins

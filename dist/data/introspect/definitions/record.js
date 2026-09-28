@@ -10,12 +10,11 @@ const _field = require('./field')
 const _key = require('./key')
 /**
  *
- * @param {recordProperties} properties
- * @param {recordPath} properties.path
- * @param {Array<fieldProperties>} properties.definition
- * @param {Array<keyProperties>} properties.keys
- * @param {Array<entityPath>} properties.entries
- * @returns {recordDefinition}
+ * @param properties
+ * @param properties.path
+ * @param properties.definition
+ * @param properties.keys
+ * @param properties.entries
  */
 const record = ({
   path = '',

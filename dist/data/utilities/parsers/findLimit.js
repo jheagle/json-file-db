@@ -8,9 +8,8 @@ const _removeFromQuery = require('./removeFromQuery')
 const limitMatch = /limit\s*(\d+)/i
 /**
  * Extract the limit clauses from the query.
- * @param {ParsedQuery} parsed
- * @param {string} query
- * @returns {string}
+ * @param parsed
+ * @param query
  */
 const findLimit = (parsed, query) => {
   const limitFound = query.match(limitMatch)

@@ -8,9 +8,8 @@ const _removeFromQuery = require('./removeFromQuery')
 const mergeJoinMatch = /(and)?\s*merge\s+([a-z0-9_-]+\.[a-z0-9_-]+)\s+with\s+([a-z0-9_-]+\.[a-z0-9_-]+)/ig
 /**
  * Extract merge-join clauses from the query.
- * @param {ParsedQuery} parsed
- * @param {string} query
- * @returns {string}
+ * @param parsed
+ * @param query
  */
 const findMergeJoins = (parsed, query) => {
   const mergeJoinsFound = query.matchAll(mergeJoinMatch)

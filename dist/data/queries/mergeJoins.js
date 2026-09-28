@@ -6,43 +6,14 @@ Object.defineProperty(exports, '__esModule', {
 exports.mergeJoins = void 0
 const _mergeJoin = require('../utilities/mergeJoin')
 const _reconcileJoins = require('../utilities/reconcileJoins')
-const __awaiter = void 0 && (void 0).__awaiter || function (thisArg, _arguments, P, generator) {
-  function adopt (value) {
-    return value instanceof P
-      ? value
-      : new P(function (resolve) {
-        resolve(value)
-      })
-  }
-  return new (P || (P = Promise))(function (resolve, reject) {
-    function fulfilled (value) {
-      try {
-        step(generator.next(value))
-      } catch (e) {
-        reject(e)
-      }
-    }
-    function rejected (value) {
-      try {
-        step(generator.throw(value))
-      } catch (e) {
-        reject(e)
-      }
-    }
-    function step (result) {
-      result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected)
-    }
-    step((generator = generator.apply(thisArg, _arguments || [])).next())
-  })
-}
-const mergeJoins = (...args_1) => __awaiter(void 0, [...args_1], void 0, function * (dataSet = {}, merges = []) {
+const mergeJoins = async (dataSet = {}, merges = []) => {
   if (!merges.length) {
     return dataSet
   }
   for (const merge of merges) {
-    dataSet = yield (0, _mergeJoin.mergeJoin)(merge.propertyA, merge.propertyB, dataSet)
+    dataSet = await (0, _mergeJoin.mergeJoin)(merge.propertyA, merge.propertyB, dataSet)
     dataSet = (0, _reconcileJoins.reconcileJoins)(merge.propertyA, merge.propertyB, dataSet)
   }
   return dataSet
-})
+}
 exports.mergeJoins = mergeJoins

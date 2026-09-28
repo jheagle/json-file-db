@@ -6,10 +6,9 @@ Object.defineProperty(exports, '__esModule', {
 exports.keyReference = void 0
 /**
  * Create a reference to a remote (foreign; existing on another record) key.
- * @param {referenceProperties} properties
- * @param {Array<fieldName>} properties.fields
- * @param {string} properties.lookup
- * @returns {reference}
+ * @param properties
+ * @param properties.fields
+ * @param properties.lookup
  */
 const keyReference = ({
   fields = [],

@@ -8,9 +8,8 @@ const _removeFromQuery = require('./removeFromQuery')
 const joinClauseMatch = /(and)?\s*on\s+([a-z0-9_-]+\.[a-z0-9_-]+)\s+(=|!=|>|<|>=|<=|in|between|like)\s+([a-z0-9_-]+\.[a-z0-9_-]+)/ig
 /**
  * Extract condition clauses from the query.
- * @param {ParsedQuery} parsed
- * @param {string} query
- * @returns {string}
+ * @param parsed
+ * @param query
  */
 const findJoinClauses = (parsed, query) => {
   const joinClausesFound = query.matchAll(joinClauseMatch)

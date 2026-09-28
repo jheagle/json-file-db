@@ -1,2 +1,2 @@
-export declare const insertEntity: (entity?: string, values?: never[], dataSet?: {}) => never[];
+export declare const insertEntity: (entity?: string, values?: any[], dataSet?: {}) => any[];
 //# sourceMappingURL=insertEntity.d.ts.map

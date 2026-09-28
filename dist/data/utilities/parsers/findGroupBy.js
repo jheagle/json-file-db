@@ -8,9 +8,8 @@ const _removeFromQuery = require('./removeFromQuery')
 const groupMatch = /group\s+by\s+(,?[a-z0-9._-]+)+/i
 /**
  * Extract the group by clauses from the query.
- * @param {ParsedQuery} parsed
- * @param {string} query
- * @returns {string}
+ * @param parsed
+ * @param query
  */
 const findGroupBy = (parsed, query) => {
   const groupFound = query.match(groupMatch)

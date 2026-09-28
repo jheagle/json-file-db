@@ -18,8 +18,7 @@ const _findOffset = require('./findOffset')
 function _interopRequireDefault (e) { return e && e.__esModule ? e : { default: e } }
 /**
  * Break a query down into its components.
- * @param {string} query
- * @returns {ParsedQuery}
+ * @param query
  */
 const parseQuery = query => {
   const parsedQuery = {

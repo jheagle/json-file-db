@@ -3,12 +3,6 @@ import { ParsedQuery } from './parseQuery'
 
 const mergeJoinMatch: RegExp = /(and)?\s*merge\s+([a-z0-9_-]+\.[a-z0-9_-]+)\s+with\s+([a-z0-9_-]+\.[a-z0-9_-]+)/ig
 
-/**
- * Store the merge-join as an object.
- * @typedef {Object} ParsedMergeJoin
- * @property {string} propertyA
- * @property {string} propertyB
- */
 export type ParsedMergeJoin = {
   propertyA: string
   propertyB: string
@@ -16,9 +10,8 @@ export type ParsedMergeJoin = {
 
 /**
  * Extract merge-join clauses from the query.
- * @param {ParsedQuery} parsed
- * @param {string} query
- * @returns {string}
+ * @param parsed
+ * @param query
  */
 export const findMergeJoins = (parsed: ParsedQuery, query: string): string => {
   const mergeJoinsFound: IterableIterator<RegExpMatchArray> = query.matchAll(mergeJoinMatch)

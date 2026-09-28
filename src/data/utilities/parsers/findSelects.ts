@@ -4,12 +4,6 @@ import { ParsedQuery } from './parseQuery'
 const selectClausesMatch: RegExp = /select\s+([a-z0-9=._-]+\s*(as\s+)?([a-z0-9_-]+)?)+\s*(,\s*[a-z0-9=._-]+\s*(as\s*[a-z0-9_-]+)?)*/i
 const selectClauseMatch: RegExp = /(select)?\s*,?\s*([a-z0-9=._-]+)\s*(as\s+)?([a-z0-9_-]+)?/ig
 
-/**
- * Store the select as an object.
- * @typedef {Object} ParsedSelect
- * @property {string} property
- * @property {string|undefined} alias
- */
 export type ParsedSelect = {
   property: string
   alias: string | undefined
@@ -17,9 +11,8 @@ export type ParsedSelect = {
 
 /**
  * Extract select clauses from the query.
- * @param {ParsedQuery} parsed
- * @param {string} query
- * @returns {string}
+ * @param parsed
+ * @param query
  */
 export const findSelects = (parsed: ParsedQuery, query: string): string => {
   const selectsFound: RegExpMatchArray = query.match(selectClausesMatch)

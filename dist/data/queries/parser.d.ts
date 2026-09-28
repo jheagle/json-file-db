@@ -1,2 +1,2 @@
-export declare const parser: (queries?: string) => {}[];
+export declare const parser: (queries?: string) => any[];
 //# sourceMappingURL=parser.d.ts.map

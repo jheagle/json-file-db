@@ -11,40 +11,11 @@ const _where = require('../queries/where')
 const _splitEntityProperty = require('./parsers/splitEntityProperty')
 const _siFunciona = _interopRequireDefault(require('si-funciona'))
 function _interopRequireDefault (e) { return e && e.__esModule ? e : { default: e } }
-const __awaiter = void 0 && (void 0).__awaiter || function (thisArg, _arguments, P, generator) {
-  function adopt (value) {
-    return value instanceof P
-      ? value
-      : new P(function (resolve) {
-        resolve(value)
-      })
-  }
-  return new (P || (P = Promise))(function (resolve, reject) {
-    function fulfilled (value) {
-      try {
-        step(generator.next(value))
-      } catch (e) {
-        reject(e)
-      }
-    }
-    function rejected (value) {
-      try {
-        step(generator.throw(value))
-      } catch (e) {
-        reject(e)
-      }
-    }
-    function step (result) {
-      result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected)
-    }
-    step((generator = generator.apply(thisArg, _arguments || [])).next())
-  })
-}
-const useJoinClause = (...args_1) => __awaiter(void 0, [...args_1], void 0, function * ({
+const useJoinClause = async ({
   propertyA = null,
   comparator = '=',
   propertyB = null
-} = {}, dataSets = {}, filterJoins = {}) {
+} = {}, dataSets = {}, filterJoins = {}) => {
   const {
     entity: entityA,
     property: propA
@@ -54,10 +25,10 @@ const useJoinClause = (...args_1) => __awaiter(void 0, [...args_1], void 0, func
     property: propB
   } = (0, _splitEntityProperty.splitEntityProperty)(propertyB)
   if (!dataSets.hasOwnProperty(entityA)) {
-    dataSets = yield (0, _readEntity.readEntity)(entityA, dataSets)
+    dataSets = await (0, _readEntity.readEntity)(entityA, dataSets)
   }
   if (!dataSets.hasOwnProperty(entityB)) {
-    dataSets = yield (0, _readEntity.readEntity)(entityB, dataSets)
+    dataSets = await (0, _readEntity.readEntity)(entityB, dataSets)
   }
   if (!filterJoins.hasOwnProperty(entityA)) {
     filterJoins[entityA] = _siFunciona.default.cloneObject(dataSets[entityA])
@@ -76,5 +47,5 @@ const useJoinClause = (...args_1) => __awaiter(void 0, [...args_1], void 0, func
     value: dataA[propA]
   })), [])
   return filterJoins
-})
+}
 exports.useJoinClause = useJoinClause

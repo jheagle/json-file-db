@@ -8,20 +8,6 @@ import { ParsedSortClause } from './findSortClauses';
 import { ParsedGroupBy } from './findGroupBy';
 import { ParsedLimit } from './findLimit';
 import { ParsedOffset } from './findOffset';
-/**
- * @typedef {Object} ParsedQuery
- * @property {ParsedCommand|undefined} command
- * @property {ParsedEntity|undefined} entity
- * @property {ParsedJoinEntity|undefined} joinEntity
- * @property {Array<ParsedSelect>} selectClauses
- * @property {Array<ParsedCondition>} conditions
- * @property {Array<ParsedJoinClause>} joinClauses
- * @property {Array<ParsedMergeJoin>} mergeJoins
- * @property {Array<ParsedSortClause>} sortClauses
- * @property {ParsedGroupBy|undefined} groupBy
- * @property {ParsedLimit|undefined} limit
- * @property {ParsedOffset|undefined} offset
- */
 export type ParsedQuery = {
     command: ParsedCommand | undefined;
     entity: ParsedEntity | undefined;
@@ -37,8 +23,7 @@ export type ParsedQuery = {
 };
 /**
  * Break a query down into its components.
- * @param {string} query
- * @returns {ParsedQuery}
+ * @param query
  */
 export declare const parseQuery: (query: string) => ParsedQuery;
 //# sourceMappingURL=parseQuery.d.ts.map
