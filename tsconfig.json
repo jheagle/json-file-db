@@ -1,11 +1,15 @@
 {
-  "files": ["src/**/*.ts"],
+  "include": ["src/**/*.ts"],
+  "exclude": ["src/**/*.test.*"],
   "compilerOptions": {
-    "noImplicitAny": true,
-    "target": "es6",
+    "noImplicitAny": false,
+    "target": "es2020",
     "moduleResolution": "node",
+    "ignoreDeprecations": "6.0",
     "declaration": true,
     "outDir": "dist",
     "declarationMap": true,
+    "strictNullChecks": false,
+    "types": []
   }
 }

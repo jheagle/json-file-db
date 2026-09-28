@@ -1,2 +1,2 @@
-export declare const drop: (record: any) => Promise<null | undefined>;
+export declare const drop: (record: any) => Promise<any>;
 //# sourceMappingURL=drop.d.ts.map

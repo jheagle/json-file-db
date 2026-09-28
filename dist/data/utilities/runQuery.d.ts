@@ -1,4 +1,4 @@
 export declare const runQuery: (parsed: any) => Promise<{
-    [x: number]: never[];
+    [x: number]: any[];
 }>;
 //# sourceMappingURL=runQuery.d.ts.map

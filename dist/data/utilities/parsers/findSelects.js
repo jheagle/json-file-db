@@ -9,9 +9,8 @@ const selectClausesMatch = /select\s+([a-z0-9=._-]+\s*(as\s+)?([a-z0-9_-]+)?)+\s
 const selectClauseMatch = /(select)?\s*,?\s*([a-z0-9=._-]+)\s*(as\s+)?([a-z0-9_-]+)?/ig
 /**
  * Extract select clauses from the query.
- * @param {ParsedQuery} parsed
- * @param {string} query
- * @returns {string}
+ * @param parsed
+ * @param query
  */
 const findSelects = (parsed, query) => {
   const selectsFound = query.match(selectClausesMatch)

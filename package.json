@@ -1,23 +1,23 @@
 {
   "name": "json-file-db",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Use json files to manage and read data.",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {
     "build": "gulp build",
     "dev": "gulp",
-    "htmldocs": "jsdoc -R MAIN.md -c ./.jsdoc.conf.js -d docs",
-    "readme": "gulp readme",
+    "docs": "gulp docs",
     "sass": "gulp sass",
     "test": "gulp testFull",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
     "test:quick": "gulp testQuick",
     "watch": "gulp watchFull",
     "watch:test": "gulp watchTest"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/jheagle/workout-planner.git"
+    "url": "git+https://github.com/jheagle/json-file-db.git"
   },
   "keywords": [
     "database",
@@ -28,12 +28,13 @@
   "author": "Joshua Heagle <joshuaheagle@gmail.com>",
   "license": "GPL-3.0-or-later",
   "bugs": {
-    "url": "https://github.com/jheagle/workout-planner/issues"
+    "url": "https://github.com/jheagle/json-file-db/issues"
   },
-  "homepage": "https://github.com/jheagle/workout-planner#readme",
+  "homepage": "https://github.com/jheagle/json-file-db#readme",
   "devDependencies": {
     "gulp": "^5.0.1",
-    "js-build-tools": "^5.0.0",
+    "js-build-tools": "^5.3.2",
+    "typedoc": "^0.28.20",
     "test-filesystem": "^1.3.14"
   },
   "dependencies": {

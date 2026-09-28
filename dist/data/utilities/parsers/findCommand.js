@@ -8,9 +8,8 @@ const _removeFromQuery = require('./removeFromQuery')
 const commandMatch = /^(delete|insert|read|update)\s+([a-z0-9_-]+)[\w\n]*/i
 /**
  * Extract command clauses from the query.
- * @param {ParsedQuery} parsed
- * @param {string} query
- * @returns {string}
+ * @param parsed
+ * @param query
  */
 const findCommand = (parsed, query) => {
   const commandFound = query.match(commandMatch)

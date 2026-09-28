@@ -5,10 +5,9 @@ import { fieldProperties } from './definitions/field'
 
 /**
  * Create a new record.
- * @param {recordPath} recordName
- * @param {Array<fieldProperties>} definition
- * @param {Array<keyProperties>} keys
- * @returns {Promise}
+ * @param recordName
+ * @param definition
+ * @param keys
  */
 export const create = async (recordName: string, definition: fieldProperties[] = [], keys: keyProperties[] = []): Promise<recordDefinition | null> => {
   const gulpConfig = require('js-build-tools/gulp.config')

@@ -1,6 +1,6 @@
 export declare const useJoinClause: ({ propertyA, comparator, propertyB }?: {
-    propertyA?: null | undefined;
-    comparator?: string | undefined;
-    propertyB?: null | undefined;
+    propertyA?: any;
+    comparator?: string;
+    propertyB?: any;
 }, dataSets?: {}, filterJoins?: {}) => Promise<{}>;
 //# sourceMappingURL=useJoinClause.d.ts.map

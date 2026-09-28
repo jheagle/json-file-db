@@ -3,17 +3,12 @@ import { ParsedQuery } from './parseQuery'
 
 const joinEntityMatch: RegExp = /\.([a-z0-9_-]+)/i
 
-/**
- * The main join entity for this query.
- * @typedef {string} ParsedJoinEntity
- */
 export type ParsedJoinEntity = string
 
 /**
  * Extract the main join entity from the query.
- * @param {ParsedQuery} parsed
- * @param {string} query
- * @returns {string}
+ * @param parsed
+ * @param query
  */
 export const findJoinEntity = (parsed: ParsedQuery, query: string): string => {
   const joinEntityFound: RegExpMatchArray = query.match(joinEntityMatch)

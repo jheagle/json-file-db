@@ -1,2 +1,2 @@
-export declare const groupBy: (dataSet?: never[], groupProperty?: string) => {};
+export declare const groupBy: (dataSet?: any[], groupProperty?: string) => any;
 //# sourceMappingURL=groupBy.d.ts.map

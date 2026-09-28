@@ -1,14 +1,9 @@
 import { ParsedQuery } from './parseQuery';
-/**
- * Store the limit clause as an object.
- * @typedef {number} ParsedLimit
- */
 export type ParsedLimit = number;
 /**
  * Extract the limit clauses from the query.
- * @param {ParsedQuery} parsed
- * @param {string} query
- * @returns {string}
+ * @param parsed
+ * @param query
  */
 export declare const findLimit: (parsed: ParsedQuery, query: string) => string;
 //# sourceMappingURL=findLimit.d.ts.map

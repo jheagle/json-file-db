@@ -1,16 +1,5 @@
-/**
- * @typedef {string} fieldName
- */
 export type fieldName = string;
 
-/**
- * @typedef {Object} fieldDefinition
- * @property {fieldName} name
- * @property {string} type
- * @property {boolean} optional
- * @property {boolean} default
- * @property {boolean} autoGenerate
- */
 export type fieldDefinition = {
   name: fieldName
   type: string
@@ -19,15 +8,6 @@ export type fieldDefinition = {
   autoGenerate: boolean
 }
 
-/**
- * @typedef {Object} fieldProperties
- * @param {string} name
- * @param {string} type
- * @param {boolean} optional
- * @param {boolean} useDefault
- * @param {*} defaultValue
- * @param {boolean} autoGenerate
- */
 export type fieldProperties = {
   name?: string
   type?: string
@@ -39,14 +19,13 @@ export type fieldProperties = {
 
 /**
  * Generate a field for a record.
- * @param {fieldProperties} properties
- * @param {string} [properties.name='']
- * @param {string} [properties.type='string']
- * @param {boolean} [properties.optional=false]
- * @param {boolean} [properties.useDefault=false]
- * @param {*} [properties.defaultValue='']
- * @param {boolean} [properties.autoGenerate=false]
- * @returns {fieldDefinition}
+ * @param properties
+ * @param properties.name
+ * @param properties.type
+ * @param properties.optional
+ * @param properties.useDefault
+ * @param properties.defaultValue
+ * @param properties.autoGenerate
  */
 export const field = ({
   name = '',
