@@ -3,12 +3,12 @@ import { splitEntityProperty } from './parsers/splitEntityProperty'
 export const restrictIndexedList = (joinClause, filterJoins, indexedClone) => {
   const { entity: entityA, property: propertyA } = splitEntityProperty(joinClause.propertyA)
   const { entity: entityB, property: propertyB } = splitEntityProperty(joinClause.propertyB)
-  if (filterJoins.hasOwnProperty(entityA)) {
+  if (Object.prototype.hasOwnProperty.call(filterJoins, entityA)) {
     const existingEntities = filterJoins[entityA]
-    if (!indexedClone.hasOwnProperty(entityA)) {
+    if (!Object.prototype.hasOwnProperty.call(indexedClone, entityA)) {
       indexedClone[entityA] = {}
     }
-    if (!indexedClone[entityA].hasOwnProperty(propertyA)) {
+    if (!Object.prototype.hasOwnProperty.call(indexedClone[entityA], propertyA)) {
       indexedClone[entityA][propertyA] = {}
     }
     indexedClone[entityA][propertyA] = [
@@ -18,12 +18,12 @@ export const restrictIndexedList = (joinClause, filterJoins, indexedClone) => {
       }
     ]
   }
-  if (filterJoins.hasOwnProperty(entityB)) {
+  if (Object.prototype.hasOwnProperty.call(filterJoins, entityB)) {
     const existingEntities = filterJoins[entityB]
-    if (!indexedClone.hasOwnProperty(entityB)) {
+    if (!Object.prototype.hasOwnProperty.call(indexedClone, entityB)) {
       indexedClone[entityB] = {}
     }
-    if (!indexedClone[entityB].hasOwnProperty(propertyB)) {
+    if (!Object.prototype.hasOwnProperty.call(indexedClone[entityB], propertyB)) {
       indexedClone[entityB][propertyB] = {}
     }
     indexedClone[entityB][propertyB] = [

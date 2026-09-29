@@ -15,7 +15,7 @@ const likeMatch = (dataValue, pattern) => {
   return new RegExp(`^${regexPattern}$`, 'i').test(dataValue)
 }
 const makeCondition = (data, property, comparator, value) => {
-  if (!data.hasOwnProperty(property)) {
+  if (!Object.prototype.hasOwnProperty.call(data, property)) {
     return false
   }
   const dataValue = data[property]

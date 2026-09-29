@@ -32,7 +32,7 @@ const buildEntityValues = async (entity, record, rowValues = {}) => {
     let value = rowValues[field.name]
     if (field.autoGenerate) {
       value = await (0, _keyGenerate.keyGenerate)(entity, [field.name])
-    } else if (field.hasOwnProperty('default')) {
+    } else if (Object.prototype.hasOwnProperty.call(field, 'default')) {
       value = (0, _useDefault.useDefault)(field.default, value)
     }
     if (typeof value === 'undefined') {
@@ -75,7 +75,7 @@ const assertForeignKeys = async (entity, record, entityValues) => {
       continue
     }
     const field = key.fields[0]
-    if (!entityValues.hasOwnProperty(field)) {
+    if (!Object.prototype.hasOwnProperty.call(entityValues, field)) {
       continue
     }
     const {
@@ -92,7 +92,7 @@ const insertEntity = async (entity = '', values = [], dataSet = {}) => {
   const databasePath = gulpConfig.get('databasePath', 'database/')
   const record = await (0, _retrieveRecord.retrieveRecord)(entity)
   const primaryKey = record.keys.find(key => key.type === 'primary' && key.fields.length === 1)
-  if (!dataSet.hasOwnProperty(entity)) {
+  if (!Object.prototype.hasOwnProperty.call(dataSet, entity)) {
     dataSet[entity] = []
   }
   for (const rowValues of values) {

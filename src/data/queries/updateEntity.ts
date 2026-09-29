@@ -43,7 +43,7 @@ const assertUniqueForUpdate = async (entity: string, record: recordDefinition, o
       continue
     }
     const field = key.fields[0]
-    if (!newValues.hasOwnProperty(field) || newValues[field] == oldData[field]) {
+    if (!Object.prototype.hasOwnProperty.call(newValues, field) || newValues[field] == oldData[field]) {
       continue
     }
     const isUnique = await keyUnique(entity, key.fields, newValues[field])
@@ -77,7 +77,7 @@ const assertForeignKeysForUpdate = async (entity: string, record: recordDefiniti
       continue
     }
     const field = key.fields[0]
-    if (!newValues.hasOwnProperty(field) || newValues[field] == oldData[field]) {
+    if (!Object.prototype.hasOwnProperty.call(newValues, field) || newValues[field] == oldData[field]) {
       continue
     }
     const { entity: refEntity, property: refProperty } = splitEntityProperty(key.references[0].fields[0])
@@ -94,7 +94,7 @@ const reconcileIndexes = async (record: recordDefinition, oldData: Object, newDa
       continue
     }
     const field = key.fields[0]
-    if (!newValues.hasOwnProperty(field) || newValues[field] == oldData[field]) {
+    if (!Object.prototype.hasOwnProperty.call(newValues, field) || newValues[field] == oldData[field]) {
       continue
     }
     await removeFromIndex(record.path, key, oldData[field], fileName)
@@ -121,7 +121,7 @@ const assertRequiredFields = (entity: string, record: recordDefinition, newData:
 const applyFieldTypes = (record: recordDefinition, values: Object): Object => {
   const typedValues = Object.assign({}, values)
   for (const field of record.definition) {
-    if (typedValues.hasOwnProperty(field.name)) {
+    if (Object.prototype.hasOwnProperty.call(typedValues, field.name)) {
       typedValues[field.name] = typeCheck(field.type, typedValues[field.name])
     }
   }

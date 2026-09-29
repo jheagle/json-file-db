@@ -6,7 +6,6 @@ export const reconcileJoins = (propertyA, propertyB, dataSet) => {
   const { entity: entityB, property: propB } = splitEntityProperty(propertyB)
   for (let entityName in dataSet) {
     for (let entityKey in dataSet[entityName]) {
-      const entity = dataSet[entityName][entityKey]
       dataSet = reconcileJoin(dataSet, entityName, entityKey, entityA, propA)
       dataSet = reconcileJoin(dataSet, entityName, entityKey, entityB, propB)
     }

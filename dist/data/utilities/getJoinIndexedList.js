@@ -34,10 +34,10 @@ const getJoinIndexedList = async (parsed, recordData, dataSets) => {
         property: propertyB
       } = (0, _splitEntityProperty.splitEntityProperty)(joinClause.propertyB)
       // Get the record for the entities A and B, store on the recordData
-      if (!recordData.hasOwnProperty(entityA)) {
+      if (!Object.prototype.hasOwnProperty.call(recordData, entityA)) {
         recordData[entityA] = await (0, _retrieveRecord.retrieveRecord)(entityA)
       }
-      if (!recordData.hasOwnProperty(entityB)) {
+      if (!Object.prototype.hasOwnProperty.call(recordData, entityB)) {
         recordData[entityB] = await (0, _retrieveRecord.retrieveRecord)(entityB)
       }
       indexedClone = (0, _restrictIndexedList.restrictIndexedList)(joinClause, filterJoins, indexedClone)

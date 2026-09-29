@@ -24,10 +24,10 @@ export const getJoinIndexedList = async (parsed: ParsedQuery, recordData, dataSe
       const { entity: entityB, property: propertyB } = splitEntityProperty(joinClause.propertyB)
 
       // Get the record for the entities A and B, store on the recordData
-      if (!recordData.hasOwnProperty(entityA)) {
+      if (!Object.prototype.hasOwnProperty.call(recordData, entityA)) {
         recordData[entityA] = await retrieveRecord(entityA)
       }
-      if (!recordData.hasOwnProperty(entityB)) {
+      if (!Object.prototype.hasOwnProperty.call(recordData, entityB)) {
         recordData[entityB] = await retrieveRecord(entityB)
       }
 

@@ -12,7 +12,7 @@ const groupBy = (dataSet = [], groupProperty = '') => {
   }
   return dataSet.reduce((groupedData, data) => {
     const property = data[groupProperty]
-    if (!groupedData.hasOwnProperty(property)) {
+    if (!Object.prototype.hasOwnProperty.call(groupedData, property)) {
       groupedData[property] = []
     }
     groupedData[property].push(data)

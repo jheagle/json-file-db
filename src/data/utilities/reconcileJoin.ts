@@ -2,7 +2,7 @@ import { where } from '../queries/where'
 
 export const reconcileJoin = (dataSet, entityName, entityKey, joinEntity, joinProp) => {
   const entity = dataSet[entityName][entityKey]
-  if (entity.hasOwnProperty(joinEntity) && Array.isArray(entity[joinEntity])) {
+  if (Object.prototype.hasOwnProperty.call(entity, joinEntity) && Array.isArray(entity[joinEntity])) {
     entity[joinEntity].forEach(
       (mergedEntity, k) => {
         const matchedEntity = where(

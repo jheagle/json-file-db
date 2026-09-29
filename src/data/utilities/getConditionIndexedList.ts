@@ -16,7 +16,7 @@ export const getConditionIndexedList = async (parsed: ParsedQuery, recordData, d
       entity = entityProperty.entity
       property = entityProperty.property
     }
-    if (!recordData.hasOwnProperty(entity)) {
+    if (!Object.prototype.hasOwnProperty.call(recordData, entity)) {
       recordData[entity] = await retrieveRecord(entity)
     }
     const indexed = {}

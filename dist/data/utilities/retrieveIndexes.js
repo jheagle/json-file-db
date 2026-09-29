@@ -8,7 +8,7 @@ require('core-js/modules/es.array.includes.js')
 const _retrieveFile = require('./retrieveFile')
 const _retrieveRecord = require('./retrieveRecord')
 const retrieveIndexes = async (entity = '', properties = [], recordData = {}) => {
-  if (!recordData.hasOwnProperty(entity)) {
+  if (!Object.prototype.hasOwnProperty.call(recordData, entity)) {
     recordData[entity] = await (0, _retrieveRecord.retrieveRecord)(entity)
   }
   const indexSet = {}
