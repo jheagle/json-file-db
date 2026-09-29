@@ -12,6 +12,7 @@ const _updateIndex = require('../utilities/updateIndex')
 const _keyGenerate = require('../introspect/policies/keyGenerate')
 const _keyUnique = require('../introspect/policies/keyUnique')
 const _useDefault = require('../introspect/policies/useDefault')
+const _typeCheck = require('../introspect/policies/typeCheck')
 const gulpConfig = require('js-build-tools/gulp.config')
 const {
   writeFile
@@ -38,7 +39,7 @@ const buildEntityValues = async (entity, record, rowValues = {}) => {
       }
       continue
     }
-    entityValues[field.name] = value
+    entityValues[field.name] = (0, _typeCheck.typeCheck)(field.type, value)
   }
   return entityValues
 }

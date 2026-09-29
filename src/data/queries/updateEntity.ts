@@ -3,6 +3,7 @@ import { retrieveFile } from '../utilities/retrieveFile'
 import { updateIndex } from '../utilities/updateIndex'
 import { removeFromIndex } from '../utilities/removeFromIndex'
 import { keyUnique } from '../introspect/policies/keyUnique'
+import { typeCheck } from '../introspect/policies/typeCheck'
 import { recordDefinition } from '../introspect/definitions/record'
 
 const gulpConfig = require('js-build-tools/gulp.config')
@@ -81,6 +82,24 @@ const assertRequiredFields = (entity: string, record: recordDefinition, newData:
   }
 }
 
+/**
+ * Type-check (and coerce) only the fields actually present in an update's values, never the rest
+ * of the merged record - a field whose already-stored value doesn't match its declared type
+ * (nothing enforced this before typeCheck() existed) must not block an update that never touches
+ * that field.
+ * @param record
+ * @param values
+ */
+const applyFieldTypes = (record: recordDefinition, values: Object): Object => {
+  const typedValues = Object.assign({}, values)
+  for (const field of record.definition) {
+    if (typedValues.hasOwnProperty(field.name)) {
+      typedValues[field.name] = typeCheck(field.type, typedValues[field.name])
+    }
+  }
+  return typedValues
+}
+
 export const updateEntity = async (entity: string = '', values: Object = {}, dataSet: Object = {}): Promise<Object> => {
   const databasePath = gulpConfig.get('databasePath', 'database/')
   const record = await retrieveRecord(entity)
@@ -89,6 +108,7 @@ export const updateEntity = async (entity: string = '', values: Object = {}, dat
     throw new Error(`Cannot update "${entity}" without a single-field primary key`)
   }
   const primaryField = primaryKey.fields[0]
+  const typedValues = applyFieldTypes(record, values)
 
   const toUpdate = dataSet[entity] || []
   const updatedRows = []
@@ -98,12 +118,12 @@ export const updateEntity = async (entity: string = '', values: Object = {}, dat
       throw new Error(`Could not find entry for ${entity} where "${primaryField}" = ${row[primaryField]}`)
     }
     const oldData = await retrieveFile(`${record.path}/${fileName}`)
-    await assertUniqueForUpdate(entity, record, oldData, values)
+    await assertUniqueForUpdate(entity, record, oldData, typedValues)
 
-    const newData = Object.assign({}, oldData, values)
+    const newData = Object.assign({}, oldData, typedValues)
     assertRequiredFields(entity, record, newData)
 
-    await reconcileIndexes(record, oldData, newData, values, fileName)
+    await reconcileIndexes(record, oldData, newData, typedValues, fileName)
     await writeFile(`${databasePath}${record.path}/${fileName}`, JSON.stringify(newData, null, 2))
     updatedRows.push(newData)
   }
