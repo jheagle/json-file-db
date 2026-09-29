@@ -10,6 +10,6 @@ const describe = async (record = '__RECORDS') => {
   if (record === '__RECORDS') {
     return recordFile.entries
   }
-  return recordFile.description
+  return recordFile.definition
 }
 exports.describe = describe
