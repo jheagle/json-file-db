@@ -88,4 +88,24 @@ describe('insertEntity', () => {
     await expect(insertEntity('foo', [{ _id: 'dupe', bar: 'second' }], {}))
       .rejects.toThrow('Duplicate value for primary key "_id" on foo')
   })
+
+  test('coerces a value to match its field\'s declared type', async () => {
+    const definitionWithInt = [
+      { name: '_id', type: 'string', optional: false, autoGenerate: true },
+      { name: 'reps', type: 'int', optional: false, autoGenerate: false }
+    ]
+    await create('foo', definitionWithInt, keys)
+    const dataSet = await insertEntity('foo', [{ reps: '10' }], {})
+    expect(dataSet.foo[0].reps).toBe(10)
+  })
+
+  test('rejects a value that does not match its field\'s declared type', async () => {
+    const definitionWithInt = [
+      { name: '_id', type: 'string', optional: false, autoGenerate: true },
+      { name: 'reps', type: 'int', optional: false, autoGenerate: false }
+    ]
+    await create('foo', definitionWithInt, keys)
+    await expect(insertEntity('foo', [{ reps: 'ten' }], {}))
+      .rejects.toThrow('Value "ten" is not a valid int')
+  })
 })

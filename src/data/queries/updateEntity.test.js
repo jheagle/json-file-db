@@ -117,6 +117,42 @@ describe('updateEntity', () => {
       .rejects.toThrow('Duplicate value for unique key "email" on foo')
   })
 
+  test('coerces a value to match its field\'s declared type', async () => {
+    const definitionWithInt = [
+      { name: '_id', type: 'string', optional: false, autoGenerate: true },
+      { name: 'reps', type: 'int', optional: false, autoGenerate: false }
+    ]
+    await create('foo', definitionWithInt, keys)
+    const inserted = await insertEntity('foo', [{ reps: 10 }], {})
+    const result = await updateEntity('foo', { reps: '12' }, { foo: [inserted.foo[0]] })
+    expect(result.foo[0].reps).toBe(12)
+  })
+
+  test('rejects a value that does not match its field\'s declared type', async () => {
+    const definitionWithInt = [
+      { name: '_id', type: 'string', optional: false, autoGenerate: true },
+      { name: 'reps', type: 'int', optional: false, autoGenerate: false }
+    ]
+    await create('foo', definitionWithInt, keys)
+    const inserted = await insertEntity('foo', [{ reps: 10 }], {})
+    await expect(updateEntity('foo', { reps: 'twelve' }, { foo: [inserted.foo[0]] }))
+      .rejects.toThrow('Value "twelve" is not a valid int')
+  })
+
+  test('does not re-validate a field the update never touches, even if it is already stored with a mismatched type', async () => {
+    await create('foo', definition, keys)
+    const inserted = await insertEntity('foo', [{ bar: 'one' }], {})
+    const row = inserted.foo[0]
+    // Simulate data that predates any type checking - _id is declared type "string" but stored
+    // as a real number, exactly like the project's own real fixture data.
+    const { writeFile } = require('fs/promises')
+    await writeFile(`${databasePath}foo/${row._id}.json`, JSON.stringify({ _id: 1, bar: 'one', note: null }))
+
+    const result = await updateEntity('foo', { bar: 'updated' }, { foo: [{ ...row, _id: 1 }] })
+    expect(result.foo[0].bar).toBe('updated')
+    expect(result.foo[0]._id).toBe(1)
+  })
+
   test('re-updating a row to its own existing unique value does not falsely collide', async () => {
     const uniqueDefinition = [
       { name: '_id', type: 'string', optional: false, autoGenerate: true },

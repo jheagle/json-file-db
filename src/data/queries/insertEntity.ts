@@ -3,6 +3,7 @@ import { updateIndex } from '../utilities/updateIndex'
 import { keyGenerate } from '../introspect/policies/keyGenerate'
 import { keyUnique } from '../introspect/policies/keyUnique'
 import { useDefault } from '../introspect/policies/useDefault'
+import { typeCheck } from '../introspect/policies/typeCheck'
 import { recordDefinition } from '../introspect/definitions/record'
 
 const gulpConfig = require('js-build-tools/gulp.config')
@@ -30,7 +31,7 @@ const buildEntityValues = async (entity: string, record: recordDefinition, rowVa
       }
       continue
     }
-    entityValues[field.name] = value
+    entityValues[field.name] = typeCheck(field.type, value)
   }
   return entityValues
 }
