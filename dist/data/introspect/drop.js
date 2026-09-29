@@ -9,6 +9,7 @@ Object.defineProperty(exports, '__esModule', {
 })
 exports.drop = void 0
 const _retrieveFile = require('../utilities/retrieveFile')
+const _deregisterRecord = require('../utilities/deregisterRecord')
 const gulpConfig = require('js-build-tools/gulp.config')
 const {
   rm
@@ -22,5 +23,6 @@ const drop = async record => {
   for (const file of recordFile.entries) {
     await rm(`${databasePath}${recordFile.path}/${file}`)
   }
+  await (0, _deregisterRecord.deregisterRecord)(record)
 }
 exports.drop = drop

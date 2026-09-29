@@ -47,4 +47,11 @@ describe('create', () => {
     expect(testHelpers.fileExists(`${databasePath}${recordName}.json`)).toBeTruthy()
     expect(testHelpers.fileExists(`${databasePath}${recordName}`)).toBeTruthy()
   })
+
+  test('registers the new record in __RECORDS', async () => {
+    await create('foo', [], [])
+    const { readFile } = require('fs/promises')
+    const registry = JSON.parse(await readFile(`${databasePath}__RECORDS.json`, 'utf8'))
+    expect(registry.entries).toContain('foo.json')
+  })
 })

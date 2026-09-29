@@ -33,4 +33,12 @@ describe('drop', () => {
     await drop(recordName)
     expect(testHelpers.fileExists(`${databasePath}${recordName}/${entryFile}`)).toBeFalsy()
   })
+
+  test('deregisters the record from __RECORDS', async () => {
+    await create('foo', [], [])
+    await create('bar', [], [])
+    await drop('foo')
+    const registry = JSON.parse(await readFile(`${databasePath}__RECORDS.json`, 'utf8'))
+    expect(registry.entries).toEqual(['bar.json'])
+  })
 })

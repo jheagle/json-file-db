@@ -26,4 +26,11 @@ describe('describe', () => {
     const result = await describeRecord('foo')
     expect(result).toEqual(definition)
   })
+
+  test('describes __RECORDS by returning the list of known records', async () => {
+    await create('foo', definition, keys)
+    await create('bar', definition, keys)
+    const result = await describeRecord()
+    expect(result).toEqual(['foo.json', 'bar.json'])
+  })
 })
