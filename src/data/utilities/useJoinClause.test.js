@@ -1,10 +1,10 @@
 import { useJoinClause } from './useJoinClause'
 import { testHelpers } from 'js-build-tools/testHelpers'
+import { configure } from './config'
 import { copyDatabase } from '../../../test-data/copyDatabase'
 
 const databasePath = 'use-join-clause-database/'
-const gulpConfig = testHelpers.gulpConfig
-gulpConfig.set('databasePath', databasePath)
+configure({ databasePath })
 testHelpers.setDefaults(databasePath)
 
 beforeEach(

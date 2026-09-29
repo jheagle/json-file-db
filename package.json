@@ -42,6 +42,7 @@
   },
   "dependencies": {
     "browser-or-node": "^3.0.0",
+    "core-js": "^3.50.0",
     "si-funciona": "^2.3.4"
   }
 }

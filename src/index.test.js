@@ -1,9 +1,8 @@
-import { query, create, drop, describe as describeRecord } from './index'
+import { query, create, drop, describe as describeRecord, configure } from './index'
 import { testHelpers } from 'js-build-tools/testHelpers'
 
 const databasePath = 'public-api-database/'
-const gulpConfig = testHelpers.gulpConfig
-gulpConfig.set('databasePath', databasePath)
+configure({ databasePath })
 testHelpers.setDefaults(databasePath)
 
 beforeEach(testHelpers.beforeEach)

@@ -1,7 +1,7 @@
 import { keyDefinition } from '../introspect/definitions/key'
 import { recordPath } from '../introspect/definitions/record'
+import { getSetting } from './config'
 
-const gulpConfig = require('js-build-tools/gulp.config')
 const { readFile, writeFile, mkdir } = require('fs/promises')
 
 export type indexEntry = {
@@ -22,7 +22,7 @@ export const updateIndex = async (path: recordPath = '', key: keyDefinition = nu
   if (!key || !key.lookup) {
     return null
   }
-  const databasePath = gulpConfig.get('databasePath', 'database/')
+  const databasePath = getSetting('databasePath', 'database/')
   const indexDir = `${databasePath}__indexes/${path}`
   const indexPath = `${indexDir}/${key.lookup}`
   let index: indexEntry[] = []

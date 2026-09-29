@@ -27,7 +27,7 @@ require('core-js/modules/esnext.set.union.js')
 const _retrieveRecord = require('../utilities/retrieveRecord')
 const _retrieveFile = require('../utilities/retrieveFile')
 const _removeFromIndex = require('../utilities/removeFromIndex')
-const gulpConfig = require('js-build-tools/gulp.config')
+const _config = require('../utilities/config')
 const {
   rm,
   writeFile
@@ -42,7 +42,7 @@ const {
  * @param deletedValues
  */
 const removeMatchingEntries = async (entity, record, primaryField, deletedValues) => {
-  const databasePath = gulpConfig.get('databasePath', 'database/')
+  const databasePath = (0, _config.getSetting)('databasePath', 'database/')
   const remainingEntries = []
   for (const fileName of record.entries) {
     const data = await (0, _retrieveFile.retrieveFile)(`${record.path}/${fileName}`)
@@ -60,7 +60,7 @@ const removeMatchingEntries = async (entity, record, primaryField, deletedValues
   return remainingEntries
 }
 const deleteEntity = async (entity = '', dataSet = {}) => {
-  const databasePath = gulpConfig.get('databasePath', 'database/')
+  const databasePath = (0, _config.getSetting)('databasePath', 'database/')
   const record = await (0, _retrieveRecord.retrieveRecord)(entity)
   const primaryKey = record.keys.find(key => key.type === 'primary' && key.fields.length === 1)
   if (!primaryKey) {

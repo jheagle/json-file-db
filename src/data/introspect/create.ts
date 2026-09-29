@@ -1,8 +1,8 @@
-import { fileExists } from 'test-filesystem'
 import { record, recordDefinition } from './definitions/record'
 import { keyProperties } from './definitions/key'
 import { fieldProperties } from './definitions/field'
 import { registerRecord } from '../utilities/registerRecord'
+import { getSetting } from '../utilities/config'
 
 /**
  * Create a new record.
@@ -11,13 +11,13 @@ import { registerRecord } from '../utilities/registerRecord'
  * @param keys
  */
 export const create = async (recordName: string, definition: fieldProperties[] = [], keys: keyProperties[] = []): Promise<recordDefinition | null> => {
-  const gulpConfig = require('js-build-tools/gulp.config')
   const { writeFile, mkdir } = require('fs/promises')
-  const databasePath = gulpConfig.get('databasePath', 'database/')
+  const { existsSync } = require('fs')
+  const databasePath = getSetting('databasePath', 'database/')
   if (recordName === '__RECORDS') {
     return null
   }
-  if (fileExists(`${databasePath}${recordName}.json`)) {
+  if (existsSync(`${databasePath}${recordName}.json`)) {
     return null
   }
   await mkdir(databasePath, { recursive: true })

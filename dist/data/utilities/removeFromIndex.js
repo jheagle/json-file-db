@@ -8,7 +8,7 @@ require('core-js/modules/es.json.stringify.js')
 require('core-js/modules/esnext.iterator.constructor.js')
 require('core-js/modules/esnext.iterator.filter.js')
 require('core-js/modules/esnext.iterator.map.js')
-const gulpConfig = require('js-build-tools/gulp.config')
+const _config = require('./config')
 const {
   readFile,
   writeFile
@@ -26,7 +26,7 @@ const removeFromIndex = async (path = '', key = null, value = undefined, fileNam
   if (!key || !key.lookup) {
     return null
   }
-  const databasePath = gulpConfig.get('databasePath', 'database/')
+  const databasePath = (0, _config.getSetting)('databasePath', 'database/')
   const indexPath = `${databasePath}__indexes/${path}/${key.lookup}`
   let index = []
   try {

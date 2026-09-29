@@ -2,10 +2,10 @@ import { create } from '../create'
 import { insertEntity } from '../../queries/insertEntity'
 import { foreignKeyExists } from './foreignKeyExists'
 import { testHelpers } from 'js-build-tools/testHelpers'
+import { configure } from '../../utilities/config'
 
 const databasePath = 'foreign-key-exists-database/'
-const gulpConfig = testHelpers.gulpConfig
-gulpConfig.set('databasePath', databasePath)
+configure({ databasePath })
 testHelpers.setDefaults(databasePath)
 
 beforeEach(testHelpers.beforeEach)

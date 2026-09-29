@@ -6,7 +6,7 @@ Object.defineProperty(exports, '__esModule', {
 exports.registerRecord = void 0
 require('core-js/modules/es.array.includes.js')
 require('core-js/modules/es.json.stringify.js')
-const gulpConfig = require('js-build-tools/gulp.config')
+const _config = require('./config')
 const {
   readFile,
   writeFile
@@ -49,7 +49,7 @@ const defaultRegistry = () => ({
  * @param recordName
  */
 const registerRecord = async recordName => {
-  const databasePath = gulpConfig.get('databasePath', 'database/')
+  const databasePath = (0, _config.getSetting)('databasePath', 'database/')
   const registryPath = `${databasePath}__RECORDS.json`
   let registry
   try {

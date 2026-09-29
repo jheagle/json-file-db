@@ -1,12 +1,12 @@
 import { create } from '../introspect/create'
 import { insertEntity } from './insertEntity'
 import { testHelpers } from 'js-build-tools/testHelpers'
+import { configure } from '../utilities/config'
 
 const { readFile } = require('fs/promises')
 
 const databasePath = 'insert-entity-database/'
-const gulpConfig = testHelpers.gulpConfig
-gulpConfig.set('databasePath', databasePath)
+configure({ databasePath })
 testHelpers.setDefaults(databasePath)
 
 beforeEach(testHelpers.beforeEach)

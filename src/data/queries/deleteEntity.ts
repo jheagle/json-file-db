@@ -2,8 +2,8 @@ import { retrieveRecord } from '../utilities/retrieveRecord'
 import { retrieveFile } from '../utilities/retrieveFile'
 import { removeFromIndex } from '../utilities/removeFromIndex'
 import { recordDefinition } from '../introspect/definitions/record'
+import { getSetting } from '../utilities/config'
 
-const gulpConfig = require('js-build-tools/gulp.config')
 const { rm, writeFile } = require('fs/promises')
 
 /**
@@ -16,7 +16,7 @@ const { rm, writeFile } = require('fs/promises')
  * @param deletedValues
  */
 const removeMatchingEntries = async (entity: string, record: recordDefinition, primaryField: string, deletedValues: Set<any>): Promise<string[]> => {
-  const databasePath = gulpConfig.get('databasePath', 'database/')
+  const databasePath = getSetting('databasePath', 'database/')
   const remainingEntries = []
   for (const fileName of record.entries) {
     const data = await retrieveFile(`${record.path}/${fileName}`)
@@ -35,7 +35,7 @@ const removeMatchingEntries = async (entity: string, record: recordDefinition, p
 }
 
 export const deleteEntity = async (entity: string = '', dataSet: Object = {}): Promise<Object> => {
-  const databasePath = gulpConfig.get('databasePath', 'database/')
+  const databasePath = getSetting('databasePath', 'database/')
   const record = await retrieveRecord(entity)
   const primaryKey = record.keys.find(key => key.type === 'primary' && key.fields.length === 1)
   if (!primaryKey) {
