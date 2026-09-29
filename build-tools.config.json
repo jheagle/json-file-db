@@ -1,6 +1,6 @@
 {
   "browser": {
-    "enabled": true,
+    "enabled": false,
     "name": "jsonFileDb"
   },
   "dist": {

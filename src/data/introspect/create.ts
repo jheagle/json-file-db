@@ -20,6 +20,7 @@ export const create = async (recordName: string, definition: fieldProperties[] =
   if (fileExists(`${databasePath}${recordName}.json`)) {
     return null
   }
+  await mkdir(databasePath, { recursive: true })
   const recordContent = record({ path: recordName, definition: definition, keys: keys })
   await writeFile(`${databasePath}${recordName}.json`, JSON.stringify(recordContent, null, 2))
   await mkdir(`${databasePath}${recordName}`, { recursive: true })

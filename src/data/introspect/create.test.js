@@ -54,4 +54,14 @@ describe('create', () => {
     const registry = JSON.parse(await readFile(`${databasePath}__RECORDS.json`, 'utf8'))
     expect(registry.entries).toContain('foo.json')
   })
+
+  test('creates the database directory itself when it does not already exist', async () => {
+    const { rm } = require('fs/promises')
+    await rm(databasePath, { recursive: true, force: true })
+    expect(testHelpers.fileExists(databasePath)).toBeFalsy()
+
+    await create('foo', [], [])
+
+    expect(testHelpers.fileExists(`${databasePath}foo.json`)).toBeTruthy()
+  })
 })
