@@ -15,6 +15,15 @@ beforeEach(
 afterEach(testHelpers.afterEach)
 
 describe('query', () => {
+  test('it deletes matching rows, resolved via an indexed condition', async () => {
+    const deleted = await query('delete workouts where date = \'2024-06-05\'')
+    expect(deleted[0]).toHaveLength(3)
+
+    const remaining = await query('read workouts')
+    expect(remaining[0]).toHaveLength(3)
+    expect(remaining[0].every(row => row.date === '2024-06-02')).toBe(true)
+  })
+
   test('it reads with where', async () => {
     const queryString = 'read workouts where date = \'2024-06-02\''
     const result = await query(queryString)

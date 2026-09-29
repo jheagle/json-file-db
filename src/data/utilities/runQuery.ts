@@ -24,6 +24,18 @@ export const runQuery = async (parsed) => {
   parsed = await getConditionIndexedList(parsed, recordData, dataSet)
   parsed = await getJoinIndexedList(parsed, recordData, dataSet)
 
+  // delete/update act on whatever is already in dataSet[entity] - unlike read, which loads
+  // everything and lets the where-reduce below narrow it down afterward, they never get a second
+  // pass. So the matching rows have to be fully resolved (indexed conditions already are, via
+  // getConditionIndexedList above; anything left in parsed.conditions is not) before either runs.
+  if (parsed.command === 'delete' || parsed.command === 'update') {
+    dataSet = await readEntity(parsed.entity, dataSet)
+    dataSet[parsed.entity] = parsed.conditions.reduce(
+      (remainingData, condition) => where(remainingData, condition),
+      dataSet[parsed.entity]
+    )
+  }
+
   switch (parsed.command) {
     case 'delete':
       dataSet = await deleteEntity(parsed.entity, dataSet)
@@ -43,12 +55,18 @@ export const runQuery = async (parsed) => {
   dataSet = await joinEntity(parsed.entity, parsed.joinEntity, dataSet, parsed.joinClauses)
   dataSet = await mergeJoins(dataSet, parsed.mergeJoins)
 
-  dataSet[parsed.entity] = parsed.conditions.reduce(
-    (remainingData, condition) => {
-      return where(remainingData, condition)
-    },
-    dataSet[parsed.entity]
-  )
+  // delete/update already had parsed.conditions applied above, before they ran. Re-applying the
+  // same conditions here would be wrong, not just redundant, for update specifically: if the
+  // update just changed the very field a condition filters on, re-checking that condition against
+  // the now-changed data would filter the just-updated rows back out.
+  if (parsed.command !== 'delete' && parsed.command !== 'update') {
+    dataSet[parsed.entity] = parsed.conditions.reduce(
+      (remainingData, condition) => {
+        return where(remainingData, condition)
+      },
+      dataSet[parsed.entity]
+    )
+  }
 
   dataSet[parsed.entity] = sortBy(dataSet[parsed.entity], parsed.sortClauses)
   dataSet[parsed.entity] = groupBy(dataSet[parsed.entity], parsed.groupBy)
