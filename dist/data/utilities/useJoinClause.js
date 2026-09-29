@@ -24,16 +24,16 @@ const useJoinClause = async ({
     entity: entityB,
     property: propB
   } = (0, _splitEntityProperty.splitEntityProperty)(propertyB)
-  if (!dataSets.hasOwnProperty(entityA)) {
+  if (!Object.prototype.hasOwnProperty.call(dataSets, entityA)) {
     dataSets = await (0, _readEntity.readEntity)(entityA, dataSets)
   }
-  if (!dataSets.hasOwnProperty(entityB)) {
+  if (!Object.prototype.hasOwnProperty.call(dataSets, entityB)) {
     dataSets = await (0, _readEntity.readEntity)(entityB, dataSets)
   }
-  if (!filterJoins.hasOwnProperty(entityA)) {
+  if (!Object.prototype.hasOwnProperty.call(filterJoins, entityA)) {
     filterJoins[entityA] = _siFunciona.default.cloneObject(dataSets[entityA])
   }
-  if (!filterJoins.hasOwnProperty(entityB)) {
+  if (!Object.prototype.hasOwnProperty.call(filterJoins, entityB)) {
     filterJoins[entityB] = _siFunciona.default.cloneObject(dataSets[entityB])
   }
   filterJoins[entityA] = filterJoins[entityB].reduce((dataA, dataB) => _siFunciona.default.mergeArrays(dataA, (0, _where.where)(filterJoins[entityA], {

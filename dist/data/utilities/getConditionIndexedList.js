@@ -20,7 +20,7 @@ const getConditionIndexedList = async (parsed, recordData, dataSet) => {
       entity = entityProperty.entity
       property = entityProperty.property
     }
-    if (!recordData.hasOwnProperty(entity)) {
+    if (!Object.prototype.hasOwnProperty.call(recordData, entity)) {
       recordData[entity] = await (0, _retrieveRecord.retrieveRecord)(entity)
     }
     const indexed = {}

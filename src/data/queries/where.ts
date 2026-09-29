@@ -10,7 +10,7 @@ const likeMatch = (dataValue, pattern) => {
 }
 
 const makeCondition = (data, property, comparator, value) => {
-  if (!data.hasOwnProperty(property)) {
+  if (!Object.prototype.hasOwnProperty.call(data, property)) {
     return false
   }
   const dataValue = data[property]

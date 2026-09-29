@@ -24,7 +24,7 @@ const buildEntityValues = async (entity: string, record: recordDefinition, rowVa
     let value = rowValues[field.name]
     if (field.autoGenerate) {
       value = await keyGenerate(entity, [field.name])
-    } else if (field.hasOwnProperty('default')) {
+    } else if (Object.prototype.hasOwnProperty.call(field, 'default')) {
       value = useDefault(field['default'], value)
     }
     if (typeof value === 'undefined') {
@@ -69,7 +69,7 @@ const assertForeignKeys = async (entity: string, record: recordDefinition, entit
       continue
     }
     const field = key.fields[0]
-    if (!entityValues.hasOwnProperty(field)) {
+    if (!Object.prototype.hasOwnProperty.call(entityValues, field)) {
       continue
     }
     const { entity: refEntity, property: refProperty } = splitEntityProperty(key.references[0].fields[0])
@@ -85,7 +85,7 @@ export const insertEntity = async (entity: string = '', values: Object[] = [], d
   const record = await retrieveRecord(entity)
   const primaryKey = record.keys.find(key => key.type === 'primary' && key.fields.length === 1)
 
-  if (!dataSet.hasOwnProperty(entity)) {
+  if (!Object.prototype.hasOwnProperty.call(dataSet, entity)) {
     dataSet[entity] = []
   }
 

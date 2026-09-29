@@ -11,10 +11,10 @@ const getMatchingIndexes = async (entity, property, recordData, clause, dataSet,
   for (const key of recordData[entity].keys) {
     if (key.fields.includes(property)) {
       dataSet[entity] = []
-      if (!indexed.hasOwnProperty(entity)) {
+      if (!Object.prototype.hasOwnProperty.call(indexed, entity)) {
         indexed[entity] = {}
       }
-      if (!indexed[entity].hasOwnProperty(property)) {
+      if (!Object.prototype.hasOwnProperty.call(indexed[entity], property)) {
         indexed[entity][property] = (await (0, _retrieveIndexes.retrieveIndexes)(entity, [property], recordData))[property]
       }
       if (typeof cb === 'function') {

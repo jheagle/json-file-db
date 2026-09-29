@@ -32,7 +32,7 @@ const matchIndexedJoins = (entity, indexedClone, dataSets) => async (focusEntity
     propertySecond: propertyA
   }]
   for (const checkProp of properties) {
-    if (!indexedClone.hasOwnProperty(checkProp.entitySecond)) {
+    if (!Object.prototype.hasOwnProperty.call(indexedClone, checkProp.entitySecond)) {
       indexedClone[checkProp.entitySecond] = _siFunciona.default.cloneObject(indexed[checkProp.entitySecond])
     }
     const matchedRecords = indexedClone[checkProp.entitySecond][checkProp.propertySecond].reduce((dataA, dataB) => _siFunciona.default.mergeArrays(dataA, (0, _where.where)(indexedClone[checkProp.entityFirst][checkProp.propertyFirst], {
@@ -41,7 +41,7 @@ const matchIndexedJoins = (entity, indexedClone, dataSets) => async (focusEntity
       value: dataB.value
     })), [])
     const skipPush = checkProp.entityFirst === entity
-    if (!dataSets.hasOwnProperty(checkProp.entityFirst)) {
+    if (!Object.prototype.hasOwnProperty.call(dataSets, checkProp.entityFirst)) {
       dataSets[checkProp.entityFirst] = []
     }
     for (const matchedRecord of matchedRecords) {

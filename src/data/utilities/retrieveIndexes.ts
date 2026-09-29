@@ -2,7 +2,7 @@ import { retrieveFile } from './retrieveFile'
 import { retrieveRecord } from './retrieveRecord'
 
 export const retrieveIndexes = async (entity = '', properties = [], recordData = {}) => {
-  if (!recordData.hasOwnProperty(entity)) {
+  if (!Object.prototype.hasOwnProperty.call(recordData, entity)) {
     recordData[entity] = await retrieveRecord(entity)
   }
   const indexSet = {}

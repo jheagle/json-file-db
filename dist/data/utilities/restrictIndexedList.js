@@ -14,12 +14,12 @@ const restrictIndexedList = (joinClause, filterJoins, indexedClone) => {
     entity: entityB,
     property: propertyB
   } = (0, _splitEntityProperty.splitEntityProperty)(joinClause.propertyB)
-  if (filterJoins.hasOwnProperty(entityA)) {
+  if (Object.prototype.hasOwnProperty.call(filterJoins, entityA)) {
     const existingEntities = filterJoins[entityA]
-    if (!indexedClone.hasOwnProperty(entityA)) {
+    if (!Object.prototype.hasOwnProperty.call(indexedClone, entityA)) {
       indexedClone[entityA] = {}
     }
-    if (!indexedClone[entityA].hasOwnProperty(propertyA)) {
+    if (!Object.prototype.hasOwnProperty.call(indexedClone[entityA], propertyA)) {
       indexedClone[entityA][propertyA] = {}
     }
     indexedClone[entityA][propertyA] = [{
@@ -27,12 +27,12 @@ const restrictIndexedList = (joinClause, filterJoins, indexedClone) => {
       record: existingEntities
     }]
   }
-  if (filterJoins.hasOwnProperty(entityB)) {
+  if (Object.prototype.hasOwnProperty.call(filterJoins, entityB)) {
     const existingEntities = filterJoins[entityB]
-    if (!indexedClone.hasOwnProperty(entityB)) {
+    if (!Object.prototype.hasOwnProperty.call(indexedClone, entityB)) {
       indexedClone[entityB] = {}
     }
-    if (!indexedClone[entityB].hasOwnProperty(propertyB)) {
+    if (!Object.prototype.hasOwnProperty.call(indexedClone[entityB], propertyB)) {
       indexedClone[entityB][propertyB] = {}
     }
     indexedClone[entityB][propertyB] = [{

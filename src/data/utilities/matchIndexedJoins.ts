@@ -11,7 +11,7 @@ export const matchIndexedJoins = (entity, indexedClone, dataSets) => async (focu
     { entityFirst: entityB, propertyFirst: propertyB, entitySecond: entityA, propertySecond: propertyA },
   ]
   for (let checkProp of properties) {
-    if (!indexedClone.hasOwnProperty(checkProp.entitySecond)) {
+    if (!Object.prototype.hasOwnProperty.call(indexedClone, checkProp.entitySecond)) {
       indexedClone[checkProp.entitySecond] = siFunciona.cloneObject(indexed[checkProp.entitySecond])
     }
     const matchedRecords = indexedClone[checkProp.entitySecond][checkProp.propertySecond].reduce(
@@ -26,7 +26,7 @@ export const matchIndexedJoins = (entity, indexedClone, dataSets) => async (focu
       []
     )
     let skipPush = checkProp.entityFirst === entity
-    if (!dataSets.hasOwnProperty(checkProp.entityFirst)) {
+    if (!Object.prototype.hasOwnProperty.call(dataSets, checkProp.entityFirst)) {
       dataSets[checkProp.entityFirst] = []
     }
     for (let matchedRecord of matchedRecords) {

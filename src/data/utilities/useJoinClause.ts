@@ -11,17 +11,17 @@ export const useJoinClause = async (
   const { entity: entityA, property: propA } = splitEntityProperty(propertyA)
   const { entity: entityB, property: propB } = splitEntityProperty(propertyB)
 
-  if (!dataSets.hasOwnProperty(entityA)) {
+  if (!Object.prototype.hasOwnProperty.call(dataSets, entityA)) {
     dataSets = await readEntity(entityA, dataSets)
   }
-  if (!dataSets.hasOwnProperty(entityB)) {
+  if (!Object.prototype.hasOwnProperty.call(dataSets, entityB)) {
     dataSets = await readEntity(entityB, dataSets)
   }
 
-  if (!filterJoins.hasOwnProperty(entityA)) {
+  if (!Object.prototype.hasOwnProperty.call(filterJoins, entityA)) {
     filterJoins[entityA] = siFunciona.cloneObject(dataSets[entityA])
   }
-  if (!filterJoins.hasOwnProperty(entityB)) {
+  if (!Object.prototype.hasOwnProperty.call(filterJoins, entityB)) {
     filterJoins[entityB] = siFunciona.cloneObject(dataSets[entityB])
   }
 
