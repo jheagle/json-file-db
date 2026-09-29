@@ -13,6 +13,8 @@ const _updateIndex = require('../utilities/updateIndex')
 const _removeFromIndex = require('../utilities/removeFromIndex')
 const _keyUnique = require('../introspect/policies/keyUnique')
 const _typeCheck = require('../introspect/policies/typeCheck')
+const _foreignKeyExists = require('../introspect/policies/foreignKeyExists')
+const _splitEntityProperty = require('../utilities/parsers/splitEntityProperty')
 const gulpConfig = require('js-build-tools/gulp.config')
 const {
   writeFile
@@ -66,6 +68,34 @@ const assertUniqueForUpdate = async (entity, record, oldData, newValues) => {
  * @param newValues
  * @param fileName
  */
+/**
+ * Same "only if it actually changed" scoping as assertUniqueForUpdate: re-checking an unchanged
+ * foreign key value would re-validate a reference this update never touches, which could fail an
+ * unrelated field's update if that parent record happened to be deleted since.
+ * @param entity
+ * @param record
+ * @param oldData
+ * @param newValues
+ */
+const assertForeignKeysForUpdate = async (entity, record, oldData, newValues) => {
+  for (const key of record.keys) {
+    if (key.type !== 'foreign' || key.fields.length !== 1 || !key.references || key.references.length !== 1) {
+      continue
+    }
+    const field = key.fields[0]
+    if (!newValues.hasOwnProperty(field) || newValues[field] == oldData[field]) {
+      continue
+    }
+    const {
+      entity: refEntity,
+      property: refProperty
+    } = (0, _splitEntityProperty.splitEntityProperty)(key.references[0].fields[0])
+    const exists = await (0, _foreignKeyExists.foreignKeyExists)(refEntity, refProperty, newValues[field])
+    if (!exists) {
+      throw new Error(`Foreign key "${field}" on ${entity} references a nonexistent ${refEntity}.${refProperty} = ${newValues[field]}`)
+    }
+  }
+}
 const reconcileIndexes = async (record, oldData, newData, newValues, fileName) => {
   for (const key of record.keys) {
     if (key.fields.length !== 1) {
@@ -121,6 +151,7 @@ const updateEntity = async (entity = '', values = {}, dataSet = {}) => {
     }
     const oldData = await (0, _retrieveFile.retrieveFile)(`${record.path}/${fileName}`)
     await assertUniqueForUpdate(entity, record, oldData, typedValues)
+    await assertForeignKeysForUpdate(entity, record, oldData, typedValues)
     const newData = Object.assign({}, oldData, typedValues)
     assertRequiredFields(entity, record, newData)
     await reconcileIndexes(record, oldData, newData, typedValues, fileName)

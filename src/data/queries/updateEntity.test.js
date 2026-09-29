@@ -153,6 +153,62 @@ describe('updateEntity', () => {
     expect(result.foo[0]._id).toBe(1)
   })
 
+  describe('foreign keys', () => {
+    const exerciseDefinition = [
+      { name: '_id', type: 'string', optional: false, autoGenerate: true },
+      { name: 'name', type: 'string', optional: true, autoGenerate: false }
+    ]
+    const exerciseKeys = [
+      { type: 'primary', fields: ['_id'], lookup: 'pk__id.json' }
+    ]
+    const workoutDefinition = [
+      { name: '_id', type: 'string', optional: false, autoGenerate: true },
+      { name: 'exercise_id', type: 'string', optional: true, autoGenerate: false }
+    ]
+    const workoutKeys = [
+      { type: 'primary', fields: ['_id'], lookup: 'pk__id.json' },
+      {
+        type: 'foreign',
+        fields: ['exercise_id'],
+        lookup: 'fk_exercise_id.json',
+        references: [{ fields: ['exercises._id'], lookup: 'exercises.json' }]
+      }
+    ]
+
+    test('accepts changing a foreign key to a value that exists in the referenced record', async () => {
+      await create('exercises', exerciseDefinition, exerciseKeys)
+      const exercises = await insertEntity('exercises', [{ name: 'Bench Press' }, { name: 'Squat' }], {})
+      await create('workouts', workoutDefinition, workoutKeys)
+      const inserted = await insertEntity('workouts', [{ exercise_id: exercises.exercises[0]._id }], {})
+
+      const result = await updateEntity('workouts', { exercise_id: exercises.exercises[1]._id }, { workouts: [inserted.workouts[0]] })
+      expect(result.workouts[0].exercise_id).toBe(exercises.exercises[1]._id)
+    })
+
+    test('rejects changing a foreign key to a value that does not exist in the referenced record', async () => {
+      await create('exercises', exerciseDefinition, exerciseKeys)
+      const exercises = await insertEntity('exercises', [{ name: 'Bench Press' }], {})
+      await create('workouts', workoutDefinition, workoutKeys)
+      const inserted = await insertEntity('workouts', [{ exercise_id: exercises.exercises[0]._id }], {})
+
+      await expect(updateEntity('workouts', { exercise_id: 'does-not-exist' }, { workouts: [inserted.workouts[0]] }))
+        .rejects.toThrow('Foreign key "exercise_id" on workouts references a nonexistent exercises._id = does-not-exist')
+    })
+
+    test('does not re-check an unchanged foreign key value, even if its referenced record was since removed', async () => {
+      await create('exercises', exerciseDefinition, exerciseKeys)
+      const exercises = await insertEntity('exercises', [{ name: 'Bench Press' }], {})
+      await create('workouts', workoutDefinition, workoutKeys)
+      const inserted = await insertEntity('workouts', [{ exercise_id: exercises.exercises[0]._id }], {})
+
+      const { rm } = require('fs/promises')
+      await rm(`${databasePath}exercises/${exercises.exercises[0]._id}.json`)
+
+      const result = await updateEntity('workouts', { exercise_id: exercises.exercises[0]._id }, { workouts: [inserted.workouts[0]] })
+      expect(result.workouts[0].exercise_id).toBe(exercises.exercises[0]._id)
+    })
+  })
+
   test('re-updating a row to its own existing unique value does not falsely collide', async () => {
     const uniqueDefinition = [
       { name: '_id', type: 'string', optional: false, autoGenerate: true },
