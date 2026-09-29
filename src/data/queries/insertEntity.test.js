@@ -108,4 +108,49 @@ describe('insertEntity', () => {
     await expect(insertEntity('foo', [{ reps: 'ten' }], {}))
       .rejects.toThrow('Value "ten" is not a valid int')
   })
+
+  describe('foreign keys', () => {
+    const exerciseDefinition = [
+      { name: '_id', type: 'string', optional: false, autoGenerate: true },
+      { name: 'name', type: 'string', optional: true, autoGenerate: false }
+    ]
+    const exerciseKeys = [
+      { type: 'primary', fields: ['_id'], lookup: 'pk__id.json' }
+    ]
+    const workoutDefinition = [
+      { name: '_id', type: 'string', optional: false, autoGenerate: true },
+      { name: 'exercise_id', type: 'string', optional: true, autoGenerate: false }
+    ]
+    const workoutKeys = [
+      { type: 'primary', fields: ['_id'], lookup: 'pk__id.json' },
+      {
+        type: 'foreign',
+        fields: ['exercise_id'],
+        lookup: 'fk_exercise_id.json',
+        references: [{ fields: ['exercises._id'], lookup: 'exercises.json' }]
+      }
+    ]
+
+    test('accepts a foreign key value that exists in the referenced record', async () => {
+      await create('exercises', exerciseDefinition, exerciseKeys)
+      const exercise = await insertEntity('exercises', [{ name: 'Bench Press' }], {})
+      await create('workouts', workoutDefinition, workoutKeys)
+      const result = await insertEntity('workouts', [{ exercise_id: exercise.exercises[0]._id }], {})
+      expect(result.workouts[0].exercise_id).toBe(exercise.exercises[0]._id)
+    })
+
+    test('rejects a foreign key value that does not exist in the referenced record', async () => {
+      await create('exercises', exerciseDefinition, exerciseKeys)
+      await create('workouts', workoutDefinition, workoutKeys)
+      await expect(insertEntity('workouts', [{ exercise_id: 'does-not-exist' }], {}))
+        .rejects.toThrow('Foreign key "exercise_id" on workouts references a nonexistent exercises._id = does-not-exist')
+    })
+
+    test('skips the check when an optional foreign key field is omitted', async () => {
+      await create('exercises', exerciseDefinition, exerciseKeys)
+      await create('workouts', workoutDefinition, workoutKeys)
+      const result = await insertEntity('workouts', [{}], {})
+      expect(result.workouts[0].exercise_id).toBeUndefined()
+    })
+  })
 })

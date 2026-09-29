@@ -4,6 +4,8 @@ import { keyGenerate } from '../introspect/policies/keyGenerate'
 import { keyUnique } from '../introspect/policies/keyUnique'
 import { useDefault } from '../introspect/policies/useDefault'
 import { typeCheck } from '../introspect/policies/typeCheck'
+import { foreignKeyExists } from '../introspect/policies/foreignKeyExists'
+import { splitEntityProperty } from '../utilities/parsers/splitEntityProperty'
 import { recordDefinition } from '../introspect/definitions/record'
 
 const gulpConfig = require('js-build-tools/gulp.config')
@@ -54,6 +56,30 @@ const assertUnique = async (entity: string, record: recordDefinition, entityValu
   }
 }
 
+/**
+ * Reject the insert if a single-field foreign key's value doesn't exist in the record it
+ * references.
+ * @param entity
+ * @param record
+ * @param entityValues
+ */
+const assertForeignKeys = async (entity: string, record: recordDefinition, entityValues: Object): Promise<void> => {
+  for (const key of record.keys) {
+    if (key.type !== 'foreign' || key.fields.length !== 1 || !key.references || key.references.length !== 1) {
+      continue
+    }
+    const field = key.fields[0]
+    if (!entityValues.hasOwnProperty(field)) {
+      continue
+    }
+    const { entity: refEntity, property: refProperty } = splitEntityProperty(key.references[0].fields[0])
+    const exists = await foreignKeyExists(refEntity, refProperty, entityValues[field])
+    if (!exists) {
+      throw new Error(`Foreign key "${field}" on ${entity} references a nonexistent ${refEntity}.${refProperty} = ${entityValues[field]}`)
+    }
+  }
+}
+
 export const insertEntity = async (entity: string = '', values: Object[] = [], dataSet: Object = {}): Promise<Object> => {
   const databasePath = gulpConfig.get('databasePath', 'database/')
   const record = await retrieveRecord(entity)
@@ -66,6 +92,7 @@ export const insertEntity = async (entity: string = '', values: Object[] = [], d
   for (const rowValues of values) {
     const entityValues = await buildEntityValues(entity, record, rowValues)
     await assertUnique(entity, record, entityValues)
+    await assertForeignKeys(entity, record, entityValues)
 
     const fileName = `${primaryKey ? entityValues[primaryKey.fields[0]] : crypto.randomUUID()}.json`
     await writeFile(`${databasePath}${record.path}/${fileName}`, JSON.stringify(entityValues, null, 2))
