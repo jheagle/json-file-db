@@ -2,9 +2,9 @@ import { retrieveFile } from '../utilities/retrieveFile'
 
 const gulpConfig = require('js-build-tools/gulp.config')
 const { rm } = require('fs/promises')
-const databasePath = gulpConfig.get('databasePath', 'database/')
 
 export const drop = async (record) => {
+  const databasePath = gulpConfig.get('databasePath', 'database/')
   if (record === '__RECORDS') {
     return null
   }
