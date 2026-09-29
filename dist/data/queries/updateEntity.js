@@ -4,7 +4,111 @@ Object.defineProperty(exports, '__esModule', {
   value: true
 })
 exports.updateEntity = void 0
-const updateEntity = (entity = '', values = {}, dataSet = {}) => {
-  return []
+require('core-js/modules/es.json.stringify.js')
+require('core-js/modules/esnext.iterator.constructor.js')
+require('core-js/modules/esnext.iterator.find.js')
+const _retrieveRecord = require('../utilities/retrieveRecord')
+const _retrieveFile = require('../utilities/retrieveFile')
+const _updateIndex = require('../utilities/updateIndex')
+const _removeFromIndex = require('../utilities/removeFromIndex')
+const _keyUnique = require('../introspect/policies/keyUnique')
+const gulpConfig = require('js-build-tools/gulp.config')
+const {
+  writeFile
+} = require('fs/promises')
+/**
+ * Same reasoning as deleteEntity: a record object carries no memory of which entry file it came
+ * from, so re-scan entries[] and match by the record's own primary key value.
+ * @param record
+ * @param primaryField
+ * @param primaryValue
+ */
+const findEntryFile = async (record, primaryField, primaryValue) => {
+  for (const fileName of record.entries) {
+    const data = await (0, _retrieveFile.retrieveFile)(`${record.path}/${fileName}`)
+    if (data[primaryField] == primaryValue) {
+      return fileName
+    }
+  }
+  return null
+}
+/**
+ * Only check uniqueness for a single-field primary/unique key whose value is actually changing -
+ * checking an unchanged value would find the record's own existing entry and wrongly report it
+ * as a duplicate of itself.
+ * @param entity
+ * @param record
+ * @param oldData
+ * @param newValues
+ */
+const assertUniqueForUpdate = async (entity, record, oldData, newValues) => {
+  for (const key of record.keys) {
+    if (key.type !== 'primary' && key.type !== 'unique' || key.fields.length !== 1) {
+      continue
+    }
+    const field = key.fields[0]
+    if (!newValues.hasOwnProperty(field) || newValues[field] == oldData[field]) {
+      continue
+    }
+    const isUnique = await (0, _keyUnique.keyUnique)(entity, key.fields, newValues[field])
+    if (!isUnique) {
+      throw new Error(`Duplicate value for ${key.type} key "${field}" on ${entity}`)
+    }
+  }
+}
+/**
+ * Move a single-field key's index entry from the old value to the new one wherever the update
+ * actually changed that field.
+ * @param record
+ * @param oldData
+ * @param newData
+ * @param newValues
+ * @param fileName
+ */
+const reconcileIndexes = async (record, oldData, newData, newValues, fileName) => {
+  for (const key of record.keys) {
+    if (key.fields.length !== 1) {
+      continue
+    }
+    const field = key.fields[0]
+    if (!newValues.hasOwnProperty(field) || newValues[field] == oldData[field]) {
+      continue
+    }
+    await (0, _removeFromIndex.removeFromIndex)(record.path, key, oldData[field], fileName)
+    await (0, _updateIndex.updateIndex)(record.path, key, newData[field], fileName)
+  }
+}
+const assertRequiredFields = (entity, record, newData) => {
+  for (const field of record.definition) {
+    if (!field.optional && typeof newData[field.name] === 'undefined') {
+      throw new Error(`Missing required field "${field.name}" for ${entity}`)
+    }
+  }
+}
+const updateEntity = async (entity = '', values = {}, dataSet = {}) => {
+  const databasePath = gulpConfig.get('databasePath', 'database/')
+  const record = await (0, _retrieveRecord.retrieveRecord)(entity)
+  const primaryKey = record.keys.find(key => key.type === 'primary' && key.fields.length === 1)
+  if (!primaryKey) {
+    throw new Error(`Cannot update "${entity}" without a single-field primary key`)
+  }
+  const primaryField = primaryKey.fields[0]
+  const toUpdate = dataSet[entity] || []
+  const updatedRows = []
+  for (const row of toUpdate) {
+    const fileName = await findEntryFile(record, primaryField, row[primaryField])
+    if (!fileName) {
+      throw new Error(`Could not find entry for ${entity} where "${primaryField}" = ${row[primaryField]}`)
+    }
+    const oldData = await (0, _retrieveFile.retrieveFile)(`${record.path}/${fileName}`)
+    await assertUniqueForUpdate(entity, record, oldData, values)
+    const newData = Object.assign({}, oldData, values)
+    assertRequiredFields(entity, record, newData)
+    await reconcileIndexes(record, oldData, newData, values, fileName)
+    await writeFile(`${databasePath}${record.path}/${fileName}`, JSON.stringify(newData, null, 2))
+    updatedRows.push(newData)
+  }
+  dataSet[entity] = updatedRows
+  return dataSet
 }
 exports.updateEntity = updateEntity
