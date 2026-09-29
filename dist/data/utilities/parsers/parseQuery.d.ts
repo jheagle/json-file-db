@@ -1,4 +1,6 @@
 import { ParsedCommand, ParsedEntity } from './findCommand';
+import { ParsedInsertRow } from './findInsertValues';
+import { ParsedUpdateValues } from './findUpdateValues';
 import { ParsedJoinEntity } from './findJoinEntity';
 import { ParsedSelect } from './findSelects';
 import { ParsedCondition } from './findConditions';
@@ -13,6 +15,8 @@ export type ParsedQuery = {
     entity: ParsedEntity | undefined;
     joinEntity: ParsedJoinEntity | undefined;
     selectClauses: ParsedSelect[];
+    insertValues: ParsedInsertRow[];
+    updateValues: ParsedUpdateValues;
     conditions: ParsedCondition[];
     joinClauses: ParsedJoinClause[];
     mergeJoins: ParsedMergeJoin[];

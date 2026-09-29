@@ -1,5 +1,7 @@
 import siFunciona from 'si-funciona'
 import { findCommand, ParsedCommand, ParsedEntity } from './findCommand'
+import { findInsertValues, ParsedInsertRow } from './findInsertValues'
+import { findUpdateValues, ParsedUpdateValues } from './findUpdateValues'
 import { findJoinEntity, ParsedJoinEntity } from './findJoinEntity'
 import { findSelects, ParsedSelect } from './findSelects'
 import { findConditions, ParsedCondition } from './findConditions'
@@ -15,6 +17,8 @@ export type ParsedQuery = {
   entity: ParsedEntity | undefined
   joinEntity: ParsedJoinEntity | undefined
   selectClauses: ParsedSelect[]
+  insertValues: ParsedInsertRow[]
+  updateValues: ParsedUpdateValues
   conditions: ParsedCondition[]
   joinClauses: ParsedJoinClause[]
   mergeJoins: ParsedMergeJoin[]
@@ -34,6 +38,8 @@ export const parseQuery = (query: string): ParsedQuery => {
     entity: undefined,
     joinEntity: undefined,
     selectClauses: [],
+    insertValues: [],
+    updateValues: {},
     conditions: [],
     joinClauses: [],
     mergeJoins: [],
@@ -47,6 +53,8 @@ export const parseQuery = (query: string): ParsedQuery => {
 
   query = pipe(
     curry(findCommand)(parsedQuery),
+    curry(findInsertValues)(parsedQuery),
+    curry(findUpdateValues)(parsedQuery),
     curry(findJoinEntity)(parsedQuery),
     curry(findSelects)(parsedQuery),
     curry(findConditions)(parsedQuery),

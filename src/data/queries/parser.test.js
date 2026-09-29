@@ -1,6 +1,56 @@
 import { parser } from './parser'
 
 describe('parser', () => {
+  test('can parse an update with a set clause and a where clause', () => {
+    const query = "update workouts set reps = 12, note = 'done' where date = '2024-06-02'"
+    const result = parser(query)
+    expect(result).toEqual([
+      {
+        command: 'update',
+        entity: 'workouts',
+        joinEntity: undefined,
+        selectClauses: [],
+        insertValues: [],
+        updateValues: { reps: 12, note: 'done' },
+        conditions: [
+          {
+            property: 'date',
+            comparator: '=',
+            value: '2024-06-02'
+          }
+        ],
+        joinClauses: [],
+        mergeJoins: [],
+        sortClauses: [],
+        groupBy: undefined,
+        limit: undefined,
+        offset: undefined,
+      }
+    ])
+  })
+
+  test('can parse an insert with a values clause', () => {
+    const query = "insert workouts values reps = 12, date = '2024-06-02'"
+    const result = parser(query)
+    expect(result).toEqual([
+      {
+        command: 'insert',
+        entity: 'workouts',
+        joinEntity: undefined,
+        selectClauses: [],
+        insertValues: [{ reps: 12, date: '2024-06-02' }],
+        updateValues: {},
+        conditions: [],
+        joinClauses: [],
+        mergeJoins: [],
+        sortClauses: [],
+        groupBy: undefined,
+        limit: undefined,
+        offset: undefined,
+      }
+    ])
+  })
+
   test('can parse simple read', () => {
     const query = 'read workouts'
       + ' where date = \'2024-06-02\''
@@ -11,6 +61,8 @@ describe('parser', () => {
         entity: 'workouts',
         joinEntity: undefined,
         selectClauses: [],
+        insertValues: [],
+        updateValues: {},
         conditions: [
           {
             property: 'date',
@@ -41,6 +93,8 @@ describe('parser', () => {
         entity: 'workouts',
         joinEntity: 'muscles',
         selectClauses: [],
+        insertValues: [],
+        updateValues: {},
         conditions: [
           {
             property: 'muscles.alias',
@@ -89,6 +143,8 @@ describe('parser', () => {
         entity: 'workouts',
         joinEntity: 'muscles',
         selectClauses: [],
+        insertValues: [],
+        updateValues: {},
         conditions: [
           {
             property: 'muscles.alias',
@@ -141,6 +197,8 @@ describe('parser', () => {
         entity: 'workouts',
         joinEntity: undefined,
         selectClauses: [],
+        insertValues: [],
+        updateValues: {},
         conditions: [],
         joinClauses: [],
         mergeJoins: [],
@@ -165,6 +223,8 @@ describe('parser', () => {
         entity: 'workouts',
         joinEntity: undefined,
         selectClauses: [],
+        insertValues: [],
+        updateValues: {},
         conditions: [],
         joinClauses: [],
         mergeJoins: [],
@@ -203,6 +263,8 @@ describe('parser', () => {
             alias: undefined,
           }
         ],
+        insertValues: [],
+        updateValues: {},
         conditions: [],
         joinClauses: [
           {
@@ -243,6 +305,8 @@ describe('parser', () => {
           { property: 'exercises.name', alias: 'exercise' },
           { property: 'read', alias: undefined }
         ],
+        insertValues: [],
+        updateValues: {},
         conditions: [],
         joinClauses: [
           {
@@ -264,6 +328,8 @@ describe('parser', () => {
         entity: 'exercises',
         joinEntity: undefined,
         selectClauses: [],
+        insertValues: [],
+        updateValues: {},
         conditions: [],
         joinClauses: [],
         mergeJoins: [],

@@ -24,6 +24,24 @@ describe('query', () => {
     expect(remaining[0].every(row => row.date === '2024-06-02')).toBe(true)
   })
 
+  test('it inserts a new row via a values clause', async () => {
+    const inserted = await query("insert workouts values _id = 99, exercise_id = 1, order = 0, date = '2024-06-10'")
+    expect(inserted[0]).toHaveLength(1)
+    expect(inserted[0][0]).toMatchObject({ _id: '99', exercise_id: '1', order: 0, date: '2024-06-10' })
+
+    const readBack = await query("read workouts where date = '2024-06-10'")
+    expect(readBack[0]).toHaveLength(1)
+  })
+
+  test('it updates matching rows via a set clause, resolved via an indexed condition', async () => {
+    const updated = await query("update workouts set reps = 20 where date = '2024-06-05'")
+    expect(updated[0]).toHaveLength(3)
+    expect(updated[0].every(row => row.reps === 20)).toBe(true)
+
+    const readBack = await query("read workouts where date = '2024-06-05'")
+    expect(readBack[0].every(row => row.reps === 20)).toBe(true)
+  })
+
   test('it reads with where', async () => {
     const queryString = 'read workouts where date = \'2024-06-02\''
     const result = await query(queryString)
