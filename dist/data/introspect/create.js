@@ -27,6 +27,9 @@ const create = async (recordName, definition = [], keys = []) => {
   if ((0, _testFilesystem.fileExists)(`${databasePath}${recordName}.json`)) {
     return null
   }
+  await mkdir(databasePath, {
+    recursive: true
+  })
   const recordContent = (0, _record.record)({
     path: recordName,
     definition,
