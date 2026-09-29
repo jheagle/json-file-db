@@ -1,7 +1,8 @@
 {
   "browser": {
-    "enabled": false,
-    "name": "jsonFileDb"
+    "enabled": true,
+    "name": "jsonFsQuery",
+    "ignore": ["fs", "fs/promises"]
   },
   "dist": {
     "main": "dist/index.js"

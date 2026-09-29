@@ -4,9 +4,9 @@ Read and manage data with JSON files - a small query engine that treats a folder
 a SQL-like query string (`read workouts where date = '2024-06-02'`) instead of a query builder API.
 
 > **Pre-release.** The core engine (schema management plus a full read/insert/update/delete query language) is
-> implemented and tested. Still open: multi-field keys, a browser-safe build, and referential integrity on
-> delete/update (see the repository's issue tracker for details). Expect the public API below to stay stable, but
-> breaking changes are possible before a 1.0 release.
+> implemented and tested. Still open: multi-field keys, and referential integrity on delete/update (see the
+> repository's issue tracker for details). Expect the public API below to stay stable, but breaking changes are
+> possible before a 1.0 release.
 
 ## Install
 
@@ -35,8 +35,23 @@ await query("delete workouts where date = '2024-06-02'")
 await drop('workouts')
 ```
 
-This is a Node-only admin API today - `create`/`drop`/`query` all read and write real files on disk. A
-browser-safe read-only build is planned but not yet built (see the pre-release note above).
+## In the browser
+
+A pre-built bundle is included (`browser/jsonFsQuery.js`, `.min.js` - also served directly via
+[unpkg](https://unpkg.com/json-fs-query) or [jsDelivr](https://cdn.jsdelivr.net/npm/json-fs-query)) and exposes the
+same functions as a global:
+
+```html
+<script src="https://unpkg.com/json-fs-query"></script>
+<script>
+  jsonFsQuery.configure({ databasePath: 'database/', relativePath: 'https://example.com/' })
+  jsonFsQuery.query("read workouts where date = '2024-06-02'").then(console.log)
+</script>
+```
+
+Reads work in the browser via `fetch()` - `create`/`drop`, and any write through `query()` (`insert`/`update`/
+`delete`), need real filesystem access and only work in Node. They're still present in the browser build (same
+public API either way), but throw if actually called there, rather than being silently unavailable.
 
 ## Documentation
 

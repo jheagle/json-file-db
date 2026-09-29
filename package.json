@@ -4,8 +4,11 @@
   "description": "Use json files to manage and read data.",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
+  "unpkg": "browser/jsonFsQuery.min.js",
+  "jsdelivr": "browser/jsonFsQuery.min.js",
   "files": [
-    "dist"
+    "dist",
+    "browser"
   ],
   "scripts": {
     "build": "gulp build",

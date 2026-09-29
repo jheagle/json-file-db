@@ -40,3 +40,16 @@ Object.defineProperty(exports, 'query', {
 var _query = require('./data/queries/query')
 var _introspect = require('./data/introspect')
 var _config = require('./data/utilities/config')
+// Loaded via a bare <script> tag (the browser bundle, standalone isn't wired up on the bundler
+// side), rather than require()/import - expose the same public API as a global, matching the
+// convention used by this project's sibling packages (e.g. pseudo-dom).
+if (typeof window !== 'undefined') {
+  // @ts-ignore
+  window.jsonFsQuery = {
+    query: _query.query,
+    create: _introspect.create,
+    drop: _introspect.drop,
+    describe: _introspect.describe,
+    configure: _config.configure
+  }
+}
