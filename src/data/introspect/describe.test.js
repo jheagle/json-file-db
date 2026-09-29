@@ -1,10 +1,10 @@
 import { create } from './create'
 import { describe as describeRecord } from './describe'
 import { testHelpers } from 'js-build-tools/testHelpers'
+import { configure } from '../utilities/config'
 
 const databasePath = 'describe-database/'
-const gulpConfig = testHelpers.gulpConfig
-gulpConfig.set('databasePath', databasePath)
+configure({ databasePath })
 testHelpers.setDefaults(databasePath)
 
 beforeEach(testHelpers.beforeEach)

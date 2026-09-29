@@ -1,8 +1,8 @@
 import { keyDefinition } from '../introspect/definitions/key'
 import { recordPath } from '../introspect/definitions/record'
 import { indexEntry } from './updateIndex'
+import { getSetting } from './config'
 
-const gulpConfig = require('js-build-tools/gulp.config')
 const { readFile, writeFile } = require('fs/promises')
 
 /**
@@ -18,7 +18,7 @@ export const removeFromIndex = async (path: recordPath = '', key: keyDefinition 
   if (!key || !key.lookup) {
     return null
   }
-  const databasePath = gulpConfig.get('databasePath', 'database/')
+  const databasePath = getSetting('databasePath', 'database/')
   const indexPath = `${databasePath}__indexes/${path}/${key.lookup}`
   let index: indexEntry[] = []
   try {

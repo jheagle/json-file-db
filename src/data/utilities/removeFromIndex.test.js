@@ -1,12 +1,12 @@
 import { updateIndex } from './updateIndex'
 import { removeFromIndex } from './removeFromIndex'
 import { testHelpers } from 'js-build-tools/testHelpers'
+import { configure } from './config'
 
 const { readFile } = require('fs/promises')
 
 const databasePath = 'remove-from-index-database/'
-const gulpConfig = testHelpers.gulpConfig
-gulpConfig.set('databasePath', databasePath)
+configure({ databasePath })
 testHelpers.setDefaults(databasePath)
 
 beforeEach(testHelpers.beforeEach)

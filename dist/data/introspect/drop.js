@@ -10,12 +10,12 @@ Object.defineProperty(exports, '__esModule', {
 exports.drop = void 0
 const _retrieveFile = require('../utilities/retrieveFile')
 const _deregisterRecord = require('../utilities/deregisterRecord')
-const gulpConfig = require('js-build-tools/gulp.config')
+const _config = require('../utilities/config')
 const {
   rm
 } = require('fs/promises')
 const drop = async record => {
-  const databasePath = gulpConfig.get('databasePath', 'database/')
+  const databasePath = (0, _config.getSetting)('databasePath', 'database/')
   if (record === '__RECORDS') {
     return null
   }

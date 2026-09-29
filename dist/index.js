@@ -7,6 +7,12 @@ require('core-js/modules/esnext.iterator.drop.js')
 Object.defineProperty(exports, '__esModule', {
   value: true
 })
+Object.defineProperty(exports, 'configure', {
+  enumerable: true,
+  get: function () {
+    return _config.configure
+  }
+})
 Object.defineProperty(exports, 'create', {
   enumerable: true,
   get: function () {
@@ -33,3 +39,4 @@ Object.defineProperty(exports, 'query', {
 })
 var _query = require('./data/queries/query')
 var _introspect = require('./data/introspect')
+var _config = require('./data/utilities/config')

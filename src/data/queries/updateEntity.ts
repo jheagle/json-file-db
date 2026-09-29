@@ -7,8 +7,8 @@ import { typeCheck } from '../introspect/policies/typeCheck'
 import { foreignKeyExists } from '../introspect/policies/foreignKeyExists'
 import { splitEntityProperty } from '../utilities/parsers/splitEntityProperty'
 import { recordDefinition } from '../introspect/definitions/record'
+import { getSetting } from '../utilities/config'
 
-const gulpConfig = require('js-build-tools/gulp.config')
 const { writeFile } = require('fs/promises')
 
 /**
@@ -129,7 +129,7 @@ const applyFieldTypes = (record: recordDefinition, values: Object): Object => {
 }
 
 export const updateEntity = async (entity: string = '', values: Object = {}, dataSet: Object = {}): Promise<Object> => {
-  const databasePath = gulpConfig.get('databasePath', 'database/')
+  const databasePath = getSetting('databasePath', 'database/')
   const record = await retrieveRecord(entity)
   const primaryKey = record.keys.find(key => key.type === 'primary' && key.fields.length === 1)
   if (!primaryKey) {

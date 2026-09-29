@@ -1,6 +1,6 @@
 import { recordDefinition } from '../introspect/definitions/record'
+import { getSetting } from './config'
 
-const gulpConfig = require('js-build-tools/gulp.config')
 const { readFile, writeFile } = require('fs/promises')
 
 /**
@@ -27,7 +27,7 @@ const defaultRegistry = (): recordDefinition => ({
  * @param recordName
  */
 export const registerRecord = async (recordName: string): Promise<recordDefinition> => {
-  const databasePath = gulpConfig.get('databasePath', 'database/')
+  const databasePath = getSetting('databasePath', 'database/')
   const registryPath = `${databasePath}__RECORDS.json`
   let registry: recordDefinition
   try {

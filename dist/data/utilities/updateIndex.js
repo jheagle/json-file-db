@@ -8,7 +8,7 @@ require('core-js/modules/es.array.includes.js')
 require('core-js/modules/es.json.stringify.js')
 require('core-js/modules/esnext.iterator.constructor.js')
 require('core-js/modules/esnext.iterator.find.js')
-const gulpConfig = require('js-build-tools/gulp.config')
+const _config = require('./config')
 const {
   readFile,
   writeFile,
@@ -27,7 +27,7 @@ const updateIndex = async (path = '', key = null, value = undefined, fileName = 
   if (!key || !key.lookup) {
     return null
   }
-  const databasePath = gulpConfig.get('databasePath', 'database/')
+  const databasePath = (0, _config.getSetting)('databasePath', 'database/')
   const indexDir = `${databasePath}__indexes/${path}`
   const indexPath = `${indexDir}/${key.lookup}`
   let index = []

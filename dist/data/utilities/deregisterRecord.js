@@ -7,7 +7,7 @@ exports.deregisterRecord = void 0
 require('core-js/modules/es.json.stringify.js')
 require('core-js/modules/esnext.iterator.constructor.js')
 require('core-js/modules/esnext.iterator.filter.js')
-const gulpConfig = require('js-build-tools/gulp.config')
+const _config = require('./config')
 const {
   readFile,
   writeFile
@@ -18,7 +18,7 @@ const {
  * @param recordName
  */
 const deregisterRecord = async recordName => {
-  const databasePath = gulpConfig.get('databasePath', 'database/')
+  const databasePath = (0, _config.getSetting)('databasePath', 'database/')
   const registryPath = `${databasePath}__RECORDS.json`
   let registry
   try {

@@ -1,5 +1,6 @@
 export { query } from './data/queries/query'
 export { create, drop, describe } from './data/introspect'
+export { configure } from './data/utilities/config'
 export {
   fieldProperties,
   fieldDefinition,

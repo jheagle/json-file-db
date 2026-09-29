@@ -1,11 +1,11 @@
 import { retrieveFile } from '../utilities/retrieveFile'
 import { deregisterRecord } from '../utilities/deregisterRecord'
+import { getSetting } from '../utilities/config'
 
-const gulpConfig = require('js-build-tools/gulp.config')
 const { rm } = require('fs/promises')
 
 export const drop = async (record) => {
-  const databasePath = gulpConfig.get('databasePath', 'database/')
+  const databasePath = getSetting('databasePath', 'database/')
   if (record === '__RECORDS') {
     return null
   }
