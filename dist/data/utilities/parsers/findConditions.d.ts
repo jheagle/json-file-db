@@ -1,5 +1,6 @@
+import { LiteralValue } from './parseLiteralValue';
 import { ParsedQuery } from './parseQuery';
-export type ConditionValue = string | number | boolean | null | any[];
+export type ConditionValue = LiteralValue;
 export type ParsedCondition = {
     property: string;
     comparator: string;

@@ -6,6 +6,8 @@ Object.defineProperty(exports, '__esModule', {
 exports.parseQuery = void 0
 const _siFunciona = _interopRequireDefault(require('si-funciona'))
 const _findCommand = require('./findCommand')
+const _findInsertValues = require('./findInsertValues')
+const _findUpdateValues = require('./findUpdateValues')
 const _findJoinEntity = require('./findJoinEntity')
 const _findSelects = require('./findSelects')
 const _findConditions = require('./findConditions')
@@ -26,6 +28,8 @@ const parseQuery = query => {
     entity: undefined,
     joinEntity: undefined,
     selectClauses: [],
+    insertValues: [],
+    updateValues: {},
     conditions: [],
     joinClauses: [],
     mergeJoins: [],
@@ -38,7 +42,7 @@ const parseQuery = query => {
     curry,
     pipe
   } = _siFunciona.default
-  query = pipe(curry(_findCommand.findCommand)(parsedQuery), curry(_findJoinEntity.findJoinEntity)(parsedQuery), curry(_findSelects.findSelects)(parsedQuery), curry(_findConditions.findConditions)(parsedQuery), curry(_findJoinClauses.findJoinClauses)(parsedQuery), curry(_findMergeJoins.findMergeJoins)(parsedQuery), curry(_findSortClauses.findSortClauses)(parsedQuery), curry(_findGroupBy.findGroupBy)(parsedQuery), curry(_findLimit.findLimit)(parsedQuery), curry(_findOffset.findOffset)(parsedQuery))(query)
+  query = pipe(curry(_findCommand.findCommand)(parsedQuery), curry(_findInsertValues.findInsertValues)(parsedQuery), curry(_findUpdateValues.findUpdateValues)(parsedQuery), curry(_findJoinEntity.findJoinEntity)(parsedQuery), curry(_findSelects.findSelects)(parsedQuery), curry(_findConditions.findConditions)(parsedQuery), curry(_findJoinClauses.findJoinClauses)(parsedQuery), curry(_findMergeJoins.findMergeJoins)(parsedQuery), curry(_findSortClauses.findSortClauses)(parsedQuery), curry(_findGroupBy.findGroupBy)(parsedQuery), curry(_findLimit.findLimit)(parsedQuery), curry(_findOffset.findOffset)(parsedQuery))(query)
   if (query) {
     throw new Error(`Unrecognized query value: ${query}`)
   }
