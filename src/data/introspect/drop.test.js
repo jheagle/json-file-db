@@ -1,5 +1,6 @@
 import { create } from './create'
 import { drop } from './drop'
+import { insertEntity } from '../queries/insertEntity'
 import { testHelpers } from 'js-build-tools/testHelpers'
 
 const { writeFile, readFile } = require('fs/promises')
@@ -40,5 +41,37 @@ describe('drop', () => {
     await drop('foo')
     const registry = JSON.parse(await readFile(`${databasePath}__RECORDS.json`, 'utf8'))
     expect(registry.entries).toEqual(['bar.json'])
+  })
+
+  test('removes the record\'s own definition file and data directory', async () => {
+    await create('foo', [], [])
+    expect(testHelpers.fileExists(`${databasePath}foo.json`)).toBeTruthy()
+    expect(testHelpers.fileExists(`${databasePath}foo`)).toBeTruthy()
+
+    await drop('foo')
+
+    expect(testHelpers.fileExists(`${databasePath}foo.json`)).toBeFalsy()
+    expect(testHelpers.fileExists(`${databasePath}foo`)).toBeFalsy()
+  })
+
+  test('removes the record\'s own index directory', async () => {
+    const definition = [
+      { name: '_id', type: 'string', optional: false, autoGenerate: true }
+    ]
+    const keys = [
+      { type: 'primary', fields: ['_id'], lookup: 'pk__id.json' }
+    ]
+    await create('foo', definition, keys)
+    await insertEntity('foo', [{}], {})
+    expect(testHelpers.fileExists(`${databasePath}__indexes/foo/pk__id.json`)).toBeTruthy()
+
+    await drop('foo')
+
+    expect(testHelpers.fileExists(`${databasePath}__indexes/foo`)).toBeFalsy()
+  })
+
+  test('does not throw when the record has no index directory to remove', async () => {
+    await create('foo', [], [])
+    await expect(drop('foo')).resolves.not.toThrow()
   })
 })

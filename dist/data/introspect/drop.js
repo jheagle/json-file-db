@@ -23,6 +23,15 @@ const drop = async record => {
   for (const file of recordFile.entries) {
     await rm(`${databasePath}${recordFile.path}/${file}`)
   }
+  await rm(`${databasePath}${recordFile.path}`, {
+    recursive: true,
+    force: true
+  })
+  await rm(`${databasePath}__indexes/${recordFile.path}`, {
+    recursive: true,
+    force: true
+  })
+  await rm(`${databasePath}${record}.json`)
   await (0, _deregisterRecord.deregisterRecord)(record)
 }
 exports.drop = drop
