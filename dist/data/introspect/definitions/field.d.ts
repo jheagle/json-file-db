@@ -3,7 +3,7 @@ export type fieldDefinition = {
     name: fieldName;
     type: string;
     optional: boolean;
-    default?: boolean;
+    default?: any;
     autoGenerate: boolean;
 };
 export type fieldProperties = {

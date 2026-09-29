@@ -19,7 +19,7 @@ export const runQuery = async (parsed) => {
     recordData[parsed.joinEntity] = await retrieveRecord(parsed.joinEntity)
   }
 
-  let dataSet = { [parsed.entity]: [] }
+  let dataSet: any = { [parsed.entity]: [] }
 
   parsed = await getConditionIndexedList(parsed, recordData, dataSet)
   parsed = await getJoinIndexedList(parsed, recordData, dataSet)
