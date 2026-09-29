@@ -7,6 +7,7 @@ exports.create = void 0
 require('core-js/modules/es.json.stringify.js')
 const _testFilesystem = require('test-filesystem')
 const _record = require('./definitions/record')
+const _registerRecord = require('../utilities/registerRecord')
 /**
  * Create a new record.
  * @param recordName
@@ -35,6 +36,7 @@ const create = async (recordName, definition = [], keys = []) => {
   await mkdir(`${databasePath}${recordName}`, {
     recursive: true
   })
+  await (0, _registerRecord.registerRecord)(recordName)
   return recordContent
 }
 exports.create = create

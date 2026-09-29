@@ -2,6 +2,7 @@ import { fileExists } from 'test-filesystem'
 import { record, recordDefinition } from './definitions/record'
 import { keyProperties } from './definitions/key'
 import { fieldProperties } from './definitions/field'
+import { registerRecord } from '../utilities/registerRecord'
 
 /**
  * Create a new record.
@@ -22,5 +23,6 @@ export const create = async (recordName: string, definition: fieldProperties[] =
   const recordContent = record({ path: recordName, definition: definition, keys: keys })
   await writeFile(`${databasePath}${recordName}.json`, JSON.stringify(recordContent, null, 2))
   await mkdir(`${databasePath}${recordName}`, { recursive: true })
+  await registerRecord(recordName)
   return recordContent
 }
