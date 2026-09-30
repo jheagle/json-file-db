@@ -261,4 +261,33 @@ describe('query', () => {
     const stillThere = await query('read exercises where _id = 1')
     expect(stillThere[0]).toHaveLength(1)
   })
+
+  test('limit caps how many rows a real query string returns', async () => {
+    const result = await query('read workouts sort date asc, order asc limit 2')
+    expect(result[0]).toHaveLength(2)
+    expect(result[0].map(row => row._id)).toEqual([1, 2])
+  })
+
+  test('offset skips that many rows, and combines with limit to page through a real query string', async () => {
+    const result = await query('read workouts sort date asc, order asc offset 2 limit 2')
+    expect(result[0]).toHaveLength(2)
+    expect(result[0].map(row => row._id)).toEqual([3, 4])
+  })
+
+  test('select shapes a real query string down to just the chosen columns, aliased when given', async () => {
+    const result = await query('read workouts select date, reps as repetitions where date = \'2024-06-02\'')
+    expect(result[0]).toEqual([
+      { date: '2024-06-02', repetitions: 10 },
+      { date: '2024-06-02', repetitions: 10 },
+      { date: '2024-06-02', repetitions: 10 }
+    ])
+  })
+
+  test('select, limit and offset all combine on the same real query string', async () => {
+    const result = await query('read workouts select _id, date sort date asc, order asc offset 1 limit 2')
+    expect(result[0]).toEqual([
+      { _id: 2, date: '2024-06-02' },
+      { _id: 3, date: '2024-06-02' }
+    ])
+  })
 })

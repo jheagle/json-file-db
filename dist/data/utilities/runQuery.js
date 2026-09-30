@@ -15,6 +15,8 @@ const _mergeJoins = require('../queries/mergeJoins')
 const _where = require('../queries/where')
 const _sortBy = require('../queries/sortBy')
 const _groupBy = require('../queries/groupBy')
+const _limitOffset = require('../queries/limitOffset')
+const _selectFields = require('../queries/selectFields')
 const _retrieveRecord = require('./retrieveRecord')
 const _getConditionIndexedList = require('./getConditionIndexedList')
 const _getJoinIndexedList = require('./getJoinIndexedList')
@@ -66,7 +68,9 @@ const runQuery = async parsed => {
     }, dataSet[parsed.entity])
   }
   dataSet[parsed.entity] = (0, _sortBy.sortBy)(dataSet[parsed.entity], parsed.sortClauses)
+  dataSet[parsed.entity] = (0, _limitOffset.limitOffset)(dataSet[parsed.entity], parsed.offset, parsed.limit)
   dataSet[parsed.entity] = (0, _groupBy.groupBy)(dataSet[parsed.entity], parsed.groupBy)
+  dataSet[parsed.entity] = (0, _selectFields.selectFields)(dataSet[parsed.entity], parsed.selectClauses)
   return dataSet
 }
 exports.runQuery = runQuery
