@@ -7,6 +7,8 @@ import { mergeJoins } from '../queries/mergeJoins'
 import { where } from '../queries/where'
 import { sortBy } from '../queries/sortBy'
 import { groupBy } from '../queries/groupBy'
+import { limitOffset } from '../queries/limitOffset'
+import { selectFields } from '../queries/selectFields'
 import { retrieveRecord } from './retrieveRecord'
 import { getConditionIndexedList } from './getConditionIndexedList'
 import { getJoinIndexedList } from './getJoinIndexedList'
@@ -69,7 +71,9 @@ export const runQuery = async (parsed) => {
   }
 
   dataSet[parsed.entity] = sortBy(dataSet[parsed.entity], parsed.sortClauses)
+  dataSet[parsed.entity] = limitOffset(dataSet[parsed.entity], parsed.offset, parsed.limit)
   dataSet[parsed.entity] = groupBy(dataSet[parsed.entity], parsed.groupBy)
+  dataSet[parsed.entity] = selectFields(dataSet[parsed.entity], parsed.selectClauses)
 
   return dataSet
 }
