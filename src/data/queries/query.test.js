@@ -253,4 +253,12 @@ describe('query', () => {
     const read = await query('read pairs')
     expect(read[0]).toEqual([{ _id: id, a: 'x', b: 'z' }])
   })
+
+  test('deleting a referenced record via a real query string is rejected while dependents exist', async () => {
+    await expect(query('delete exercises where _id = 1'))
+      .rejects.toThrow('Cannot delete from "exercises" where "_id" = 1 - other records still reference it')
+
+    const stillThere = await query('read exercises where _id = 1')
+    expect(stillThere[0]).toHaveLength(1)
+  })
 })

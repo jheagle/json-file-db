@@ -16,4 +16,10 @@ describe('config', () => {
     expect(getSetting('databasePath', 'database/')).toBe('still-my-data/')
     expect(getSetting('relativePath', '')).toBe('http://example.com')
   })
+
+  test('enforceForeignKeys defaults to true and can be turned off', () => {
+    expect(getSetting('enforceForeignKeys', true)).toBe(true)
+    configure({ enforceForeignKeys: false })
+    expect(getSetting('enforceForeignKeys', true)).toBe(false)
+  })
 })

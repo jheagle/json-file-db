@@ -17,6 +17,7 @@ const _computeKeyValue = require('../utilities/computeKeyValue')
 const _keyUnique = require('../introspect/policies/keyUnique')
 const _typeCheck = require('../introspect/policies/typeCheck')
 const _foreignKeyExists = require('../introspect/policies/foreignKeyExists')
+const _hasDependents = require('../introspect/policies/hasDependents')
 const _splitEntityProperty = require('../utilities/parsers/splitEntityProperty')
 const _config = require('../utilities/config')
 const {
@@ -98,6 +99,25 @@ const assertForeignKeysForUpdate = async (entity, record, oldData, newValues) =>
   }
 }
 /**
+ * RESTRICT: reject an update that would change a single-field primary key's value while another
+ * entity's foreign key still points at the old one - that reference would otherwise be left
+ * dangling, since the row itself isn't gone, just re-keyed. Only meaningful for a single-field
+ * primary key, matching foreign key support's own single-field-only scope.
+ * @param entity
+ * @param primaryKey
+ * @param oldData
+ * @param newValues
+ */
+const assertNoDependentsForUpdate = async (entity, primaryKey, oldData, newValues) => {
+  if (!(0, _config.getSetting)('enforceForeignKeys', true) || primaryKey.fields.length !== 1 || !keyFieldsChanged(primaryKey, oldData, newValues)) {
+    return
+  }
+  const property = primaryKey.fields[0]
+  if (await (0, _hasDependents.hasDependents)(entity, property, oldData[property])) {
+    throw new Error(`Cannot update "${entity}" where "${property}" = ${oldData[property]} - other records still reference it`)
+  }
+}
+/**
  * Move a key's index entry (single-field, or a composite for a multi-field key) from the old
  * value to the new one wherever the update actually changed one of its fields.
  * @param record
@@ -158,6 +178,7 @@ const updateEntity = async (entity = '', values = {}, dataSet = {}) => {
     const newData = Object.assign({}, oldData, typedValues)
     await assertUniqueForUpdate(entity, record, oldData, newData, typedValues)
     await assertForeignKeysForUpdate(entity, record, oldData, typedValues)
+    await assertNoDependentsForUpdate(entity, primaryKey, oldData, typedValues)
     assertRequiredFields(entity, record, newData)
     await reconcileIndexes(record, oldData, newData, typedValues, fileName)
     await writeFile(`${databasePath}${record.path}/${fileName}`, JSON.stringify(newData, null, 2))

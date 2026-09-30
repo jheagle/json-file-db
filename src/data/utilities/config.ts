@@ -1,11 +1,13 @@
 export type RuntimeSettings = {
   databasePath: string
   relativePath: string
+  enforceForeignKeys: boolean
 }
 
 const defaults: RuntimeSettings = {
   databasePath: 'database/',
-  relativePath: ''
+  relativePath: '',
+  enforceForeignKeys: true
 }
 
 let settings: RuntimeSettings = { ...defaults }
@@ -15,6 +17,11 @@ let settings: RuntimeSettings = { ...defaults }
  * relativePath (a URL prefix prepended to databasePath, used when reading over fetch() in a
  * browser). Call this once before using create()/drop()/query() - a fresh consumer has no other
  * way to point this package at their own data directory.
+ *
+ * enforceForeignKeys (default true) controls whether deleteEntity/updateEntity block an operation
+ * that would leave another record's foreign key pointing at a value that no longer exists -
+ * mirroring MySQL's own foreign_key_checks setting, which is also toggleable rather than always
+ * on, since strict enforcement isn't always what every consumer wants.
  * @param newSettings
  */
 export const configure = (newSettings: Partial<RuntimeSettings>): void => {

@@ -6,6 +6,7 @@ import { computeKeyValue } from '../utilities/computeKeyValue'
 import { keyUnique } from '../introspect/policies/keyUnique'
 import { typeCheck } from '../introspect/policies/typeCheck'
 import { foreignKeyExists } from '../introspect/policies/foreignKeyExists'
+import { hasDependents } from '../introspect/policies/hasDependents'
 import { splitEntityProperty } from '../utilities/parsers/splitEntityProperty'
 import { recordDefinition } from '../introspect/definitions/record'
 import { keyDefinition } from '../introspect/definitions/key'
@@ -91,6 +92,26 @@ const assertForeignKeysForUpdate = async (entity: string, record: recordDefiniti
 }
 
 /**
+ * RESTRICT: reject an update that would change a single-field primary key's value while another
+ * entity's foreign key still points at the old one - that reference would otherwise be left
+ * dangling, since the row itself isn't gone, just re-keyed. Only meaningful for a single-field
+ * primary key, matching foreign key support's own single-field-only scope.
+ * @param entity
+ * @param primaryKey
+ * @param oldData
+ * @param newValues
+ */
+const assertNoDependentsForUpdate = async (entity: string, primaryKey: keyDefinition, oldData: Object, newValues: Object): Promise<void> => {
+  if (!getSetting('enforceForeignKeys', true) || primaryKey.fields.length !== 1 || !keyFieldsChanged(primaryKey, oldData, newValues)) {
+    return
+  }
+  const property = primaryKey.fields[0]
+  if (await hasDependents(entity, property, oldData[property])) {
+    throw new Error(`Cannot update "${entity}" where "${property}" = ${oldData[property]} - other records still reference it`)
+  }
+}
+
+/**
  * Move a key's index entry (single-field, or a composite for a multi-field key) from the old
  * value to the new one wherever the update actually changed one of its fields.
  * @param record
@@ -155,6 +176,7 @@ export const updateEntity = async (entity: string = '', values: Object = {}, dat
     const newData = Object.assign({}, oldData, typedValues)
     await assertUniqueForUpdate(entity, record, oldData, newData, typedValues)
     await assertForeignKeysForUpdate(entity, record, oldData, typedValues)
+    await assertNoDependentsForUpdate(entity, primaryKey, oldData, typedValues)
 
     assertRequiredFields(entity, record, newData)
 
