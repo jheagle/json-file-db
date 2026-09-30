@@ -1,4 +1,5 @@
 import { query } from './query'
+import { create } from '../introspect/create'
 import { testHelpers } from 'js-build-tools/testHelpers'
 import { configure } from '../utilities/config'
 import { copyDatabase } from '../../../test-data/copyDatabase'
@@ -229,5 +230,27 @@ describe('query', () => {
         ]
       }
     ])
+  })
+
+  test('a multi-field unique key works end-to-end through insert/update query strings', async () => {
+    await create('pairs', [
+      { name: '_id', type: 'string', optional: false, autoGenerate: true },
+      { name: 'a', type: 'string', optional: true },
+      { name: 'b', type: 'string', optional: true }
+    ], [
+      { type: 'primary', fields: ['_id'], lookup: 'pk__id.json' },
+      { type: 'unique', fields: ['a', 'b'], lookup: 'unique_a_b.json' }
+    ])
+
+    const inserted = await query("insert pairs values a = 'x', b = 'y'")
+    expect(inserted[0]).toHaveLength(1)
+
+    await expect(query("insert pairs values a = 'x', b = 'y'"))
+      .rejects.toThrow('Duplicate value for unique key "a, b" on pairs')
+
+    const id = inserted[0][0]._id
+    await query(`update pairs set b = 'z' where _id = '${id}'`)
+    const read = await query('read pairs')
+    expect(read[0]).toEqual([{ _id: id, a: 'x', b: 'z' }])
   })
 })

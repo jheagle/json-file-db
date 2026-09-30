@@ -10,7 +10,7 @@ const keyGenerate = async (entity, references = []) => {
   let isUnique = false
   while (!isUnique) {
     uuid = crypto.randomUUID()
-    isUnique = await (0, _keyUnique.keyUnique)(entity, references, uuid)
+    isUnique = await (0, _keyUnique.keyUnique)(entity, references, [uuid])
   }
   return uuid
 }

@@ -109,6 +109,56 @@ describe('insertEntity', () => {
       .rejects.toThrow('Value "ten" is not a valid int')
   })
 
+  describe('multi-field keys', () => {
+    const multiDefinition = [
+      { name: '_id', type: 'string', optional: false, autoGenerate: true },
+      { name: 'a', type: 'string', optional: true },
+      { name: 'b', type: 'string', optional: true }
+    ]
+    const multiUniqueKeys = [
+      { type: 'primary', fields: ['_id'], lookup: 'pk__id.json' },
+      { type: 'unique', fields: ['a', 'b'], lookup: 'unique_a_b.json' }
+    ]
+
+    test('accepts a row whose composite value is new, even if individual fields repeat', async () => {
+      await create('foo', multiDefinition, multiUniqueKeys)
+      await insertEntity('foo', [{ a: 'x', b: 'y' }], {})
+      const result = await insertEntity('foo', [{ a: 'x', b: 'z' }], {})
+      expect(result.foo[0].a).toBe('x')
+      expect(result.foo[0].b).toBe('z')
+    })
+
+    test('rejects a row whose composite value duplicates an existing one', async () => {
+      await create('foo', multiDefinition, multiUniqueKeys)
+      await insertEntity('foo', [{ a: 'x', b: 'y' }], {})
+      await expect(insertEntity('foo', [{ a: 'x', b: 'y' }], {}))
+        .rejects.toThrow('Duplicate value for unique key "a, b" on foo')
+    })
+
+    test('indexes a multi-field key as a composite value', async () => {
+      await create('foo', multiDefinition, multiUniqueKeys)
+      const inserted = await insertEntity('foo', [{ a: 'x', b: 'y' }], {})
+      const indexFile = JSON.parse(await readFile(`${databasePath}__indexes/foo/unique_a_b.json`, 'utf8'))
+      expect(indexFile).toEqual([{ value: JSON.stringify(['x', 'y']), record: [`${inserted.foo[0]._id}.json`] }])
+    })
+
+    test('a genuinely composite (multi-field) primary key works, with a UUID-based filename', async () => {
+      const compositePrimaryKeys = [
+        { type: 'primary', fields: ['a', 'b'], lookup: 'pk_a_b.json' }
+      ]
+      await create('foo', multiDefinition, compositePrimaryKeys)
+      const inserted = await insertEntity('foo', [{ a: 'x', b: 'y' }], {})
+      expect(inserted.foo[0].a).toBe('x')
+      expect(inserted.foo[0].b).toBe('y')
+      const recordFile = JSON.parse(await readFile(`${databasePath}foo.json`, 'utf8'))
+      expect(recordFile.entries).toHaveLength(1)
+      // No single-field primary key exists, so the filename falls back to a generated UUID -
+      // never derived from the composite key's own field values.
+      expect(recordFile.entries[0]).not.toContain('x')
+      expect(recordFile.entries[0]).not.toContain('y')
+    })
+  })
+
   describe('foreign keys', () => {
     const exerciseDefinition = [
       { name: '_id', type: 'string', optional: false, autoGenerate: true },
