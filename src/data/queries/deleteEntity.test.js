@@ -115,4 +115,65 @@ describe('deleteEntity', () => {
       expect(indexFile).toEqual([])
     })
   })
+
+  describe('referential integrity', () => {
+    const exerciseDefinition = [
+      { name: '_id', type: 'string', optional: false, autoGenerate: true },
+      { name: 'name', type: 'string', optional: true }
+    ]
+    const exerciseKeys = [
+      { type: 'primary', fields: ['_id'], lookup: 'pk__id.json' }
+    ]
+    const workoutDefinition = [
+      { name: '_id', type: 'string', optional: false, autoGenerate: true },
+      { name: 'exercise_id', type: 'string', optional: true }
+    ]
+    const workoutKeys = [
+      { type: 'primary', fields: ['_id'], lookup: 'pk__id.json' },
+      {
+        type: 'foreign',
+        fields: ['exercise_id'],
+        lookup: 'fk_exercise_id.json',
+        references: [{ fields: ['exercises._id'], lookup: 'exercises.json' }]
+      }
+    ]
+
+    afterEach(() => configure({ enforceForeignKeys: true }))
+
+    test('rejects deleting a record that another entity still references', async () => {
+      await create('exercises', exerciseDefinition, exerciseKeys)
+      const exercise = await insertEntity('exercises', [{ name: 'Bench Press' }], {})
+      await create('workouts', workoutDefinition, workoutKeys)
+      await insertEntity('workouts', [{ exercise_id: exercise.exercises[0]._id }], {})
+
+      await expect(deleteEntity('exercises', { exercises: [exercise.exercises[0]] }))
+        .rejects.toThrow(`Cannot delete from "exercises" where "_id" = ${exercise.exercises[0]._id} - other records still reference it`)
+
+      expect(testHelpers.fileExists(`${databasePath}exercises/${exercise.exercises[0]._id}.json`)).toBeTruthy()
+    })
+
+    test('allows deleting once the dependent record is gone', async () => {
+      await create('exercises', exerciseDefinition, exerciseKeys)
+      const exercise = await insertEntity('exercises', [{ name: 'Bench Press' }], {})
+      await create('workouts', workoutDefinition, workoutKeys)
+      const workout = await insertEntity('workouts', [{ exercise_id: exercise.exercises[0]._id }], {})
+      await deleteEntity('workouts', { workouts: [workout.workouts[0]] })
+
+      await deleteEntity('exercises', { exercises: [exercise.exercises[0]] })
+
+      expect(testHelpers.fileExists(`${databasePath}exercises/${exercise.exercises[0]._id}.json`)).toBeFalsy()
+    })
+
+    test('allows the delete anyway when enforceForeignKeys is turned off', async () => {
+      await create('exercises', exerciseDefinition, exerciseKeys)
+      const exercise = await insertEntity('exercises', [{ name: 'Bench Press' }], {})
+      await create('workouts', workoutDefinition, workoutKeys)
+      await insertEntity('workouts', [{ exercise_id: exercise.exercises[0]._id }], {})
+
+      configure({ enforceForeignKeys: false })
+      await deleteEntity('exercises', { exercises: [exercise.exercises[0]] })
+
+      expect(testHelpers.fileExists(`${databasePath}exercises/${exercise.exercises[0]._id}.json`)).toBeFalsy()
+    })
+  })
 })

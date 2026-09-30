@@ -28,11 +28,32 @@ const _retrieveRecord = require('../utilities/retrieveRecord')
 const _retrieveFile = require('../utilities/retrieveFile')
 const _removeFromIndex = require('../utilities/removeFromIndex')
 const _computeKeyValue = require('../utilities/computeKeyValue')
+const _hasDependents = require('../introspect/policies/hasDependents')
 const _config = require('../utilities/config')
 const {
   rm,
   writeFile
 } = require('fs/promises')
+/**
+ * RESTRICT: reject the whole delete (before removing anything) if any row being deleted is still
+ * referenced by a single-field foreign key elsewhere. Only meaningful for a single-field primary
+ * key, since foreign key support itself is single-field only - a composite primary key can't be
+ * the target of one yet, so there's nothing to check.
+ * @param entity
+ * @param primaryKey
+ * @param toDelete
+ */
+const assertNoDependents = async (entity, primaryKey, toDelete) => {
+  if (!(0, _config.getSetting)('enforceForeignKeys', true) || primaryKey.fields.length !== 1) {
+    return
+  }
+  const property = primaryKey.fields[0]
+  for (const row of toDelete) {
+    if (await (0, _hasDependents.hasDependents)(entity, property, row[property])) {
+      throw new Error(`Cannot delete from "${entity}" where "${property}" = ${row[property]} - other records still reference it`)
+    }
+  }
+}
 /**
  * A record object carries no memory of which entry file it was read from, and files are not
  * guaranteed to be named after any field's value, so the only reliable way to find a record's
@@ -70,6 +91,7 @@ const deleteEntity = async (entity = '', dataSet = {}) => {
   if (!toDelete.length) {
     return dataSet
   }
+  await assertNoDependents(entity, primaryKey, toDelete)
   const deletedValues = new Set(toDelete.map(row => (0, _computeKeyValue.computeKeyValue)(primaryKey.fields, row)))
   record.entries = await removeMatchingEntries(entity, record, primaryKey, deletedValues)
   await writeFile(`${databasePath}${record.path}.json`, JSON.stringify(record, null, 2))
