@@ -31,10 +31,10 @@ describe('updateEntity', () => {
     expect(result).toEqual({ foo: [] })
   })
 
-  test('throws when the record has no single-field primary key', async () => {
+  test('throws when the record has no primary key', async () => {
     await create('foo', definition, [])
     await expect(updateEntity('foo', { bar: 'x' }, { foo: [{ _id: '1' }] }))
-      .rejects.toThrow('Cannot update "foo" without a single-field primary key')
+      .rejects.toThrow('Cannot update "foo" without a primary key')
   })
 
   test('throws when no entry matches the row being updated', async () => {
@@ -224,5 +224,68 @@ describe('updateEntity', () => {
 
     const result = await updateEntity('foo', { email: 'same@example.com' }, { foo: [row] })
     expect(result.foo[0].email).toBe('same@example.com')
+  })
+
+  describe('multi-field keys', () => {
+    const compositePrimaryDefinition = [
+      { name: 'a', type: 'string', optional: false },
+      { name: 'b', type: 'string', optional: false },
+      { name: 'note', type: 'string', optional: true }
+    ]
+    const compositePrimaryKeys = [
+      { type: 'primary', fields: ['a', 'b'], lookup: 'pk_a_b.json' }
+    ]
+
+    test('finds the right row by a composite (multi-field) primary key, leaving the other row untouched', async () => {
+      await create('foo', compositePrimaryDefinition, compositePrimaryKeys)
+      await insertEntity('foo', [{ a: 'x', b: 'y', note: 'first' }, { a: 'x', b: 'z', note: 'second' }], {})
+
+      const result = await updateEntity('foo', { note: 'updated' }, { foo: [{ a: 'x', b: 'y' }] })
+      expect(result.foo).toEqual([{ a: 'x', b: 'y', note: 'updated' }])
+
+      const recordFile = JSON.parse(await readFile(`${databasePath}foo.json`, 'utf8'))
+      const entryContents = await Promise.all(
+        recordFile.entries.map(fileName => readFile(`${databasePath}foo/${fileName}`, 'utf8').then(JSON.parse))
+      )
+      expect(entryContents).toContainEqual({ a: 'x', b: 'y', note: 'updated' })
+      expect(entryContents).toContainEqual({ a: 'x', b: 'z', note: 'second' })
+    })
+
+    test('moves a changed multi-field unique key value to a new composite index entry', async () => {
+      const multiUniqueDefinition = [
+        { name: '_id', type: 'string', optional: false, autoGenerate: true },
+        { name: 'a', type: 'string', optional: true },
+        { name: 'b', type: 'string', optional: true }
+      ]
+      const multiUniqueKeys = [
+        { type: 'primary', fields: ['_id'], lookup: 'pk__id.json' },
+        { type: 'unique', fields: ['a', 'b'], lookup: 'unique_a_b.json' }
+      ]
+      await create('foo', multiUniqueDefinition, multiUniqueKeys)
+      const inserted = await insertEntity('foo', [{ a: 'x', b: 'y' }], {})
+      const row = inserted.foo[0]
+
+      await updateEntity('foo', { b: 'z' }, { foo: [row] })
+
+      const indexFile = JSON.parse(await readFile(`${databasePath}__indexes/foo/unique_a_b.json`, 'utf8'))
+      expect(indexFile).toEqual([{ value: JSON.stringify(['x', 'z']), record: [`${row._id}.json`] }])
+    })
+
+    test('rejects an update whose new composite value collides with another record', async () => {
+      const multiUniqueDefinition = [
+        { name: '_id', type: 'string', optional: false, autoGenerate: true },
+        { name: 'a', type: 'string', optional: true },
+        { name: 'b', type: 'string', optional: true }
+      ]
+      const multiUniqueKeys = [
+        { type: 'primary', fields: ['_id'], lookup: 'pk__id.json' },
+        { type: 'unique', fields: ['a', 'b'], lookup: 'unique_a_b.json' }
+      ]
+      await create('foo', multiUniqueDefinition, multiUniqueKeys)
+      const inserted = await insertEntity('foo', [{ a: 'x', b: 'y' }, { a: 'x', b: 'z' }], {})
+
+      await expect(updateEntity('foo', { b: 'z' }, { foo: [inserted.foo[0]] }))
+        .rejects.toThrow('Duplicate value for unique key "a, b" on foo')
+    })
   })
 })

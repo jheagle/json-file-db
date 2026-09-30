@@ -6,6 +6,7 @@ import { useDefault } from '../introspect/policies/useDefault'
 import { typeCheck } from '../introspect/policies/typeCheck'
 import { foreignKeyExists } from '../introspect/policies/foreignKeyExists'
 import { splitEntityProperty } from '../utilities/parsers/splitEntityProperty'
+import { computeKeyValue } from '../utilities/computeKeyValue'
 import { recordDefinition } from '../introspect/definitions/record'
 import { getSetting } from '../utilities/config'
 
@@ -39,19 +40,21 @@ const buildEntityValues = async (entity: string, record: recordDefinition, rowVa
 }
 
 /**
- * Reject the insert if it collides with an existing primary or unique single-field key value.
+ * Reject the insert if it collides with an existing primary or unique key value - a single field,
+ * or a composite of several for a multi-field key.
  * @param entity
  * @param record
  * @param entityValues
  */
 const assertUnique = async (entity: string, record: recordDefinition, entityValues: Object): Promise<void> => {
   for (const key of record.keys) {
-    if ((key.type !== 'primary' && key.type !== 'unique') || key.fields.length !== 1) {
+    if (key.type !== 'primary' && key.type !== 'unique') {
       continue
     }
-    const isUnique = await keyUnique(entity, key.fields, entityValues[key.fields[0]])
+    const checkKeys = key.fields.map(field => entityValues[field])
+    const isUnique = await keyUnique(entity, key.fields, checkKeys)
     if (!isUnique) {
-      throw new Error(`Duplicate value for ${key.type} key "${key.fields[0]}" on ${entity}`)
+      throw new Error(`Duplicate value for ${key.type} key "${key.fields.join(', ')}" on ${entity}`)
     }
   }
 }
@@ -101,9 +104,7 @@ export const insertEntity = async (entity: string = '', values: Object[] = [], d
     await writeFile(`${databasePath}${record.path}.json`, JSON.stringify(record, null, 2))
 
     for (const key of record.keys) {
-      if (key.fields.length === 1) {
-        await updateIndex(record.path, key, entityValues[key.fields[0]], fileName)
-      }
+      await updateIndex(record.path, key, computeKeyValue(key.fields, entityValues), fileName)
     }
 
     dataSet[entity].push(entityValues)

@@ -7,6 +7,7 @@ exports.insertEntity = void 0
 require('core-js/modules/es.json.stringify.js')
 require('core-js/modules/esnext.iterator.constructor.js')
 require('core-js/modules/esnext.iterator.find.js')
+require('core-js/modules/esnext.iterator.map.js')
 const _retrieveRecord = require('../utilities/retrieveRecord')
 const _updateIndex = require('../utilities/updateIndex')
 const _keyGenerate = require('../introspect/policies/keyGenerate')
@@ -15,6 +16,7 @@ const _useDefault = require('../introspect/policies/useDefault')
 const _typeCheck = require('../introspect/policies/typeCheck')
 const _foreignKeyExists = require('../introspect/policies/foreignKeyExists')
 const _splitEntityProperty = require('../utilities/parsers/splitEntityProperty')
+const _computeKeyValue = require('../utilities/computeKeyValue')
 const _config = require('../utilities/config')
 const {
   writeFile
@@ -46,19 +48,21 @@ const buildEntityValues = async (entity, record, rowValues = {}) => {
   return entityValues
 }
 /**
- * Reject the insert if it collides with an existing primary or unique single-field key value.
+ * Reject the insert if it collides with an existing primary or unique key value - a single field,
+ * or a composite of several for a multi-field key.
  * @param entity
  * @param record
  * @param entityValues
  */
 const assertUnique = async (entity, record, entityValues) => {
   for (const key of record.keys) {
-    if (key.type !== 'primary' && key.type !== 'unique' || key.fields.length !== 1) {
+    if (key.type !== 'primary' && key.type !== 'unique') {
       continue
     }
-    const isUnique = await (0, _keyUnique.keyUnique)(entity, key.fields, entityValues[key.fields[0]])
+    const checkKeys = key.fields.map(field => entityValues[field])
+    const isUnique = await (0, _keyUnique.keyUnique)(entity, key.fields, checkKeys)
     if (!isUnique) {
-      throw new Error(`Duplicate value for ${key.type} key "${key.fields[0]}" on ${entity}`)
+      throw new Error(`Duplicate value for ${key.type} key "${key.fields.join(', ')}" on ${entity}`)
     }
   }
 }
@@ -104,9 +108,7 @@ const insertEntity = async (entity = '', values = [], dataSet = {}) => {
     record.entries.push(fileName)
     await writeFile(`${databasePath}${record.path}.json`, JSON.stringify(record, null, 2))
     for (const key of record.keys) {
-      if (key.fields.length === 1) {
-        await (0, _updateIndex.updateIndex)(record.path, key, entityValues[key.fields[0]], fileName)
-      }
+      await (0, _updateIndex.updateIndex)(record.path, key, (0, _computeKeyValue.computeKeyValue)(key.fields, entityValues), fileName)
     }
     dataSet[entity].push(entityValues)
   }

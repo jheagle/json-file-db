@@ -33,10 +33,10 @@ describe('deleteEntity', () => {
     expect(recordFile.entries).toEqual([`${inserted.foo[0]._id}.json`])
   })
 
-  test('throws when the record has no single-field primary key', async () => {
+  test('throws when the record has no primary key', async () => {
     await create('foo', definition, [])
     await expect(deleteEntity('foo', { foo: [{ _id: '1' }] }))
-      .rejects.toThrow('Cannot delete from "foo" without a single-field primary key')
+      .rejects.toThrow('Cannot delete from "foo" without a primary key')
   })
 
   test('removes the matching entry file, entries[] entry, and index entry', async () => {
@@ -82,5 +82,37 @@ describe('deleteEntity', () => {
 
     const recordFile = JSON.parse(await readFile(`${databasePath}foo.json`, 'utf8'))
     expect(recordFile.entries).toEqual([`${inserted.foo[1]._id}.json`])
+  })
+
+  describe('multi-field primary key', () => {
+    const multiDefinition = [
+      { name: 'a', type: 'string', optional: false },
+      { name: 'b', type: 'string', optional: false }
+    ]
+    const compositePrimaryKeys = [
+      { type: 'primary', fields: ['a', 'b'], lookup: 'pk_a_b.json' }
+    ]
+
+    test('deletes only the row matching every field of the composite key', async () => {
+      await create('foo', multiDefinition, compositePrimaryKeys)
+      const inserted = await insertEntity('foo', [{ a: 'x', b: 'y' }, { a: 'x', b: 'z' }], {})
+
+      await deleteEntity('foo', { foo: [{ a: 'x', b: 'y' }] })
+
+      const recordFile = JSON.parse(await readFile(`${databasePath}foo.json`, 'utf8'))
+      expect(recordFile.entries).toHaveLength(1)
+      const remaining = JSON.parse(await readFile(`${databasePath}foo/${recordFile.entries[0]}`, 'utf8'))
+      expect(remaining).toEqual(inserted.foo[1])
+    })
+
+    test('removes the composite index entry too', async () => {
+      await create('foo', multiDefinition, compositePrimaryKeys)
+      await insertEntity('foo', [{ a: 'x', b: 'y' }], {})
+
+      await deleteEntity('foo', { foo: [{ a: 'x', b: 'y' }] })
+
+      const indexFile = JSON.parse(await readFile(`${databasePath}__indexes/foo/pk_a_b.json`, 'utf8'))
+      expect(indexFile).toEqual([])
+    })
   })
 })
