@@ -3,10 +3,12 @@
 Read and manage data with JSON files - a small query engine that treats a folder of JSON files as a database, with
 a SQL-like query string (`read workouts where date = '2024-06-02'`) instead of a query builder API.
 
-> **Pre-release.** The core engine (schema management plus a full read/insert/update/delete query language) is
-> implemented and tested. Still open: multi-field keys, and referential integrity on delete/update (see the
-> repository's issue tracker for details). Expect the public API below to stay stable, but breaking changes are
-> possible before a 1.0 release.
+The core engine (schema management, a full read/insert/update/delete query language, single- and multi-field key
+support, and referential integrity) is implemented and tested. Still open, tracked for whenever they're actually
+needed: multi-field *foreign* keys specifically (single-field ones work; composite primary/unique/index keys work
+too), and CASCADE/SET NULL modes for referential integrity (deleting/updating a referenced record is RESTRICTed -
+blocked outright - rather than cascading or nulling out the dependents; see `configure()` below to turn that
+enforcement off entirely if it doesn't fit your workflow).
 
 ## Install
 
@@ -34,6 +36,24 @@ await query("delete workouts where date = '2024-06-02'")
 
 await drop('workouts')
 ```
+
+## Configuration
+
+`configure()` sets where this package's data lives and how strictly it enforces foreign keys - call it once,
+before anything else:
+
+```js
+const { configure } = require('json-fs-query')
+
+configure({
+  databasePath: 'database/',   // where the JSON files live (default 'database/')
+  relativePath: '',            // URL prefix prepended to databasePath when reading via fetch() in a browser
+  enforceForeignKeys: true     // RESTRICT delete/update of a record other entities still reference (default true)
+})
+```
+
+Turning `enforceForeignKeys` off restores the pre-1.0 behavior (no referential integrity checks at all) - useful if
+it doesn't fit a particular workflow, mirroring MySQL's own toggleable `foreign_key_checks`.
 
 ## In the browser
 
