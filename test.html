@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>json-fs-query test</title>
+    <script src="./browser/jsonFsQuery.js"></script>
+</head>
+<body>
+<h1>json-fs-query local test page</h1>
+<p>Loads the real built bundle (<code>./browser/jsonFsQuery.js</code>) directly from this repo, reading the
+    <code>test-data/</code> fixtures over <code>fetch()</code> - run <code>npm run build</code> first if the
+    bundle is out of date. Writes (<code>create</code>/<code>insert</code>/<code>update</code>/<code>delete</code>)
+    only work in Node, not here - reads are all this page can demonstrate.</p>
+
+<h2>read workouts where date = '2024-06-02'</h2>
+<pre id="workouts">Loading...</pre>
+
+<h2>read workouts.muscles (joined + merged)</h2>
+<pre id="joined">Loading...</pre>
+
+<script>
+    window.addEventListener('DOMContentLoaded', async () => {
+        console.log(jsonFsQuery, 'jsonFsQuery loaded')
+        jsonFsQuery.configure({ databasePath: 'test-data/', relativePath: '' })
+
+        try {
+            const [rows] = await jsonFsQuery.query("read workouts where date = '2024-06-02'")
+            document.getElementById('workouts').textContent = JSON.stringify(rows, null, 2)
+        } catch (e) {
+            document.getElementById('workouts').textContent = 'Error: ' + e.message
+        }
+
+        try {
+            const queryString = 'read workouts.muscles'
+                + ' on workouts.exercise_id = exercises._id'
+                + ' and on exercises._id = exercise_muscle.exercise_id'
+                + ' and on exercise_muscle.muscle_id = muscles._id'
+                + ' merge muscles._id with exercise_muscle.muscle_id'
+                + " where date = '2024-06-02'"
+            const [rows] = await jsonFsQuery.query(queryString)
+            document.getElementById('joined').textContent = JSON.stringify(rows, null, 2)
+        } catch (e) {
+            document.getElementById('joined').textContent = 'Error: ' + e.message
+        }
+    })
+</script>
+</body>
+</html>
