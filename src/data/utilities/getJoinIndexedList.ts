@@ -23,6 +23,13 @@ export const getJoinIndexedList = async (parsed: ParsedQuery, recordData, dataSe
     // was actually parsed - silently discarding every join clause whenever the query had no WHERE.
     return parsed
   }
+  if (!joinClauses.length) {
+    // A WHERE condition DID index entity's own rows above, but this query has no join at all -
+    // joinEntity is undefined. The loop below writes dataSets[entity][anEntity][joinEntity]
+    // unconditionally; left unguarded, that assigns a literal "undefined" key (object[undefined]
+    // coerces to the string "undefined") onto every row, since there's no join to actually attach.
+    return parsed
+  }
   for (const anEntity in dataSets[entity]) {
     const currentEntity = dataSets[entity][anEntity]
     // Loop over each of the main entities
