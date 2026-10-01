@@ -25,6 +25,15 @@ describe('query', () => {
     expect(remaining[0].every(row => row.date === '2024-06-02')).toBe(true)
   })
 
+  test('a read resolved via an indexed condition, with no join at all, does not add a stray "undefined" key', async () => {
+    const [rows] = await query('read workouts where exercise_id = 1 sort date desc limit 1')
+    expect(rows).toHaveLength(1)
+    expect(rows[0]).not.toHaveProperty('undefined')
+    expect(Object.keys(rows[0]).sort()).toEqual(
+      ['_id', 'date', 'exercise_id', 'note', 'order', 'reps', 'sets', 'weight_effort'].sort()
+    )
+  })
+
   test('a read whose indexed condition genuinely matches nothing returns nothing, not every row', async () => {
     const result = await query('read workouts where exercise_id = 999')
     expect(result[0]).toEqual([])
