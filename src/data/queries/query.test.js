@@ -159,6 +159,16 @@ describe('query', () => {
     ])
   })
 
+  test('it reads with joins and no where clause at all - every row, not just an indexed subset, gets joined', async () => {
+    const queryString = 'read workouts.exercises on workouts.exercise_id = exercises._id'
+    const [rows] = await query(queryString)
+    expect(rows).toHaveLength(6)
+    rows.forEach(row => {
+      expect(row.exercises).toHaveLength(1)
+      expect(row.exercises[0]._id).toBe(row.exercise_id)
+    })
+  })
+
   test('it can use sort and group by', async () => {
     const queryString = 'read workouts sort date desc, order asc group by date'
     const result = await query(queryString)

@@ -13,6 +13,16 @@ export const getJoinIndexedList = async (parsed: ParsedQuery, recordData, dataSe
   const entity = parsed.entity
   const joinEntity = parsed.joinEntity
   const joinClauses = parsed.joinClauses
+  if (!dataSets[entity].length) {
+    // Nothing indexed entity's own rows yet (no WHERE condition narrowed them down ahead of this -
+    // that only happens via getConditionIndexedList, called just before this). The loop below can't
+    // pre-resolve anything against zero rows, so leave parsed.joinClauses exactly as parsed: the
+    // later, unconditional joinEntity() call (once this command's own read actually runs) still
+    // needs the real clauses to do the join itself. Previously this fell through to the loop,
+    // which never ran, leaving reducedJoins (and so parsed.joinClauses) empty regardless of what
+    // was actually parsed - silently discarding every join clause whenever the query had no WHERE.
+    return parsed
+  }
   for (const anEntity in dataSets[entity]) {
     const currentEntity = dataSets[entity][anEntity]
     // Loop over each of the main entities
