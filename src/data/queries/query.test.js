@@ -25,6 +25,27 @@ describe('query', () => {
     expect(remaining[0].every(row => row.date === '2024-06-02')).toBe(true)
   })
 
+  test('a read whose indexed condition genuinely matches nothing returns nothing, not every row', async () => {
+    const result = await query('read workouts where exercise_id = 999')
+    expect(result[0]).toEqual([])
+  })
+
+  test('a delete whose indexed condition genuinely matches nothing deletes nothing, not every row', async () => {
+    const deleted = await query('delete workouts where exercise_id = 999')
+    expect(deleted[0]).toEqual([])
+
+    const remaining = await query('read workouts')
+    expect(remaining[0]).toHaveLength(6)
+  })
+
+  test('an update whose indexed condition genuinely matches nothing updates nothing, not every row', async () => {
+    const updated = await query("update workouts set note = 'should never apply' where exercise_id = 999")
+    expect(updated[0]).toEqual([])
+
+    const unaffected = await query('read workouts')
+    expect(unaffected[0].every(row => row.note !== 'should never apply')).toBe(true)
+  })
+
   test('it inserts a new row via a values clause', async () => {
     const inserted = await query("insert workouts values _id = 99, exercise_id = 1, order = 0, date = '2024-06-10'")
     expect(inserted[0]).toHaveLength(1)

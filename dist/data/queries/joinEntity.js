@@ -8,8 +8,13 @@ const _siFunciona = _interopRequireDefault(require('si-funciona'))
 const _readEntity = require('./readEntity')
 const _useJoinClause = require('../utilities/useJoinClause')
 function _interopRequireDefault (e) { return e && e.__esModule ? e : { default: e } }
-const joinEntity = async (entity, joinEntity, dataSets = {}, joinClauses = []) => {
-  dataSets = await (0, _readEntity.readEntity)(entity, dataSets)
+const joinEntity = async (entity, joinEntity, dataSets = {}, joinClauses = [], entityAlreadyResolved = false) => {
+  // Same ambiguity readEntity() always has (can't tell "never loaded" from "loaded, zero rows
+  // matched") - runQuery already resolved entity's rows via an indexed condition in that second
+  // case, so entityAlreadyResolved tells this call not to reload and silently discard that result.
+  if (!entityAlreadyResolved) {
+    dataSets = await (0, _readEntity.readEntity)(entity, dataSets)
+  }
   if (!joinClauses.length) {
     return dataSets
   }

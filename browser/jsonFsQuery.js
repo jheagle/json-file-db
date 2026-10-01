@@ -749,8 +749,13 @@
       const _readEntity = require('./readEntity')
       const _useJoinClause = require('../utilities/useJoinClause')
       function _interopRequireDefault (e) { return e && e.__esModule ? e : { default: e } }
-      const joinEntity = async (entity, joinEntity, dataSets = {}, joinClauses = []) => {
-        dataSets = await (0, _readEntity.readEntity)(entity, dataSets)
+      const joinEntity = async (entity, joinEntity, dataSets = {}, joinClauses = [], entityAlreadyResolved = false) => {
+      // Same ambiguity readEntity() always has (can't tell "never loaded" from "loaded, zero rows
+      // matched") - runQuery already resolved entity's rows via an indexed condition in that second
+      // case, so entityAlreadyResolved tells this call not to reload and silently discard that result.
+        if (!entityAlreadyResolved) {
+          dataSets = await (0, _readEntity.readEntity)(entity, dataSets)
+        }
         if (!joinClauses.length) {
           return dataSets
         }
@@ -2400,14 +2405,23 @@
         let dataSet = {
           [parsed.entity]: []
         }
+        // A condition that's indexed but genuinely matches nothing leaves dataSet[entity] at [] - the
+        // same state it starts in before anything has looked at it at all. readEntity() (below) can't
+        // tell those two states apart on its own (it reloads whenever the array is empty, regardless of
+        // why), so capture here, before that ambiguity can happen, whether every condition actually got
+        // resolved this way - if so, dataSet[entity] is already correct and must not be reloaded.
+        const hadConditions = parsed.conditions.length > 0
         parsed = await (0, _getConditionIndexedList.getConditionIndexedList)(parsed, recordData, dataSet)
+        const conditionsFullyIndexed = hadConditions && parsed.conditions.length === 0
         parsed = await (0, _getJoinIndexedList.getJoinIndexedList)(parsed, recordData, dataSet)
         // delete/update act on whatever is already in dataSet[entity] - unlike read, which loads
         // everything and lets the where-reduce below narrow it down afterward, they never get a second
         // pass. So the matching rows have to be fully resolved (indexed conditions already are, via
         // getConditionIndexedList above; anything left in parsed.conditions is not) before either runs.
         if (parsed.command === 'delete' || parsed.command === 'update') {
-          dataSet = await (0, _readEntity.readEntity)(parsed.entity, dataSet)
+          if (!conditionsFullyIndexed) {
+            dataSet = await (0, _readEntity.readEntity)(parsed.entity, dataSet)
+          }
           dataSet[parsed.entity] = parsed.conditions.reduce((remainingData, condition) => (0, _where.where)(remainingData, condition), dataSet[parsed.entity])
         }
         switch (parsed.command) {
@@ -2418,7 +2432,9 @@
             dataSet = await (0, _insertEntity.insertEntity)(parsed.entity, parsed.insertValues, dataSet)
             break
           case 'read':
-            dataSet = await (0, _readEntity.readEntity)(parsed.entity, dataSet)
+            if (!conditionsFullyIndexed) {
+              dataSet = await (0, _readEntity.readEntity)(parsed.entity, dataSet)
+            }
             break
           case 'update':
             dataSet = await (0, _updateEntity.updateEntity)(parsed.entity, parsed.updateValues, dataSet)
@@ -2426,7 +2442,7 @@
           default:
             throw new Error(`Unknown command: ${parsed.command}`)
         }
-        dataSet = await (0, _joinEntity.joinEntity)(parsed.entity, parsed.joinEntity, dataSet, parsed.joinClauses)
+        dataSet = await (0, _joinEntity.joinEntity)(parsed.entity, parsed.joinEntity, dataSet, parsed.joinClauses, conditionsFullyIndexed)
         dataSet = await (0, _mergeJoins.mergeJoins)(dataSet, parsed.mergeJoins)
         // delete/update already had parsed.conditions applied above, before they ran. Re-applying the
         // same conditions here would be wrong, not just redundant, for update specifically: if the
