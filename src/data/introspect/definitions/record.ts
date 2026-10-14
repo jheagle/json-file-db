@@ -34,9 +34,9 @@ export const record = ({
   entries = []
 }: recordProperties = {}): recordDefinition => {
   return {
-    path: path,
+    path,
     definition: definition.map(field),
     keys: keys.map(key),
-    entries: entries
+    entries
   }
 }

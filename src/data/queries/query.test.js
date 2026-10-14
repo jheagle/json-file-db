@@ -1,19 +1,19 @@
 import { query } from './query'
 import { create } from '../introspect/create'
-import { testHelpers } from 'js-build-tools/testHelpers'
+import { setUp } from 'test-filesystem'
 import { configure } from '../utilities/config'
 import { copyDatabase } from '../../../test-data/copyDatabase'
 
 const databasePath = 'query-database/'
 configure({ databasePath })
-testHelpers.setDefaults(databasePath)
+setUp.setDefaults(databasePath)
 
 beforeEach(
-  () => testHelpers.beforeEach()
+  () => setUp.beforeEach()
     .then(() => copyDatabase(databasePath))
 )
 
-afterEach(testHelpers.afterEach)
+afterEach(setUp.afterEach)
 
 describe('query', () => {
   test('it deletes matching rows, resolved via an indexed condition', async () => {
@@ -113,12 +113,12 @@ describe('query', () => {
   })
 
   test('it reads with joins and merges', async () => {
-    const queryString = 'read workouts.muscles'
-      + ' on workouts.exercise_id = exercises._id'
-      + ' and on exercises._id = exercise_muscle.exercise_id'
-      + ' and on exercise_muscle.muscle_id = muscles._id'
-      + ' merge muscles._id with exercise_muscle.muscle_id'
-      + ' where date = \'2024-06-02\''
+    const queryString = 'read workouts.muscles' +
+      ' on workouts.exercise_id = exercises._id' +
+      ' and on exercises._id = exercise_muscle.exercise_id' +
+      ' and on exercise_muscle.muscle_id = muscles._id' +
+      ' merge muscles._id with exercise_muscle.muscle_id' +
+      ' where date = \'2024-06-02\''
     const result = await query(queryString)
     expect(result).toEqual([
       [

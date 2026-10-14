@@ -1,26 +1,26 @@
-'use strict'
+"use strict";
 
-Object.defineProperty(exports, '__esModule', {
+Object.defineProperty(exports, "__esModule", {
   value: true
-})
-exports.findMergeJoins = void 0
-const _removeFromQuery = require('./removeFromQuery')
-const mergeJoinMatch = /(and)?\s*merge\s+([a-z0-9_-]+\.[a-z0-9_-]+)\s+with\s+([a-z0-9_-]+\.[a-z0-9_-]+)/ig
+});
+exports.findMergeJoins = void 0;
+var _removeFromQuery = require("./removeFromQuery");
+const mergeJoinMatch = /(and)?\s*merge\s+([a-z0-9_-]+\.[a-z0-9_-]+)\s+with\s+([a-z0-9_-]+\.[a-z0-9_-]+)/ig;
 /**
  * Extract merge-join clauses from the query.
  * @param parsed
  * @param query
  */
 const findMergeJoins = (parsed, query) => {
-  const mergeJoinsFound = query.matchAll(mergeJoinMatch)
+  const mergeJoinsFound = query.matchAll(mergeJoinMatch);
   // @ts-ignore
   for (const mergeJoin of mergeJoinsFound) {
-    parsed.mergeJoins.push({
+    parsed['mergeJoins'].push({
       propertyA: mergeJoin[2],
       propertyB: mergeJoin[3]
-    })
-    query = (0, _removeFromQuery.removeFromQuery)(mergeJoin[0].trim(), query)
+    });
+    query = (0, _removeFromQuery.removeFromQuery)(mergeJoin[0].trim(), query);
   }
-  return query
-}
-exports.findMergeJoins = findMergeJoins
+  return query;
+};
+exports.findMergeJoins = findMergeJoins;

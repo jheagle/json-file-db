@@ -1,22 +1,22 @@
-'use strict'
+"use strict";
 
-Object.defineProperty(exports, '__esModule', {
+Object.defineProperty(exports, "__esModule", {
   value: true
-})
-exports.findOffset = void 0
-const _removeFromQuery = require('./removeFromQuery')
-const offsetMatch = /offset\s*(\d+)/i
+});
+exports.findOffset = void 0;
+var _removeFromQuery = require("./removeFromQuery");
+const offsetMatch = /offset\s*(\d+)/i;
 /**
  * Extract the offset clauses from the query.
  * @param parsed
  * @param query
  */
 const findOffset = (parsed, query) => {
-  const offsetFound = query.match(offsetMatch)
+  const offsetFound = query.match(offsetMatch);
   if (offsetFound) {
-    parsed.offset = offsetFound ? parseInt(offsetFound[1]) : undefined
-    return (0, _removeFromQuery.removeFromQuery)(offsetFound[0], query)
+    parsed['offset'] = offsetFound ? parseInt(offsetFound[1]) : undefined;
+    return (0, _removeFromQuery.removeFromQuery)(offsetFound[0], query);
   }
-  return query
-}
-exports.findOffset = findOffset
+  return query;
+};
+exports.findOffset = findOffset;

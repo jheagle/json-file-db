@@ -1,18 +1,18 @@
 import { create } from './create'
 import { drop } from './drop'
 import { insertEntity } from '../queries/insertEntity'
-import { testHelpers } from 'js-build-tools/testHelpers'
+import { fileExists, setUp } from 'test-filesystem'
 import { configure } from '../utilities/config'
 
 const { writeFile, readFile } = require('fs/promises')
 
 const databasePath = 'drop-database/'
 configure({ databasePath })
-testHelpers.setDefaults(databasePath)
+setUp.setDefaults(databasePath)
 
-beforeEach(testHelpers.beforeEach)
+beforeEach(setUp.beforeEach)
 
-afterEach(testHelpers.afterEach)
+afterEach(setUp.afterEach)
 
 describe('drop', () => {
   test('returns null for the reserved __RECORDS name, without touching anything', async () => {
@@ -30,9 +30,9 @@ describe('drop', () => {
     recordContent.entries = [entryFile]
     await writeFile(`${databasePath}${recordName}.json`, JSON.stringify(recordContent))
 
-    expect(testHelpers.fileExists(`${databasePath}${recordName}/${entryFile}`)).toBeTruthy()
+    expect(fileExists(`${databasePath}${recordName}/${entryFile}`)).toBeTruthy()
     await drop(recordName)
-    expect(testHelpers.fileExists(`${databasePath}${recordName}/${entryFile}`)).toBeFalsy()
+    expect(fileExists(`${databasePath}${recordName}/${entryFile}`)).toBeFalsy()
   })
 
   test('deregisters the record from __RECORDS', async () => {
@@ -45,13 +45,13 @@ describe('drop', () => {
 
   test('removes the record\'s own definition file and data directory', async () => {
     await create('foo', [], [])
-    expect(testHelpers.fileExists(`${databasePath}foo.json`)).toBeTruthy()
-    expect(testHelpers.fileExists(`${databasePath}foo`)).toBeTruthy()
+    expect(fileExists(`${databasePath}foo.json`)).toBeTruthy()
+    expect(fileExists(`${databasePath}foo`)).toBeTruthy()
 
     await drop('foo')
 
-    expect(testHelpers.fileExists(`${databasePath}foo.json`)).toBeFalsy()
-    expect(testHelpers.fileExists(`${databasePath}foo`)).toBeFalsy()
+    expect(fileExists(`${databasePath}foo.json`)).toBeFalsy()
+    expect(fileExists(`${databasePath}foo`)).toBeFalsy()
   })
 
   test('removes the record\'s own index directory', async () => {
@@ -63,11 +63,11 @@ describe('drop', () => {
     ]
     await create('foo', definition, keys)
     await insertEntity('foo', [{}], {})
-    expect(testHelpers.fileExists(`${databasePath}__indexes/foo/pk__id.json`)).toBeTruthy()
+    expect(fileExists(`${databasePath}__indexes/foo/pk__id.json`)).toBeTruthy()
 
     await drop('foo')
 
-    expect(testHelpers.fileExists(`${databasePath}__indexes/foo`)).toBeFalsy()
+    expect(fileExists(`${databasePath}__indexes/foo`)).toBeFalsy()
   })
 
   test('does not throw when the record has no index directory to remove', async () => {

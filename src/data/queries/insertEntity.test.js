@@ -1,17 +1,17 @@
 import { create } from '../introspect/create'
 import { insertEntity } from './insertEntity'
-import { testHelpers } from 'js-build-tools/testHelpers'
+import { fileExists, setUp } from 'test-filesystem'
 import { configure } from '../utilities/config'
 
 const { readFile } = require('fs/promises')
 
 const databasePath = 'insert-entity-database/'
 configure({ databasePath })
-testHelpers.setDefaults(databasePath)
+setUp.setDefaults(databasePath)
 
-beforeEach(testHelpers.beforeEach)
+beforeEach(setUp.beforeEach)
 
-afterEach(testHelpers.afterEach)
+afterEach(setUp.afterEach)
 
 const definition = [
   { name: '_id', type: 'string', optional: false, autoGenerate: true },
@@ -32,7 +32,7 @@ describe('insertEntity', () => {
     expect(typeof inserted._id).toBe('string')
     expect(inserted.bar).toBe('baz')
 
-    expect(testHelpers.fileExists(`${databasePath}foo/${inserted._id}.json`)).toBeTruthy()
+    expect(fileExists(`${databasePath}foo/${inserted._id}.json`)).toBeTruthy()
     const entryFile = JSON.parse(await readFile(`${databasePath}foo/${inserted._id}.json`, 'utf8'))
     expect(entryFile).toEqual(inserted)
 

@@ -10,7 +10,7 @@ export const matchIndexedJoins = (entity, indexedClone, dataSets) => async (focu
     { entityFirst: entityA, propertyFirst: propertyA, entitySecond: entityB, propertySecond: propertyB },
     { entityFirst: entityB, propertyFirst: propertyB, entitySecond: entityA, propertySecond: propertyA },
   ]
-  for (let checkProp of properties) {
+  for (const checkProp of properties) {
     if (!Object.prototype.hasOwnProperty.call(indexedClone, checkProp.entitySecond)) {
       indexedClone[checkProp.entitySecond] = siFunciona.cloneObject(indexed[checkProp.entitySecond])
     }
@@ -25,12 +25,12 @@ export const matchIndexedJoins = (entity, indexedClone, dataSets) => async (focu
       ),
       []
     )
-    let skipPush = checkProp.entityFirst === entity
+    const skipPush = checkProp.entityFirst === entity
     if (!Object.prototype.hasOwnProperty.call(dataSets, checkProp.entityFirst)) {
       dataSets[checkProp.entityFirst] = []
     }
-    for (let matchedRecord of matchedRecords) {
-      for (let file of matchedRecord.record) {
+    for (const matchedRecord of matchedRecords) {
+      for (const file of matchedRecord.record) {
         let entityRecord = file
         if (typeof file === 'string') {
           entityRecord = await retrieveFile(`${checkProp.entityFirst}/${file}`)

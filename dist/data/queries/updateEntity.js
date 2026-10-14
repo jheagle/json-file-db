@@ -1,28 +1,28 @@
-'use strict'
+"use strict";
 
-Object.defineProperty(exports, '__esModule', {
+Object.defineProperty(exports, "__esModule", {
   value: true
-})
-exports.updateEntity = void 0
-require('core-js/modules/es.json.stringify.js')
-require('core-js/modules/esnext.iterator.constructor.js')
-require('core-js/modules/esnext.iterator.find.js')
-require('core-js/modules/esnext.iterator.map.js')
-require('core-js/modules/esnext.iterator.some.js')
-const _retrieveRecord = require('../utilities/retrieveRecord')
-const _retrieveFile = require('../utilities/retrieveFile')
-const _updateIndex = require('../utilities/updateIndex')
-const _removeFromIndex = require('../utilities/removeFromIndex')
-const _computeKeyValue = require('../utilities/computeKeyValue')
-const _keyUnique = require('../introspect/policies/keyUnique')
-const _typeCheck = require('../introspect/policies/typeCheck')
-const _foreignKeyExists = require('../introspect/policies/foreignKeyExists')
-const _hasDependents = require('../introspect/policies/hasDependents')
-const _splitEntityProperty = require('../utilities/parsers/splitEntityProperty')
-const _config = require('../utilities/config')
+});
+exports.updateEntity = void 0;
+require("core-js/modules/es.json.stringify.js");
+require("core-js/modules/esnext.iterator.constructor.js");
+require("core-js/modules/esnext.iterator.find.js");
+require("core-js/modules/esnext.iterator.map.js");
+require("core-js/modules/esnext.iterator.some.js");
+var _retrieveRecord = require("../utilities/retrieveRecord");
+var _retrieveFile = require("../utilities/retrieveFile");
+var _updateIndex = require("../utilities/updateIndex");
+var _removeFromIndex = require("../utilities/removeFromIndex");
+var _computeKeyValue = require("../utilities/computeKeyValue");
+var _keyUnique = require("../introspect/policies/keyUnique");
+var _typeCheck = require("../introspect/policies/typeCheck");
+var _foreignKeyExists = require("../introspect/policies/foreignKeyExists");
+var _hasDependents = require("../introspect/policies/hasDependents");
+var _splitEntityProperty = require("../utilities/parsers/splitEntityProperty");
+var _config = require("../utilities/config");
 const {
   writeFile
-} = require('fs/promises')
+} = require('fs/promises');
 /**
  * Same reasoning as deleteEntity: a record object carries no memory of which entry file it came
  * from, so re-scan entries[] and match by the record's own primary key value(s) - a single field,
@@ -33,13 +33,13 @@ const {
  */
 const findEntryFile = async (record, primaryKey, primaryValue) => {
   for (const fileName of record.entries) {
-    const data = await (0, _retrieveFile.retrieveFile)(`${record.path}/${fileName}`)
+    const data = await (0, _retrieveFile.retrieveFile)(`${record.path}/${fileName}`);
     if ((0, _computeKeyValue.computeKeyValue)(primaryKey.fields, data) == primaryValue) {
-      return fileName
+      return fileName;
     }
   }
-  return null
-}
+  return null;
+};
 /**
  * True if the update actually changes at least one of this key's fields - a key none of whose
  * fields appear in newValues, or whose given values are all unchanged, doesn't need re-checking.
@@ -47,7 +47,7 @@ const findEntryFile = async (record, primaryKey, primaryValue) => {
  * @param oldData
  * @param newValues
  */
-const keyFieldsChanged = (key, oldData, newValues) => key.fields.some(field => Object.prototype.hasOwnProperty.call(newValues, field) && newValues[field] != oldData[field])
+const keyFieldsChanged = (key, oldData, newValues) => key.fields.some(field => Object.prototype.hasOwnProperty.call(newValues, field) && newValues[field] != oldData[field]);
 /**
  * Only check uniqueness for a primary/unique key (single-field, or composite) whose value is
  * actually changing - checking an unchanged value would find the record's own existing entry and
@@ -61,15 +61,15 @@ const keyFieldsChanged = (key, oldData, newValues) => key.fields.some(field => O
 const assertUniqueForUpdate = async (entity, record, oldData, newData, newValues) => {
   for (const key of record.keys) {
     if (key.type !== 'primary' && key.type !== 'unique' || !keyFieldsChanged(key, oldData, newValues)) {
-      continue
+      continue;
     }
-    const checkKeys = key.fields.map(field => newData[field])
-    const isUnique = await (0, _keyUnique.keyUnique)(entity, key.fields, checkKeys)
+    const checkKeys = key.fields.map(field => newData[field]);
+    const isUnique = await (0, _keyUnique.keyUnique)(entity, key.fields, checkKeys);
     if (!isUnique) {
-      throw new Error(`Duplicate value for ${key.type} key "${key.fields.join(', ')}" on ${entity}`)
+      throw new Error(`Duplicate value for ${key.type} key "${key.fields.join(', ')}" on ${entity}`);
     }
   }
-}
+};
 /**
  * Same "only if it actually changed" scoping as assertUniqueForUpdate: re-checking an unchanged
  * foreign key value would re-validate a reference this update never touches, which could fail an
@@ -82,22 +82,22 @@ const assertUniqueForUpdate = async (entity, record, oldData, newData, newValues
 const assertForeignKeysForUpdate = async (entity, record, oldData, newValues) => {
   for (const key of record.keys) {
     if (key.type !== 'foreign' || key.fields.length !== 1 || !key.references || key.references.length !== 1) {
-      continue
+      continue;
     }
-    const field = key.fields[0]
+    const field = key.fields[0];
     if (!Object.prototype.hasOwnProperty.call(newValues, field) || newValues[field] == oldData[field]) {
-      continue
+      continue;
     }
     const {
       entity: refEntity,
       property: refProperty
-    } = (0, _splitEntityProperty.splitEntityProperty)(key.references[0].fields[0])
-    const exists = await (0, _foreignKeyExists.foreignKeyExists)(refEntity, refProperty, newValues[field])
+    } = (0, _splitEntityProperty.splitEntityProperty)(key.references[0].fields[0]);
+    const exists = await (0, _foreignKeyExists.foreignKeyExists)(refEntity, refProperty, newValues[field]);
     if (!exists) {
-      throw new Error(`Foreign key "${field}" on ${entity} references a nonexistent ${refEntity}.${refProperty} = ${newValues[field]}`)
+      throw new Error(`Foreign key "${field}" on ${entity} references a nonexistent ${refEntity}.${refProperty} = ${newValues[field]}`);
     }
   }
-}
+};
 /**
  * RESTRICT: reject an update that would change a single-field primary key's value while another
  * entity's foreign key still points at the old one - that reference would otherwise be left
@@ -110,13 +110,13 @@ const assertForeignKeysForUpdate = async (entity, record, oldData, newValues) =>
  */
 const assertNoDependentsForUpdate = async (entity, primaryKey, oldData, newValues) => {
   if (!(0, _config.getSetting)('enforceForeignKeys', true) || primaryKey.fields.length !== 1 || !keyFieldsChanged(primaryKey, oldData, newValues)) {
-    return
+    return;
   }
-  const property = primaryKey.fields[0]
+  const property = primaryKey.fields[0];
   if (await (0, _hasDependents.hasDependents)(entity, property, oldData[property])) {
-    throw new Error(`Cannot update "${entity}" where "${property}" = ${oldData[property]} - other records still reference it`)
+    throw new Error(`Cannot update "${entity}" where "${property}" = ${oldData[property]} - other records still reference it`);
   }
-}
+};
 /**
  * Move a key's index entry (single-field, or a composite for a multi-field key) from the old
  * value to the new one wherever the update actually changed one of its fields.
@@ -129,19 +129,19 @@ const assertNoDependentsForUpdate = async (entity, primaryKey, oldData, newValue
 const reconcileIndexes = async (record, oldData, newData, newValues, fileName) => {
   for (const key of record.keys) {
     if (!keyFieldsChanged(key, oldData, newValues)) {
-      continue
+      continue;
     }
-    await (0, _removeFromIndex.removeFromIndex)(record.path, key, (0, _computeKeyValue.computeKeyValue)(key.fields, oldData), fileName)
-    await (0, _updateIndex.updateIndex)(record.path, key, (0, _computeKeyValue.computeKeyValue)(key.fields, newData), fileName)
+    await (0, _removeFromIndex.removeFromIndex)(record.path, key, (0, _computeKeyValue.computeKeyValue)(key.fields, oldData), fileName);
+    await (0, _updateIndex.updateIndex)(record.path, key, (0, _computeKeyValue.computeKeyValue)(key.fields, newData), fileName);
   }
-}
+};
 const assertRequiredFields = (entity, record, newData) => {
   for (const field of record.definition) {
     if (!field.optional && typeof newData[field.name] === 'undefined') {
-      throw new Error(`Missing required field "${field.name}" for ${entity}`)
+      throw new Error(`Missing required field "${field.name}" for ${entity}`);
     }
   }
-}
+};
 /**
  * Type-check (and coerce) only the fields actually present in an update's values, never the rest
  * of the merged record - a field whose already-stored value doesn't match its declared type
@@ -151,40 +151,40 @@ const assertRequiredFields = (entity, record, newData) => {
  * @param values
  */
 const applyFieldTypes = (record, values) => {
-  const typedValues = Object.assign({}, values)
+  const typedValues = Object.assign({}, values);
   for (const field of record.definition) {
     if (Object.prototype.hasOwnProperty.call(typedValues, field.name)) {
-      typedValues[field.name] = (0, _typeCheck.typeCheck)(field.type, typedValues[field.name])
+      typedValues[field.name] = (0, _typeCheck.typeCheck)(field.type, typedValues[field.name]);
     }
   }
-  return typedValues
-}
+  return typedValues;
+};
 const updateEntity = async (entity = '', values = {}, dataSet = {}) => {
-  const databasePath = (0, _config.getSetting)('databasePath', 'database/')
-  const record = await (0, _retrieveRecord.retrieveRecord)(entity)
-  const primaryKey = record.keys.find(key => key.type === 'primary')
+  const databasePath = (0, _config.getSetting)('databasePath', 'database/');
+  const record = await (0, _retrieveRecord.retrieveRecord)(entity);
+  const primaryKey = record.keys.find(key => key.type === 'primary');
   if (!primaryKey) {
-    throw new Error(`Cannot update "${entity}" without a primary key`)
+    throw new Error(`Cannot update "${entity}" without a primary key`);
   }
-  const typedValues = applyFieldTypes(record, values)
-  const toUpdate = dataSet[entity] || []
-  const updatedRows = []
+  const typedValues = applyFieldTypes(record, values);
+  const toUpdate = dataSet[entity] || [];
+  const updatedRows = [];
   for (const row of toUpdate) {
-    const fileName = await findEntryFile(record, primaryKey, (0, _computeKeyValue.computeKeyValue)(primaryKey.fields, row))
+    const fileName = await findEntryFile(record, primaryKey, (0, _computeKeyValue.computeKeyValue)(primaryKey.fields, row));
     if (!fileName) {
-      throw new Error(`Could not find entry for ${entity} where "${primaryKey.fields.join(', ')}" = ${(0, _computeKeyValue.computeKeyValue)(primaryKey.fields, row)}`)
+      throw new Error(`Could not find entry for ${entity} where "${primaryKey.fields.join(', ')}" = ${(0, _computeKeyValue.computeKeyValue)(primaryKey.fields, row)}`);
     }
-    const oldData = await (0, _retrieveFile.retrieveFile)(`${record.path}/${fileName}`)
-    const newData = Object.assign({}, oldData, typedValues)
-    await assertUniqueForUpdate(entity, record, oldData, newData, typedValues)
-    await assertForeignKeysForUpdate(entity, record, oldData, typedValues)
-    await assertNoDependentsForUpdate(entity, primaryKey, oldData, typedValues)
-    assertRequiredFields(entity, record, newData)
-    await reconcileIndexes(record, oldData, newData, typedValues, fileName)
-    await writeFile(`${databasePath}${record.path}/${fileName}`, JSON.stringify(newData, null, 2))
-    updatedRows.push(newData)
+    const oldData = await (0, _retrieveFile.retrieveFile)(`${record.path}/${fileName}`);
+    const newData = Object.assign({}, oldData, typedValues);
+    await assertUniqueForUpdate(entity, record, oldData, newData, typedValues);
+    await assertForeignKeysForUpdate(entity, record, oldData, typedValues);
+    await assertNoDependentsForUpdate(entity, primaryKey, oldData, typedValues);
+    assertRequiredFields(entity, record, newData);
+    await reconcileIndexes(record, oldData, newData, typedValues, fileName);
+    await writeFile(`${databasePath}${record.path}/${fileName}`, JSON.stringify(newData, null, 2));
+    updatedRows.push(newData);
   }
-  dataSet[entity] = updatedRows
-  return dataSet
-}
-exports.updateEntity = updateEntity
+  dataSet[entity] = updatedRows;
+  return dataSet;
+};
+exports.updateEntity = updateEntity;

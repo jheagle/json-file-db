@@ -1,9 +1,9 @@
-'use strict'
+"use strict";
 
-Object.defineProperty(exports, '__esModule', {
+Object.defineProperty(exports, "__esModule", {
   value: true
-})
-exports.limitOffset = void 0
+});
+exports.limitOffset = void 0;
 /**
  * Slice a dataSet down to at most `limit` rows, starting after the first `offset` of them.
  * @param dataSet
@@ -12,10 +12,10 @@ exports.limitOffset = void 0
  */
 const limitOffset = (dataSet = [], offset, limit) => {
   if (typeof offset === 'undefined' && typeof limit === 'undefined') {
-    return dataSet
+    return dataSet;
   }
-  const start = offset ?? 0
-  const end = typeof limit === 'number' ? start + limit : undefined
-  return dataSet.slice(start, end)
-}
-exports.limitOffset = limitOffset
+  const start = offset ?? 0;
+  const end = typeof limit === 'number' ? start + limit : undefined;
+  return dataSet.slice(start, end);
+};
+exports.limitOffset = limitOffset;

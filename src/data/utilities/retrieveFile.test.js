@@ -1,15 +1,15 @@
 import { retrieveFile } from './retrieveFile'
-import { testHelpers } from 'js-build-tools/testHelpers'
+import { setUp } from 'test-filesystem'
 import { configure } from './config'
 import fs from 'fs'
 
 const databasePath = 'retrieve-file-database/'
 configure({ databasePath })
-testHelpers.setDefaults(databasePath)
+setUp.setDefaults(databasePath)
 
-beforeEach(testHelpers.beforeEach)
+beforeEach(setUp.beforeEach)
 
-afterEach(testHelpers.afterEach)
+afterEach(setUp.afterEach)
 
 describe('retrieveFile', () => {
   test('should get the file if found', async () => {

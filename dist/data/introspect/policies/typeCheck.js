@@ -1,9 +1,9 @@
-'use strict'
+"use strict";
 
-Object.defineProperty(exports, '__esModule', {
+Object.defineProperty(exports, "__esModule", {
   value: true
-})
-exports.typeCheck = void 0
+});
+exports.typeCheck = void 0;
 /**
  * Validate (and where sensible, coerce) a value against a field's declared type. Runs only
  * against values being written by insertEntity/updateEntity - it never re-validates data already
@@ -16,42 +16,42 @@ exports.typeCheck = void 0
  */
 const typeCheck = (type = 'string', value = undefined) => {
   if (typeof value === 'undefined') {
-    return value
+    return value;
   }
   switch (type) {
     case 'string':
-      return typeof value === 'string' ? value : String(value)
+      return typeof value === 'string' ? value : String(value);
     case 'int':
-    {
-      const coerced = Number(value)
-      if (Number.isNaN(coerced) || !Number.isInteger(coerced)) {
-        throw new Error(`Value "${value}" is not a valid int`)
+      {
+        const coerced = Number(value);
+        if (Number.isNaN(coerced) || !Number.isInteger(coerced)) {
+          throw new Error(`Value "${value}" is not a valid int`);
+        }
+        return coerced;
       }
-      return coerced
-    }
     case 'boolean':
       if (typeof value === 'boolean') {
-        return value
+        return value;
       }
       if (value === 'true') {
-        return true
+        return true;
       }
       if (value === 'false') {
-        return false
+        return false;
       }
-      throw new Error(`Value "${value}" is not a valid boolean`)
+      throw new Error(`Value "${value}" is not a valid boolean`);
     case 'object':
       if (typeof value !== 'object' || value === null || Array.isArray(value)) {
-        throw new Error(`Value "${value}" is not a valid object`)
+        throw new Error(`Value "${value}" is not a valid object`);
       }
-      return value
+      return value;
     case 'array':
       if (!Array.isArray(value)) {
-        throw new Error(`Value "${value}" is not a valid array`)
+        throw new Error(`Value "${value}" is not a valid array`);
       }
-      return value
+      return value;
     default:
-      return value
+      return value;
   }
-}
-exports.typeCheck = typeCheck
+};
+exports.typeCheck = typeCheck;

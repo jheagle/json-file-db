@@ -1,17 +1,17 @@
 import { updateIndex } from './updateIndex'
 import { removeFromIndex } from './removeFromIndex'
-import { testHelpers } from 'js-build-tools/testHelpers'
+import { setUp } from 'test-filesystem'
 import { configure } from './config'
 
 const { readFile } = require('fs/promises')
 
 const databasePath = 'remove-from-index-database/'
 configure({ databasePath })
-testHelpers.setDefaults(databasePath)
+setUp.setDefaults(databasePath)
 
-beforeEach(testHelpers.beforeEach)
+beforeEach(setUp.beforeEach)
 
-afterEach(testHelpers.afterEach)
+afterEach(setUp.afterEach)
 
 describe('removeFromIndex', () => {
   test('does nothing for a key with no lookup', async () => {

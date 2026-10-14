@@ -7,8 +7,8 @@ import { ParsedQuery } from './parsers/parseQuery'
 import { getMatchingIndexes } from './getMatchingIndexes'
 
 export const getConditionIndexedList = async (parsed: ParsedQuery, recordData, dataSet) => {
-  let reducedConditions = []
-  for (let condition of parsed.conditions) {
+  const reducedConditions = []
+  for (const condition of parsed.conditions) {
     let entity = parsed.entity
     let property = condition.property
     if (isEntityProperty(property)) {
@@ -26,18 +26,17 @@ export const getConditionIndexedList = async (parsed: ParsedQuery, recordData, d
         comparator: condition.comparator,
         value: condition.value
       })
-      for (let matchedRecord of matchedRecords) {
-        for (let file of matchedRecord.record) {
+      for (const matchedRecord of matchedRecords) {
+        for (const file of matchedRecord.record) {
           dataSet[entity].push(await retrieveFile(`${entity}/${file}`))
         }
       }
     }
-    let isIndexed = await getMatchingIndexes(entity, property, recordData, condition, dataSet, indexed, retrieveMatchedFiles)
+    const isIndexed = await getMatchingIndexes(entity, property, recordData, condition, dataSet, indexed, retrieveMatchedFiles)
     if (!isIndexed) {
       reducedConditions.push(condition)
     }
   }
   parsed.conditions = reducedConditions
   return parsed
-
 }

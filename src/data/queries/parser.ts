@@ -5,7 +5,7 @@ export const parser = (queries: string = '') => {
   const queryArray: string[] = splitQueries(queries)
   const parsedQueries = []
   let mergeQuery = ''
-  for (let query of queryArray) {
+  for (const query of queryArray) {
     mergeQuery = mergeQuery ? `${mergeQuery}${query}` : query
     let parsedQuery = {}
     try {

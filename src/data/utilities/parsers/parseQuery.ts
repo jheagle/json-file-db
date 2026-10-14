@@ -33,7 +33,7 @@ export type ParsedQuery = {
  * @param query
  */
 export const parseQuery = (query: string): ParsedQuery => {
-  let parsedQuery: ParsedQuery = {
+  const parsedQuery: ParsedQuery = {
     command: undefined,
     entity: undefined,
     joinEntity: undefined,

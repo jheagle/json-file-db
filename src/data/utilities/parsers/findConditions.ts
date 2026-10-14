@@ -20,7 +20,7 @@ export type ParsedCondition = {
 export const findConditions = (parsed: ParsedQuery, query: string): string => {
   const conditionsFound: IterableIterator<RegExpMatchArray> = query.matchAll(conditionMatch)
   // @ts-ignore
-  for (let condition of conditionsFound) {
+  for (const condition of conditionsFound) {
     parsed['conditions'].push({
       property: condition[3],
       comparator: condition[4],

@@ -1,47 +1,47 @@
-'use strict'
+"use strict";
 
-Object.defineProperty(exports, '__esModule', {
+Object.defineProperty(exports, "__esModule", {
   value: true
-})
-exports.where = void 0
-require('core-js/modules/es.array.includes.js')
-require('core-js/modules/esnext.iterator.constructor.js')
-require('core-js/modules/esnext.iterator.filter.js')
+});
+exports.where = void 0;
+require("core-js/modules/es.array.includes.js");
+require("core-js/modules/esnext.iterator.constructor.js");
+require("core-js/modules/esnext.iterator.filter.js");
 const likeMatch = (dataValue, pattern) => {
   if (typeof dataValue !== 'string' || typeof pattern !== 'string') {
-    return false
+    return false;
   }
-  const regexPattern = pattern.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/%/g, '.*').replace(/_/g, '.')
-  return new RegExp(`^${regexPattern}$`, 'i').test(dataValue)
-}
+  const regexPattern = pattern.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/%/g, '.*').replace(/_/g, '.');
+  return new RegExp(`^${regexPattern}$`, 'i').test(dataValue);
+};
 const makeCondition = (data, property, comparator, value) => {
   if (!Object.prototype.hasOwnProperty.call(data, property)) {
-    return false
+    return false;
   }
-  const dataValue = data[property]
+  const dataValue = data[property];
   switch (comparator) {
     case '=':
-      return dataValue == value
+      return dataValue == value;
     case '!=':
     case '<>':
-      return dataValue != value
+      return dataValue != value;
     case '>':
-      return dataValue > value
+      return dataValue > value;
     case '>=':
-      return dataValue >= value
+      return dataValue >= value;
     case '<':
-      return dataValue < value
+      return dataValue < value;
     case '<=':
-      return dataValue <= value
+      return dataValue <= value;
     case 'in':
-      return Array.isArray(value) && value.includes(dataValue)
+      return Array.isArray(value) && value.includes(dataValue);
     case 'between':
-      return Array.isArray(value) && value.length === 2 && dataValue >= value[0] && dataValue <= value[1]
+      return Array.isArray(value) && value.length === 2 && dataValue >= value[0] && dataValue <= value[1];
     case 'like':
-      return likeMatch(dataValue, value)
+      return likeMatch(dataValue, value);
   }
-  return false
-}
+  return false;
+};
 const where = (dataSet = [], {
   property = '',
   joinEntity = undefined,
@@ -49,8 +49,8 @@ const where = (dataSet = [], {
   value = null
 } = {}) => {
   return dataSet.filter(data => {
-    const testProperty = joinEntity ? `${joinEntity}.${property}` : property
-    return makeCondition(data, testProperty, comparator, value)
-  })
-}
-exports.where = where
+    const testProperty = joinEntity ? `${joinEntity}.${property}` : property;
+    return makeCondition(data, testProperty, comparator, value);
+  });
+};
+exports.where = where;

@@ -1,16 +1,16 @@
 import { create } from '../create'
 import { insertEntity } from '../../queries/insertEntity'
 import { keyUnique } from './keyUnique'
-import { testHelpers } from 'js-build-tools/testHelpers'
+import { setUp } from 'test-filesystem'
 import { configure } from '../../utilities/config'
 
 const databasePath = 'key-unique-database/'
 configure({ databasePath })
-testHelpers.setDefaults(databasePath)
+setUp.setDefaults(databasePath)
 
-beforeEach(testHelpers.beforeEach)
+beforeEach(setUp.beforeEach)
 
-afterEach(testHelpers.afterEach)
+afterEach(setUp.afterEach)
 
 const definition = [
   { name: '_id', type: 'string', optional: false, autoGenerate: true },

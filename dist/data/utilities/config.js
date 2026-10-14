@@ -1,17 +1,17 @@
-'use strict'
+"use strict";
 
-Object.defineProperty(exports, '__esModule', {
+Object.defineProperty(exports, "__esModule", {
   value: true
-})
-exports.getSetting = exports.configure = void 0
+});
+exports.getSetting = exports.configure = void 0;
 const defaults = {
   databasePath: 'database/',
   relativePath: '',
   enforceForeignKeys: true
-}
+};
 let settings = {
   ...defaults
-}
+};
 /**
  * Set where this package's data lives: databasePath (a filesystem path, used in Node) and/or
  * relativePath (a URL prefix prepended to databasePath, used when reading over fetch() in a
@@ -28,8 +28,8 @@ const configure = newSettings => {
   settings = {
     ...settings,
     ...newSettings
-  }
-}
+  };
+};
 /**
  * Read one runtime setting, falling back to the given default if it was never configured. This is
  * the package's own lightweight replacement for reading settings via js-build-tools/gulp.config -
@@ -38,8 +38,8 @@ const configure = newSettings => {
  * @param key
  * @param defaultValue
  */
-exports.configure = configure
+exports.configure = configure;
 const getSetting = (key, defaultValue) => {
-  return typeof settings[key] !== 'undefined' ? settings[key] : defaultValue
-}
-exports.getSetting = getSetting
+  return typeof settings[key] !== 'undefined' ? settings[key] : defaultValue;
+};
+exports.getSetting = getSetting;

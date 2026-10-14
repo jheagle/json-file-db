@@ -1,18 +1,18 @@
 import { mergeJoin } from './mergeJoin'
-import { testHelpers } from 'js-build-tools/testHelpers'
+import { setUp } from 'test-filesystem'
 import { configure } from './config'
 import { copyDatabase } from '../../../test-data/copyDatabase'
 
 const databasePath = 'merge-join-database/'
 configure({ databasePath })
-testHelpers.setDefaults(databasePath)
+setUp.setDefaults(databasePath)
 
 beforeEach(
-  () => testHelpers.beforeEach()
+  () => setUp.beforeEach()
     .then(() => copyDatabase(databasePath))
 )
 
-afterEach(testHelpers.afterEach)
+afterEach(setUp.afterEach)
 
 describe('mergeJoin', () => {
   test('can combine both entities', async () => {

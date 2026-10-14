@@ -3,7 +3,7 @@ import { getSetting } from './config'
 
 export const retrieveFile = async (path) => {
   let retrieveFn = url => fetch(url).then(res => res.json())
-  let relativePath = jsEnv.isBrowser ? getSetting('relativePath', '') : ''
+  const relativePath = jsEnv.isBrowser ? getSetting('relativePath', '') : ''
   if (jsEnv.isNode) {
     const { readFile } = require('fs/promises')
     retrieveFn = url => readFile(url).then(res => JSON.parse(res))

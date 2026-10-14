@@ -1,15 +1,15 @@
 import { create } from './create'
 import { describe as describeRecord } from './describe'
-import { testHelpers } from 'js-build-tools/testHelpers'
+import { setUp } from 'test-filesystem'
 import { configure } from '../utilities/config'
 
 const databasePath = 'describe-database/'
 configure({ databasePath })
-testHelpers.setDefaults(databasePath)
+setUp.setDefaults(databasePath)
 
-beforeEach(testHelpers.beforeEach)
+beforeEach(setUp.beforeEach)
 
-afterEach(testHelpers.afterEach)
+afterEach(setUp.afterEach)
 
 const definition = [
   { name: '_id', type: 'string', optional: false, autoGenerate: true },

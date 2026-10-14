@@ -18,6 +18,6 @@ export type referenceProperties = {
  * @param properties.lookup
  */
 export const keyReference = ({ fields = [], lookup = '' }: referenceProperties = {}): reference => ({
-  fields: fields,
-  lookup: lookup
+  fields,
+  lookup
 })

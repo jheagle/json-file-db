@@ -5,7 +5,7 @@ export const mergeJoins = async (dataSet = {}, merges = []) => {
   if (!merges.length) {
     return dataSet
   }
-  for (let merge of merges) {
+  for (const merge of merges) {
     dataSet = await mergeJoin(merge.propertyA, merge.propertyB, dataSet)
     dataSet = reconcileJoins(merge.propertyA, merge.propertyB, dataSet)
   }

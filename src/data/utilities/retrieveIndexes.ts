@@ -6,8 +6,8 @@ export const retrieveIndexes = async (entity = '', properties = [], recordData =
     recordData[entity] = await retrieveRecord(entity)
   }
   const indexSet = {}
-  for (let property of properties) {
-    for (let key of recordData[entity].keys) {
+  for (const property of properties) {
+    for (const key of recordData[entity].keys) {
       if (key.fields.includes(property)) {
         indexSet[property] = await retrieveFile(`__indexes/${entity}/${key.lookup}`)
       }

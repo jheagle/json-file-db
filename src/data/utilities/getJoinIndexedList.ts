@@ -7,7 +7,7 @@ import { matchIndexedJoins } from './matchIndexedJoins'
 import { restrictIndexedList } from './restrictIndexedList'
 
 export const getJoinIndexedList = async (parsed: ParsedQuery, recordData, dataSets) => {
-  let reducedJoins = []
+  const reducedJoins = []
   const indexed = {}
   let firstIteration = true
   const entity = parsed.entity
@@ -33,9 +33,9 @@ export const getJoinIndexedList = async (parsed: ParsedQuery, recordData, dataSe
   for (const anEntity in dataSets[entity]) {
     const currentEntity = dataSets[entity][anEntity]
     // Loop over each of the main entities
-    let filterJoins = {}
+    const filterJoins = {}
     filterJoins[entity] = [siFunciona.cloneObject(currentEntity)]
-    for (let joinClause of joinClauses) {
+    for (const joinClause of joinClauses) {
       let indexedClone = siFunciona.cloneObject(indexed)
       const { entity: entityA, property: propertyA } = splitEntityProperty(joinClause.propertyA)
       const { entity: entityB, property: propertyB } = splitEntityProperty(joinClause.propertyB)

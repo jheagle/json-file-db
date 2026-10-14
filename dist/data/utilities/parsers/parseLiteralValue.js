@@ -1,9 +1,9 @@
-'use strict'
+"use strict";
 
-Object.defineProperty(exports, '__esModule', {
+Object.defineProperty(exports, "__esModule", {
   value: true
-})
-exports.parseLiteralValue = void 0
+});
+exports.parseLiteralValue = void 0;
 /**
  * Several parsers (findConditions, findInsertValues, findUpdateValues) capture a query-string
  * literal into one of six consecutive alternation groups depending on its shape - quoted string,
@@ -15,20 +15,20 @@ exports.parseLiteralValue = void 0
  */
 const parseLiteralValue = (match, baseIndex) => {
   if (typeof match[baseIndex] !== 'undefined') {
-    return match[baseIndex]
+    return match[baseIndex];
   }
   if (typeof match[baseIndex + 1] !== 'undefined') {
-    return Number(match[baseIndex + 1])
+    return Number(match[baseIndex + 1]);
   }
   if (typeof match[baseIndex + 2] !== 'undefined') {
-    return JSON.parse(match[baseIndex + 2])
+    return JSON.parse(match[baseIndex + 2]);
   }
   if (typeof match[baseIndex + 3] !== 'undefined') {
-    return null
+    return null;
   }
   if (typeof match[baseIndex + 4] !== 'undefined') {
-    return true
+    return true;
   }
-  return false
-}
-exports.parseLiteralValue = parseLiteralValue
+  return false;
+};
+exports.parseLiteralValue = parseLiteralValue;

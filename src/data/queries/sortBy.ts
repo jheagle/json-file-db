@@ -3,7 +3,7 @@ export const sortBy = (dataSet = [], sortClauses = []) => {
     return dataSet
   }
   dataSet.sort((a, b) => {
-    for (let sortClause of sortClauses) {
+    for (const sortClause of sortClauses) {
       const property = sortClause.property
       const direction = sortClause.direction
       if (a[property] == b[property]) {

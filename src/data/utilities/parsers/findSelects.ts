@@ -19,7 +19,7 @@ export const findSelects = (parsed: ParsedQuery, query: string): string => {
   if (selectsFound) {
     const selectClausesFound: IterableIterator<RegExpMatchArray> = selectsFound[0].matchAll(selectClauseMatch)
     // @ts-ignore
-    for (let selectClause of selectClausesFound) {
+    for (const selectClause of selectClausesFound) {
       parsed['selectClauses'].push({
         property: selectClause[2],
         alias: selectClause[4],
