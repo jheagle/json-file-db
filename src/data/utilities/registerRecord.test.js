@@ -1,16 +1,16 @@
 import { registerRecord } from './registerRecord'
-import { testHelpers } from 'js-build-tools/testHelpers'
+import { setUp } from 'test-filesystem'
 import { configure } from './config'
 
 const { readFile } = require('fs/promises')
 
 const databasePath = 'register-record-database/'
 configure({ databasePath })
-testHelpers.setDefaults(databasePath)
+setUp.setDefaults(databasePath)
 
-beforeEach(testHelpers.beforeEach)
+beforeEach(setUp.beforeEach)
 
-afterEach(testHelpers.afterEach)
+afterEach(setUp.afterEach)
 
 describe('registerRecord', () => {
   test('creates a fresh registry the first time a record is registered', async () => {

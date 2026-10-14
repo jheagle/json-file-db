@@ -1,18 +1,18 @@
 import { retrieveRecords } from './retrieveRecords'
-import { testHelpers } from 'js-build-tools/testHelpers'
+import { setUp } from 'test-filesystem'
 import { configure } from './config'
 import { copyDatabase } from '../../../test-data/copyDatabase'
 
 const databasePath = 'retrieve-records-database/'
 configure({ databasePath })
-testHelpers.setDefaults(databasePath)
+setUp.setDefaults(databasePath)
 
 beforeEach(
-  () => testHelpers.beforeEach()
+  () => setUp.beforeEach()
     .then(() => copyDatabase(databasePath))
 )
 
-afterEach(testHelpers.afterEach)
+afterEach(setUp.afterEach)
 
 describe('retrieveRecords', () => {
   test('retrieve main RECORDS file', async () => {
@@ -40,18 +40,24 @@ describe('retrieveRecords', () => {
         keys: [
           { type: 'primary', fields: ['_id'], lookup: 'pk__id.json' },
           {
-            type: 'foreign', fields: ['exercise_id'], lookup: 'fk_exercise_id.json', references: [
+            type: 'foreign',
+            fields: ['exercise_id'],
+            lookup: 'fk_exercise_id.json',
+            references: [
               {
-                'fields': ['exercises._id'],
-                'lookup': 'exercises.json'
+                fields: ['exercises._id'],
+                lookup: 'exercises.json'
               }
             ]
           },
           {
-            type: 'foreign', fields: ['muscle_id'], lookup: 'fk_muscle_id.json', references: [
+            type: 'foreign',
+            fields: ['muscle_id'],
+            lookup: 'fk_muscle_id.json',
+            references: [
               {
-                'fields': ['muscles._id'],
-                'lookup': 'muscles.json'
+                fields: ['muscles._id'],
+                lookup: 'muscles.json'
               }
             ]
           }

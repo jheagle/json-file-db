@@ -1,18 +1,18 @@
 import { readEntity } from './readEntity'
-import { testHelpers } from 'js-build-tools/testHelpers'
+import { setUp } from 'test-filesystem'
 import { configure } from '../utilities/config'
 import { copyDatabase } from '../../../test-data/copyDatabase'
 
 const databasePath = 'read-entity-database/'
 configure({ databasePath })
-testHelpers.setDefaults(databasePath)
+setUp.setDefaults(databasePath)
 
 beforeEach(
-  () => testHelpers.beforeEach()
+  () => setUp.beforeEach()
     .then(() => copyDatabase(databasePath))
 )
 
-afterEach(testHelpers.afterEach)
+afterEach(setUp.afterEach)
 
 const allWorkouts = [
   {

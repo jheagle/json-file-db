@@ -1,13 +1,13 @@
-'use strict'
+"use strict";
 
-Object.defineProperty(exports, '__esModule', {
+Object.defineProperty(exports, "__esModule", {
   value: true
-})
-exports.record = void 0
-require('core-js/modules/esnext.iterator.constructor.js')
-require('core-js/modules/esnext.iterator.map.js')
-const _field = require('./field')
-const _key = require('./key')
+});
+exports.record = void 0;
+require("core-js/modules/esnext.iterator.constructor.js");
+require("core-js/modules/esnext.iterator.map.js");
+var _field = require("./field");
+var _key = require("./key");
 /**
  *
  * @param properties
@@ -27,6 +27,6 @@ const record = ({
     definition: definition.map(_field.field),
     keys: keys.map(_key.key),
     entries
-  }
-}
-exports.record = record
+  };
+};
+exports.record = record;

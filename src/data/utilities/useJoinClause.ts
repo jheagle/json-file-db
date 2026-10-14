@@ -28,7 +28,7 @@ export const useJoinClause = async (
   filterJoins[entityA] = filterJoins[entityB].reduce(
     (dataA, dataB) => siFunciona.mergeArrays(
       dataA,
-      where(filterJoins[entityA], { property: propA, comparator: comparator, value: dataB[propB] })
+      where(filterJoins[entityA], { property: propA, comparator, value: dataB[propB] })
     ),
     []
   )
@@ -36,7 +36,7 @@ export const useJoinClause = async (
   filterJoins[entityB] = filterJoins[entityA].reduce(
     (dataB, dataA) => siFunciona.mergeArrays(
       dataB,
-      where(filterJoins[entityB], { property: propB, comparator: comparator, value: dataA[propA] })
+      where(filterJoins[entityB], { property: propB, comparator, value: dataA[propA] })
     ),
     []
   )

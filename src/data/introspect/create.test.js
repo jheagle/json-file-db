@@ -1,14 +1,14 @@
 import { create } from './create'
-import { testHelpers } from 'js-build-tools/testHelpers'
+import { fileExists, setUp } from 'test-filesystem'
 import { configure } from '../utilities/config'
 
 const databasePath = 'create-database/'
 configure({ databasePath })
-testHelpers.setDefaults(databasePath)
+setUp.setDefaults(databasePath)
 
-beforeEach(testHelpers.beforeEach)
+beforeEach(setUp.beforeEach)
 
-afterEach(testHelpers.afterEach)
+afterEach(setUp.afterEach)
 
 describe('create', () => {
   test('create a new record', async () => {
@@ -40,12 +40,12 @@ describe('create', () => {
     const result = await create(recordName, definition, keys)
     expect(result).toEqual({
       path: recordName,
-      definition: definition,
-      keys: keys,
+      definition,
+      keys,
       entries: []
     })
-    expect(testHelpers.fileExists(`${databasePath}${recordName}.json`)).toBeTruthy()
-    expect(testHelpers.fileExists(`${databasePath}${recordName}`)).toBeTruthy()
+    expect(fileExists(`${databasePath}${recordName}.json`)).toBeTruthy()
+    expect(fileExists(`${databasePath}${recordName}`)).toBeTruthy()
   })
 
   test('registers the new record in __RECORDS', async () => {
@@ -58,10 +58,10 @@ describe('create', () => {
   test('creates the database directory itself when it does not already exist', async () => {
     const { rm } = require('fs/promises')
     await rm(databasePath, { recursive: true, force: true })
-    expect(testHelpers.fileExists(databasePath)).toBeFalsy()
+    expect(fileExists(databasePath)).toBeFalsy()
 
     await create('foo', [], [])
 
-    expect(testHelpers.fileExists(`${databasePath}foo.json`)).toBeTruthy()
+    expect(fileExists(`${databasePath}foo.json`)).toBeTruthy()
   })
 })

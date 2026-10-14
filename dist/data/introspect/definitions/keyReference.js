@@ -1,9 +1,9 @@
-'use strict'
+"use strict";
 
-Object.defineProperty(exports, '__esModule', {
+Object.defineProperty(exports, "__esModule", {
   value: true
-})
-exports.keyReference = void 0
+});
+exports.keyReference = void 0;
 /**
  * Create a reference to a remote (foreign; existing on another record) key.
  * @param properties
@@ -16,5 +16,5 @@ const keyReference = ({
 } = {}) => ({
   fields,
   lookup
-})
-exports.keyReference = keyReference
+});
+exports.keyReference = keyReference;

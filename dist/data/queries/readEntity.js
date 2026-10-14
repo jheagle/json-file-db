@@ -1,14 +1,14 @@
-'use strict'
+"use strict";
 
-Object.defineProperty(exports, '__esModule', {
+Object.defineProperty(exports, "__esModule", {
   value: true
-})
-exports.readEntity = void 0
-const _retrieveRecords = require('../utilities/retrieveRecords')
+});
+exports.readEntity = void 0;
+var _retrieveRecords = require("../utilities/retrieveRecords");
 const readEntity = async (entity = '', dataSet = {}) => {
   if (!Object.prototype.hasOwnProperty.call(dataSet, entity) || !dataSet[entity].length) {
-    dataSet[entity] = await (0, _retrieveRecords.retrieveRecords)(entity)
+    dataSet[entity] = await (0, _retrieveRecords.retrieveRecords)(entity);
   }
-  return dataSet
-}
-exports.readEntity = readEntity
+  return dataSet;
+};
+exports.readEntity = readEntity;

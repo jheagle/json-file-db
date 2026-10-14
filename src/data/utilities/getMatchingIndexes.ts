@@ -2,7 +2,7 @@ import { retrieveIndexes } from './retrieveIndexes'
 
 export const getMatchingIndexes = async (entity: string, property: string, recordData: Object, clause: Object, dataSet: Object, indexed: Object, cb: Function = null): Promise<boolean> => {
   let isIndexed = false
-  for (let key of recordData[entity].keys) {
+  for (const key of recordData[entity].keys) {
     if (key.fields.includes(property)) {
       dataSet[entity] = []
       if (!Object.prototype.hasOwnProperty.call(indexed, entity)) {

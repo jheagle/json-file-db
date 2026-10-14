@@ -1,12 +1,12 @@
-'use strict'
+"use strict";
 
-Object.defineProperty(exports, '__esModule', {
+Object.defineProperty(exports, "__esModule", {
   value: true
-})
-exports.computeKeyValue = void 0
-require('core-js/modules/es.json.stringify.js')
-require('core-js/modules/esnext.iterator.constructor.js')
-require('core-js/modules/esnext.iterator.map.js')
+});
+exports.computeKeyValue = void 0;
+require("core-js/modules/es.json.stringify.js");
+require("core-js/modules/esnext.iterator.constructor.js");
+require("core-js/modules/esnext.iterator.map.js");
 /**
  * The value a key (of any field count) indexes and checks uniqueness by. A single-field key uses
  * the field's own raw value directly - this is the pre-existing, already-shipped index file
@@ -19,8 +19,8 @@ require('core-js/modules/esnext.iterator.map.js')
  */
 const computeKeyValue = (fields, values) => {
   if (fields.length === 1) {
-    return values[fields[0]]
+    return values[fields[0]];
   }
-  return JSON.stringify(fields.map(field => values[field]))
-}
-exports.computeKeyValue = computeKeyValue
+  return JSON.stringify(fields.map(field => values[field]));
+};
+exports.computeKeyValue = computeKeyValue;

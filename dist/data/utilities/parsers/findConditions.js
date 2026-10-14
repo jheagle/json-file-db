@@ -1,28 +1,28 @@
-'use strict'
+"use strict";
 
-Object.defineProperty(exports, '__esModule', {
+Object.defineProperty(exports, "__esModule", {
   value: true
-})
-exports.findConditions = void 0
-const _removeFromQuery = require('./removeFromQuery')
-const _parseLiteralValue = require('./parseLiteralValue')
-const conditionMatch = /(and|or)?\s*(where)\s+([a-z0-9_-]+\.?[a-z0-9_-]*)\s+(=|!=|>|<|>=|<=|in|between|like)\s+(["'](.*)['"]|([0-9]+)|(\[.*])|(null)|(true)|(false))/ig
+});
+exports.findConditions = void 0;
+var _removeFromQuery = require("./removeFromQuery");
+var _parseLiteralValue = require("./parseLiteralValue");
+const conditionMatch = /(and|or)?\s*(where)\s+([a-z0-9_-]+\.?[a-z0-9_-]*)\s+(=|!=|>|<|>=|<=|in|between|like)\s+(["'](.*)['"]|([0-9]+)|(\[.*])|(null)|(true)|(false))/ig;
 /**
  * Extract condition clauses from the query.
  * @param parsed
  * @param query
  */
 const findConditions = (parsed, query) => {
-  const conditionsFound = query.matchAll(conditionMatch)
+  const conditionsFound = query.matchAll(conditionMatch);
   // @ts-ignore
   for (const condition of conditionsFound) {
-    parsed.conditions.push({
+    parsed['conditions'].push({
       property: condition[3],
       comparator: condition[4],
       value: (0, _parseLiteralValue.parseLiteralValue)(condition, 6)
-    })
-    query = (0, _removeFromQuery.removeFromQuery)(condition[0], query)
+    });
+    query = (0, _removeFromQuery.removeFromQuery)(condition[0], query);
   }
-  return query
-}
-exports.findConditions = findConditions
+  return query;
+};
+exports.findConditions = findConditions;

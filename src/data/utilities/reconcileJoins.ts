@@ -4,8 +4,8 @@ import { reconcileJoin } from './reconcileJoin'
 export const reconcileJoins = (propertyA, propertyB, dataSet) => {
   const { entity: entityA, property: propA } = splitEntityProperty(propertyA)
   const { entity: entityB, property: propB } = splitEntityProperty(propertyB)
-  for (let entityName in dataSet) {
-    for (let entityKey in dataSet[entityName]) {
+  for (const entityName in dataSet) {
+    for (const entityKey in dataSet[entityName]) {
       dataSet = reconcileJoin(dataSet, entityName, entityKey, entityA, propA)
       dataSet = reconcileJoin(dataSet, entityName, entityKey, entityB, propB)
     }

@@ -1,14 +1,14 @@
 import { updateIndex } from './updateIndex'
-import { testHelpers } from 'js-build-tools/testHelpers'
+import { fileExists, setUp } from 'test-filesystem'
 import { configure } from './config'
 
 const databasePath = 'update-index-database/'
 configure({ databasePath })
-testHelpers.setDefaults(databasePath)
+setUp.setDefaults(databasePath)
 
-beforeEach(testHelpers.beforeEach)
+beforeEach(setUp.beforeEach)
 
-afterEach(testHelpers.afterEach)
+afterEach(setUp.afterEach)
 
 describe('updateIndex', () => {
   test('does nothing for a key with no lookup', async () => {
@@ -20,7 +20,7 @@ describe('updateIndex', () => {
     const key = { type: 'primary', fields: ['_id'], lookup: 'pk__id.json' }
     const result = await updateIndex('foo', key, 1, '1.json')
     expect(result).toEqual([{ value: 1, record: ['1.json'] }])
-    expect(testHelpers.fileExists(`${databasePath}__indexes/foo/pk__id.json`)).toBeTruthy()
+    expect(fileExists(`${databasePath}__indexes/foo/pk__id.json`)).toBeTruthy()
   })
 
   test('appends a new value onto an existing index file', async () => {

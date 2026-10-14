@@ -1,18 +1,18 @@
 import { joinEntity } from './joinEntity'
-import { testHelpers } from 'js-build-tools/testHelpers'
+import { setUp } from 'test-filesystem'
 import { configure } from '../utilities/config'
 import { copyDatabase } from '../../../test-data/copyDatabase'
 
 const databasePath = 'join-entity-database/'
 configure({ databasePath })
-testHelpers.setDefaults(databasePath)
+setUp.setDefaults(databasePath)
 
 beforeEach(
-  () => testHelpers.beforeEach()
+  () => setUp.beforeEach()
     .then(() => copyDatabase(databasePath))
 )
 
-afterEach(testHelpers.afterEach)
+afterEach(setUp.afterEach)
 
 describe('joinEntity', () => {
   test('it will find the joins', async () => {

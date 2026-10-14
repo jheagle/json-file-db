@@ -1,9 +1,9 @@
-'use strict'
+"use strict";
 
-Object.defineProperty(exports, '__esModule', {
+Object.defineProperty(exports, "__esModule", {
   value: true
-})
-exports.field = void 0
+});
+exports.field = void 0;
 /**
  * Generate a field for a record.
  * @param properties
@@ -27,10 +27,10 @@ const field = ({
     type,
     optional,
     autoGenerate
-  }
+  };
   if (useDefault) {
-    returnField.default = defaultValue
+    returnField['default'] = defaultValue;
   }
-  return returnField
-}
-exports.field = field
+  return returnField;
+};
+exports.field = field;

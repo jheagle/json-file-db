@@ -1,15 +1,15 @@
 import { registerRecord } from './registerRecord'
 import { deregisterRecord } from './deregisterRecord'
-import { testHelpers } from 'js-build-tools/testHelpers'
+import { setUp } from 'test-filesystem'
 import { configure } from './config'
 
 const databasePath = 'deregister-record-database/'
 configure({ databasePath })
-testHelpers.setDefaults(databasePath)
+setUp.setDefaults(databasePath)
 
-beforeEach(testHelpers.beforeEach)
+beforeEach(setUp.beforeEach)
 
-afterEach(testHelpers.afterEach)
+afterEach(setUp.afterEach)
 
 describe('deregisterRecord', () => {
   test('does nothing when the registry does not exist yet', async () => {

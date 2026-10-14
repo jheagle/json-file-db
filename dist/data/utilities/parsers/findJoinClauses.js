@@ -1,27 +1,27 @@
-'use strict'
+"use strict";
 
-Object.defineProperty(exports, '__esModule', {
+Object.defineProperty(exports, "__esModule", {
   value: true
-})
-exports.findJoinClauses = void 0
-const _removeFromQuery = require('./removeFromQuery')
-const joinClauseMatch = /(and)?\s*on\s+([a-z0-9_-]+\.[a-z0-9_-]+)\s+(=|!=|>|<|>=|<=|in|between|like)\s+([a-z0-9_-]+\.[a-z0-9_-]+)/ig
+});
+exports.findJoinClauses = void 0;
+var _removeFromQuery = require("./removeFromQuery");
+const joinClauseMatch = /(and)?\s*on\s+([a-z0-9_-]+\.[a-z0-9_-]+)\s+(=|!=|>|<|>=|<=|in|between|like)\s+([a-z0-9_-]+\.[a-z0-9_-]+)/ig;
 /**
  * Extract condition clauses from the query.
  * @param parsed
  * @param query
  */
 const findJoinClauses = (parsed, query) => {
-  const joinClausesFound = query.matchAll(joinClauseMatch)
+  const joinClausesFound = query.matchAll(joinClauseMatch);
   // @ts-ignore
   for (const joinClause of joinClausesFound) {
-    parsed.joinClauses.push({
+    parsed['joinClauses'].push({
       propertyA: joinClause[2],
       comparator: joinClause[3],
       propertyB: joinClause[4]
-    })
-    query = (0, _removeFromQuery.removeFromQuery)(joinClause[0], query)
+    });
+    query = (0, _removeFromQuery.removeFromQuery)(joinClause[0], query);
   }
-  return query
-}
-exports.findJoinClauses = findJoinClauses
+  return query;
+};
+exports.findJoinClauses = findJoinClauses;

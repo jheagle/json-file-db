@@ -19,7 +19,7 @@ export const findSortClauses = (parsed: ParsedQuery, query: string): string => {
   if (sortFound) {
     const sortRulesFound: IterableIterator<RegExpMatchArray> = sortFound[0].matchAll(sortRuleMatch)
     // @ts-ignore
-    for (let sortClause of sortRulesFound) {
+    for (const sortClause of sortRulesFound) {
       parsed['sortClauses'].push({
         property: sortClause[2],
         direction: sortClause[3] || 'asc',

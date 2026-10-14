@@ -53,9 +53,9 @@ export const key = ({
       throw new Error('Unrecognized key type; must be index, primary, unique, multi, or foreign')
   }
   const keyDefinition = {
-    type: type,
-    fields: fields,
-    lookup: lookup
+    type,
+    fields,
+    lookup
   }
   if (typeof references !== 'undefined' && references.length > 0) {
     keyDefinition['references'] = references.map(keyReference)

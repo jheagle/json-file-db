@@ -17,7 +17,7 @@ export type ParsedJoinClause = {
 export const findJoinClauses = (parsed: ParsedQuery, query: string): string => {
   const joinClausesFound: IterableIterator<RegExpMatchArray> = query.matchAll(joinClauseMatch)
   // @ts-ignore
-  for (let joinClause of joinClausesFound) {
+  for (const joinClause of joinClausesFound) {
     parsed['joinClauses'].push({
       propertyA: joinClause[2],
       comparator: joinClause[3],

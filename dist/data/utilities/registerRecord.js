@@ -1,16 +1,16 @@
-'use strict'
+"use strict";
 
-Object.defineProperty(exports, '__esModule', {
+Object.defineProperty(exports, "__esModule", {
   value: true
-})
-exports.registerRecord = void 0
-require('core-js/modules/es.array.includes.js')
-require('core-js/modules/es.json.stringify.js')
-const _config = require('./config')
+});
+exports.registerRecord = void 0;
+require("core-js/modules/es.array.includes.js");
+require("core-js/modules/es.json.stringify.js");
+var _config = require("./config");
 const {
   readFile,
   writeFile
-} = require('fs/promises')
+} = require('fs/promises');
 /**
  * __RECORDS is itself an ordinary record - path/definition/keys/entries - whose entries are the
  * filenames of every other record that has been created. This is the schema it's given the first
@@ -42,26 +42,26 @@ const defaultRegistry = () => ({
   }],
   keys: [],
   entries: []
-})
+});
 /**
  * Add a record's filename to the __RECORDS registry, creating the registry file the first time
  * a record is created if it doesn't already exist.
  * @param recordName
  */
 const registerRecord = async recordName => {
-  const databasePath = (0, _config.getSetting)('databasePath', 'database/')
-  const registryPath = `${databasePath}__RECORDS.json`
-  let registry
+  const databasePath = (0, _config.getSetting)('databasePath', 'database/');
+  const registryPath = `${databasePath}__RECORDS.json`;
+  let registry;
   try {
-    registry = JSON.parse(await readFile(registryPath, 'utf8'))
+    registry = JSON.parse(await readFile(registryPath, 'utf8'));
   } catch (err) {
-    registry = defaultRegistry()
+    registry = defaultRegistry();
   }
-  const fileName = `${recordName}.json`
+  const fileName = `${recordName}.json`;
   if (!registry.entries.includes(fileName)) {
-    registry.entries.push(fileName)
+    registry.entries.push(fileName);
   }
-  await writeFile(registryPath, JSON.stringify(registry, null, 2))
-  return registry
-}
-exports.registerRecord = registerRecord
+  await writeFile(registryPath, JSON.stringify(registry, null, 2));
+  return registry;
+};
+exports.registerRecord = registerRecord;

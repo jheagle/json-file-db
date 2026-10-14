@@ -1,22 +1,22 @@
-'use strict'
+"use strict";
 
-Object.defineProperty(exports, '__esModule', {
+Object.defineProperty(exports, "__esModule", {
   value: true
-})
-exports.findLimit = void 0
-const _removeFromQuery = require('./removeFromQuery')
-const limitMatch = /limit\s*(\d+)/i
+});
+exports.findLimit = void 0;
+var _removeFromQuery = require("./removeFromQuery");
+const limitMatch = /limit\s*(\d+)/i;
 /**
  * Extract the limit clauses from the query.
  * @param parsed
  * @param query
  */
 const findLimit = (parsed, query) => {
-  const limitFound = query.match(limitMatch)
+  const limitFound = query.match(limitMatch);
   if (limitFound) {
-    parsed.limit = limitFound ? parseInt(limitFound[1]) : undefined
-    return (0, _removeFromQuery.removeFromQuery)(limitFound[0], query)
+    parsed['limit'] = limitFound ? parseInt(limitFound[1]) : undefined;
+    return (0, _removeFromQuery.removeFromQuery)(limitFound[0], query);
   }
-  return query
-}
-exports.findLimit = findLimit
+  return query;
+};
+exports.findLimit = findLimit;

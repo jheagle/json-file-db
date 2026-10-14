@@ -16,7 +16,7 @@ export const joinEntity = async (entity, joinEntity, dataSets = {}, joinClauses 
   for (const anEntity in dataSets[entity]) {
     let filterJoins = siFunciona.cloneObject(dataSets)
     filterJoins[entity] = [dataSets[entity][anEntity]]
-    for (let joinClause of joinClauses) {
+    for (const joinClause of joinClauses) {
       filterJoins = await useJoinClause(joinClause, dataSets, filterJoins)
     }
     dataSets[entity][anEntity][joinEntity] = filterJoins[joinEntity]

@@ -1,4 +1,4 @@
-export type fieldName = string;
+export type fieldName = string
 
 export type fieldDefinition = {
   name: fieldName
@@ -36,10 +36,10 @@ export const field = ({
   autoGenerate = false
 }: fieldProperties = {}): fieldDefinition => {
   const returnField = {
-    name: name,
-    type: type,
-    optional: optional,
-    autoGenerate: autoGenerate,
+    name,
+    type,
+    optional,
+    autoGenerate,
   }
   if (useDefault) {
     returnField['default'] = defaultValue

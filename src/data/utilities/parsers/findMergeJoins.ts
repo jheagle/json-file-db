@@ -16,7 +16,7 @@ export type ParsedMergeJoin = {
 export const findMergeJoins = (parsed: ParsedQuery, query: string): string => {
   const mergeJoinsFound: IterableIterator<RegExpMatchArray> = query.matchAll(mergeJoinMatch)
   // @ts-ignore
-  for (let mergeJoin of mergeJoinsFound) {
+  for (const mergeJoin of mergeJoinsFound) {
     parsed['mergeJoins'].push({
       propertyA: mergeJoin[2],
       propertyB: mergeJoin[3]

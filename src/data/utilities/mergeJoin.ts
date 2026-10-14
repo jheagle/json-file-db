@@ -15,7 +15,7 @@ export const mergeJoin = async (propertyA = '', propertyB = '', dataSets = {}) =
       return dataA
     }
     const mergeMatch = matches[0]
-    for (let prop in mergeMatch) {
+    for (const prop in mergeMatch) {
       if (prop === propB) {
         // Skip the condition property since it is irrelevant
         continue

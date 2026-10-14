@@ -8,7 +8,7 @@ const parse = (query) => {
 
 describe('findUpdateValues', () => {
   test('extracts a single assignment', () => {
-    const { parsed, remaining } = parse("update workouts set reps = 12")
+    const { parsed, remaining } = parse('update workouts set reps = 12')
     expect(parsed.updateValues).toEqual({ reps: 12 })
     expect(remaining).toBe('update workouts')
   })

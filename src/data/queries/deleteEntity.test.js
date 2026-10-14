@@ -1,18 +1,18 @@
 import { create } from '../introspect/create'
 import { insertEntity } from './insertEntity'
 import { deleteEntity } from './deleteEntity'
-import { testHelpers } from 'js-build-tools/testHelpers'
+import { fileExists, setUp } from 'test-filesystem'
 import { configure } from '../utilities/config'
 
 const { readFile } = require('fs/promises')
 
 const databasePath = 'delete-entity-database/'
 configure({ databasePath })
-testHelpers.setDefaults(databasePath)
+setUp.setDefaults(databasePath)
 
-beforeEach(testHelpers.beforeEach)
+beforeEach(setUp.beforeEach)
 
-afterEach(testHelpers.afterEach)
+afterEach(setUp.afterEach)
 
 const definition = [
   { name: '_id', type: 'string', optional: false, autoGenerate: true },
@@ -46,8 +46,8 @@ describe('deleteEntity', () => {
 
     await deleteEntity('foo', { foo: [remove] })
 
-    expect(testHelpers.fileExists(`${databasePath}foo/${remove._id}.json`)).toBeFalsy()
-    expect(testHelpers.fileExists(`${databasePath}foo/${keep._id}.json`)).toBeTruthy()
+    expect(fileExists(`${databasePath}foo/${remove._id}.json`)).toBeFalsy()
+    expect(fileExists(`${databasePath}foo/${keep._id}.json`)).toBeTruthy()
 
     const recordFile = JSON.parse(await readFile(`${databasePath}foo.json`, 'utf8'))
     expect(recordFile.entries).toEqual([`${keep._id}.json`])
@@ -69,7 +69,7 @@ describe('deleteEntity', () => {
 
     await deleteEntity('foo', { foo: [inserted.foo[0]] })
 
-    expect(testHelpers.fileExists(`${databasePath}foo/custom-name.json`)).toBeFalsy()
+    expect(fileExists(`${databasePath}foo/custom-name.json`)).toBeFalsy()
     const finalRecordFile = JSON.parse(await readFile(`${databasePath}foo.json`, 'utf8'))
     expect(finalRecordFile.entries).toEqual([])
   })
@@ -149,7 +149,7 @@ describe('deleteEntity', () => {
       await expect(deleteEntity('exercises', { exercises: [exercise.exercises[0]] }))
         .rejects.toThrow(`Cannot delete from "exercises" where "_id" = ${exercise.exercises[0]._id} - other records still reference it`)
 
-      expect(testHelpers.fileExists(`${databasePath}exercises/${exercise.exercises[0]._id}.json`)).toBeTruthy()
+      expect(fileExists(`${databasePath}exercises/${exercise.exercises[0]._id}.json`)).toBeTruthy()
     })
 
     test('allows deleting once the dependent record is gone', async () => {
@@ -161,7 +161,7 @@ describe('deleteEntity', () => {
 
       await deleteEntity('exercises', { exercises: [exercise.exercises[0]] })
 
-      expect(testHelpers.fileExists(`${databasePath}exercises/${exercise.exercises[0]._id}.json`)).toBeFalsy()
+      expect(fileExists(`${databasePath}exercises/${exercise.exercises[0]._id}.json`)).toBeFalsy()
     })
 
     test('allows the delete anyway when enforceForeignKeys is turned off', async () => {
@@ -173,7 +173,7 @@ describe('deleteEntity', () => {
       configure({ enforceForeignKeys: false })
       await deleteEntity('exercises', { exercises: [exercise.exercises[0]] })
 
-      expect(testHelpers.fileExists(`${databasePath}exercises/${exercise.exercises[0]._id}.json`)).toBeFalsy()
+      expect(fileExists(`${databasePath}exercises/${exercise.exercises[0]._id}.json`)).toBeFalsy()
     })
   })
 })

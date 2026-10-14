@@ -1,13 +1,13 @@
 import { query, create, drop, describe as describeRecord, configure } from './index'
-import { testHelpers } from 'js-build-tools/testHelpers'
+import { setUp } from 'test-filesystem'
 
 const databasePath = 'public-api-database/'
 configure({ databasePath })
-testHelpers.setDefaults(databasePath)
+setUp.setDefaults(databasePath)
 
-beforeEach(testHelpers.beforeEach)
+beforeEach(setUp.beforeEach)
 
-afterEach(testHelpers.afterEach)
+afterEach(setUp.afterEach)
 
 describe('the public package entry point', () => {
   test('create, insert, read, update, delete, and drop all work through the exported functions', async () => {

@@ -1,16 +1,16 @@
 import { create } from '../introspect/create'
 import { insertEntity } from '../queries/insertEntity'
 import { runQuery } from './runQuery'
-import { testHelpers } from 'js-build-tools/testHelpers'
+import { setUp } from 'test-filesystem'
 import { configure } from './config'
 
 const databasePath = 'run-query-database/'
 configure({ databasePath })
-testHelpers.setDefaults(databasePath)
+setUp.setDefaults(databasePath)
 
-beforeEach(testHelpers.beforeEach)
+beforeEach(setUp.beforeEach)
 
-afterEach(testHelpers.afterEach)
+afterEach(setUp.afterEach)
 
 const definition = [
   { name: '_id', type: 'string', optional: false, autoGenerate: true },
