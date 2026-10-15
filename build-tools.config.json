@@ -4,6 +4,12 @@
     "name": "jsonFsQuery",
     "ignore": ["fs", "fs/promises"]
   },
+  "copyFiles": [
+    {
+      "from": "browser/*.js",
+      "to": "../joshuaheagle.local/projects/json-file-db/browser"
+    }
+  ],
   "dist": {
     "main": "dist/index.js"
   },
