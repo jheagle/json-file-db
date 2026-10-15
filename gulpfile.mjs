@@ -1,8 +1,10 @@
 export {
   build,
+  copyFiles,
   dist,
   defaultCmd as default,
   bundle,
+  docs,
   images,
   partials,
   readme,
