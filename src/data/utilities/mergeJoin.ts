@@ -1,6 +1,8 @@
 import { readEntity } from '../queries/readEntity'
 import { splitEntityProperty } from './parsers/splitEntityProperty'
 import { where } from '../queries/where'
+import { retrieveRecord } from './retrieveRecord'
+import { fieldType } from './fieldType'
 
 export const mergeJoin = async (propertyA = '', propertyB = '', dataSets = {}) => {
   const { entity: entityA, property: propA } = splitEntityProperty(propertyA)
@@ -9,8 +11,9 @@ export const mergeJoin = async (propertyA = '', propertyB = '', dataSets = {}) =
   dataSets = await readEntity(entityA, dataSets)
   dataSets = await readEntity(entityB, dataSets)
 
+  const typeB = fieldType(await retrieveRecord(entityB), propB)
   dataSets[entityA] = dataSets[entityA].map((dataA) => {
-    const matches = where(dataSets[entityB], { property: propB, comparator: '=', value: dataA[propA] })
+    const matches = where(dataSets[entityB], { property: propB, comparator: '=', value: dataA[propA], type: typeB })
     if (!matches.length) {
       return dataA
     }

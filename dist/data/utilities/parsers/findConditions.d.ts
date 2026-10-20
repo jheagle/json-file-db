@@ -5,6 +5,7 @@ export type ParsedCondition = {
     property: string;
     comparator: string;
     value: ConditionValue;
+    type?: string;
 };
 /**
  * Extract condition clauses from the query.

@@ -9,6 +9,7 @@ require("core-js/modules/es.json.stringify.js");
 require("core-js/modules/esnext.iterator.constructor.js");
 require("core-js/modules/esnext.iterator.find.js");
 var _config = require("./config");
+var _compareAs = require("./compareAs");
 const {
   readFile,
   writeFile,
@@ -22,8 +23,9 @@ const {
  * @param key
  * @param value
  * @param fileName
+ * @param type - The declared type of the indexed value (see keyValueType), so '3' and 3 share one entry.
  */
-const updateIndex = async (path = '', key = null, value = undefined, fileName = '') => {
+const updateIndex = async (path = '', key = null, value = undefined, fileName = '', type = undefined) => {
   if (!key || !key.lookup) {
     return null;
   }
@@ -36,10 +38,7 @@ const updateIndex = async (path = '', key = null, value = undefined, fileName = 
   } catch (err) {
     index = [];
   }
-  // Loose on purpose: writes are coerced to the schema's declared type, but stored values may not match it (ids
-  // declared string are stored as numbers), so the same value can be '3' in one record and 3 in another.
-  // eslint-disable-next-line eqeqeq
-  const existingEntry = index.find(entry => entry.value == value);
+  const existingEntry = index.find(entry => (0, _compareAs.sameValue)(type, entry.value, value));
   if (existingEntry) {
     if (!existingEntry.record.includes(fileName)) {
       existingEntry.record.push(fileName);

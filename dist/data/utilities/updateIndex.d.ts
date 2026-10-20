@@ -12,6 +12,7 @@ export type indexEntry = {
  * @param key
  * @param value
  * @param fileName
+ * @param type - The declared type of the indexed value (see keyValueType), so '3' and 3 share one entry.
  */
-export declare const updateIndex: (path?: recordPath, key?: keyDefinition, value?: any, fileName?: string) => Promise<indexEntry[] | null>;
+export declare const updateIndex: (path?: recordPath, key?: keyDefinition, value?: any, fileName?: string, type?: string) => Promise<indexEntry[] | null>;
 //# sourceMappingURL=updateIndex.d.ts.map

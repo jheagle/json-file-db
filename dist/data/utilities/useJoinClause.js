@@ -10,6 +10,8 @@ var _readEntity = require("../queries/readEntity");
 var _where = require("../queries/where");
 var _splitEntityProperty = require("./parsers/splitEntityProperty");
 var _siFunciona = _interopRequireDefault(require("si-funciona"));
+var _retrieveRecord = require("./retrieveRecord");
+var _fieldType = require("./fieldType");
 function _interopRequireDefault(e) { return e && e.__esModule ? e : { default: e }; }
 const useJoinClause = async ({
   propertyA = null,
@@ -36,15 +38,19 @@ const useJoinClause = async ({
   if (!Object.prototype.hasOwnProperty.call(filterJoins, entityB)) {
     filterJoins[entityB] = _siFunciona.default.cloneObject(dataSets[entityB]);
   }
+  const typeA = (0, _fieldType.fieldType)(await (0, _retrieveRecord.retrieveRecord)(entityA), propA);
+  const typeB = (0, _fieldType.fieldType)(await (0, _retrieveRecord.retrieveRecord)(entityB), propB);
   filterJoins[entityA] = filterJoins[entityB].reduce((dataA, dataB) => _siFunciona.default.mergeArrays(dataA, (0, _where.where)(filterJoins[entityA], {
     property: propA,
     comparator,
-    value: dataB[propB]
+    value: dataB[propB],
+    type: typeA
   })), []);
   filterJoins[entityB] = filterJoins[entityA].reduce((dataB, dataA) => _siFunciona.default.mergeArrays(dataB, (0, _where.where)(filterJoins[entityB], {
     property: propB,
     comparator,
-    value: dataA[propA]
+    value: dataA[propA],
+    type: typeB
   })), []);
   return filterJoins;
 };

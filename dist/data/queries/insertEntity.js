@@ -17,6 +17,7 @@ var _typeCheck = require("../introspect/policies/typeCheck");
 var _foreignKeyExists = require("../introspect/policies/foreignKeyExists");
 var _splitEntityProperty = require("../utilities/parsers/splitEntityProperty");
 var _computeKeyValue = require("../utilities/computeKeyValue");
+var _fieldType = require("../utilities/fieldType");
 var _config = require("../utilities/config");
 const {
   writeFile
@@ -108,7 +109,7 @@ const insertEntity = async (entity = '', values = [], dataSet = {}) => {
     record.entries.push(fileName);
     await writeFile(`${databasePath}${record.path}.json`, JSON.stringify(record, null, 2));
     for (const key of record.keys) {
-      await (0, _updateIndex.updateIndex)(record.path, key, (0, _computeKeyValue.computeKeyValue)(key.fields, entityValues), fileName);
+      await (0, _updateIndex.updateIndex)(record.path, key, (0, _computeKeyValue.computeKeyValue)(key.fields, entityValues), fileName, (0, _fieldType.keyValueType)(record, key));
     }
     dataSet[entity].push(entityValues);
   }

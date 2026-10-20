@@ -7,6 +7,7 @@ import { typeCheck } from '../introspect/policies/typeCheck'
 import { foreignKeyExists } from '../introspect/policies/foreignKeyExists'
 import { splitEntityProperty } from '../utilities/parsers/splitEntityProperty'
 import { computeKeyValue } from '../utilities/computeKeyValue'
+import { keyValueType } from '../utilities/fieldType'
 import { recordDefinition } from '../introspect/definitions/record'
 import { getSetting } from '../utilities/config'
 
@@ -104,7 +105,7 @@ export const insertEntity = async (entity: string = '', values: Object[] = [], d
     await writeFile(`${databasePath}${record.path}.json`, JSON.stringify(record, null, 2))
 
     for (const key of record.keys) {
-      await updateIndex(record.path, key, computeKeyValue(key.fields, entityValues), fileName)
+      await updateIndex(record.path, key, computeKeyValue(key.fields, entityValues), fileName, keyValueType(record, key))
     }
 
     dataSet[entity].push(entityValues)

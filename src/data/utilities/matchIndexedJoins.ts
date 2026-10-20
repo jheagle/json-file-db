@@ -2,6 +2,7 @@ import siFunciona from 'si-funciona'
 import { where } from '../queries/where'
 import { retrieveFile } from './retrieveFile'
 import { splitEntityProperty } from './parsers/splitEntityProperty'
+import { fieldType } from './fieldType'
 
 export const matchIndexedJoins = (entity, indexedClone, dataSets) => async (focusEntity, property, recordData, joinClause, filterJoins, indexed) => {
   const { entity: entityA, property: propertyA } = splitEntityProperty(joinClause.propertyA)
@@ -20,7 +21,8 @@ export const matchIndexedJoins = (entity, indexedClone, dataSets) => async (focu
         where(indexedClone[checkProp.entityFirst][checkProp.propertyFirst], {
           property: 'value',
           comparator: joinClause.comparator,
-          value: dataB.value
+          value: dataB.value,
+          type: fieldType(recordData[checkProp.entityFirst], checkProp.propertyFirst)
         })
       ),
       []

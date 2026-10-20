@@ -1,5 +1,7 @@
 import { retrieveRecords } from '../../utilities/retrieveRecords'
 import { where } from '../../queries/where'
+import { retrieveRecord } from '../../utilities/retrieveRecord'
+import { fieldType } from '../../utilities/fieldType'
 
 /**
  * Check whether any record in the referenced entity has the given property set to the given
@@ -10,6 +12,7 @@ import { where } from '../../queries/where'
  */
 export const foreignKeyExists = async (entity: string, property: string, value: any): Promise<boolean> => {
   const records = await retrieveRecords(entity)
-  const found = where(records, { property, comparator: '=', value })
+  const type = fieldType(await retrieveRecord(entity), property)
+  const found = where(records, { property, comparator: '=', value, type })
   return found.length > 0
 }

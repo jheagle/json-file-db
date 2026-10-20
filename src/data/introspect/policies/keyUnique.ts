@@ -1,5 +1,7 @@
 import { retrieveRecords } from '../../utilities/retrieveRecords'
 import { where } from '../../queries/where'
+import { retrieveRecord } from '../../utilities/retrieveRecord'
+import { fieldType } from '../../utilities/fieldType'
 
 /**
  * Check that no existing record already has this combination of values across all of the given
@@ -14,8 +16,9 @@ export const keyUnique = async (entity, references = [], checkKeys = []) => {
     return false
   }
   let records = await retrieveRecords(entity)
+  const record = await retrieveRecord(entity)
   for (let i = 0; i < references.length; i++) {
-    records = where(records, { property: references[i], comparator: '=', value: checkKeys[i] })
+    records = where(records, { property: references[i], comparator: '=', value: checkKeys[i], type: fieldType(record, references[i]) })
   }
   return !records.length
 }

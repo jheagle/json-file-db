@@ -24,7 +24,8 @@ export const getConditionIndexedList = async (parsed: ParsedQuery, recordData, d
       const matchedRecords = where(indexed[entity][property], {
         property: 'value',
         comparator: condition.comparator,
-        value: condition.value
+        value: condition.value,
+        type: condition.type
       })
       for (const matchedRecord of matchedRecords) {
         for (const file of matchedRecord.record) {

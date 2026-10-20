@@ -28,7 +28,8 @@ const getConditionIndexedList = async (parsed, recordData, dataSet) => {
       const matchedRecords = (0, _where.where)(indexed[entity][property], {
         property: 'value',
         comparator: condition.comparator,
-        value: condition.value
+        value: condition.value,
+        type: condition.type
       });
       for (const matchedRecord of matchedRecords) {
         for (const file of matchedRecord.record) {

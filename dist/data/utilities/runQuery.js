@@ -20,6 +20,31 @@ var _selectFields = require("../queries/selectFields");
 var _retrieveRecord = require("./retrieveRecord");
 var _getConditionIndexedList = require("./getConditionIndexedList");
 var _getJoinIndexedList = require("./getJoinIndexedList");
+var _isEntityProperty = require("./parsers/isEntityProperty");
+var _splitEntityProperty = require("./parsers/splitEntityProperty");
+var _fieldType = require("./fieldType");
+/**
+ * Give each condition its field's declared type, so where compares by it (a joined entity's field
+ * is looked up on that entity's record).
+ * @param parsed
+ * @param recordData
+ */
+const typeConditions = async (parsed, recordData) => {
+  for (const condition of parsed.conditions) {
+    let entity = parsed.entity;
+    let property = condition.property;
+    if ((0, _isEntityProperty.isEntityProperty)(property)) {
+      ({
+        entity,
+        property
+      } = (0, _splitEntityProperty.splitEntityProperty)(property));
+    }
+    if (!Object.prototype.hasOwnProperty.call(recordData, entity)) {
+      recordData[entity] = await (0, _retrieveRecord.retrieveRecord)(entity);
+    }
+    condition.type = (0, _fieldType.fieldType)(recordData[entity], property);
+  }
+};
 const runQuery = async parsed => {
   const recordData = {
     [parsed.entity]: await (0, _retrieveRecord.retrieveRecord)(parsed.entity)
@@ -27,6 +52,7 @@ const runQuery = async parsed => {
   if (typeof parsed.joinEntity !== 'undefined') {
     recordData[parsed.joinEntity] = await (0, _retrieveRecord.retrieveRecord)(parsed.joinEntity);
   }
+  await typeConditions(parsed, recordData);
   let dataSet = {
     [parsed.entity]: []
   };

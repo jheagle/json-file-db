@@ -10,6 +10,7 @@ var _siFunciona = _interopRequireDefault(require("si-funciona"));
 var _where = require("../queries/where");
 var _retrieveFile = require("./retrieveFile");
 var _splitEntityProperty = require("./parsers/splitEntityProperty");
+var _fieldType = require("./fieldType");
 function _interopRequireDefault(e) { return e && e.__esModule ? e : { default: e }; }
 const matchIndexedJoins = (entity, indexedClone, dataSets) => async (focusEntity, property, recordData, joinClause, filterJoins, indexed) => {
   const {
@@ -38,7 +39,8 @@ const matchIndexedJoins = (entity, indexedClone, dataSets) => async (focusEntity
     const matchedRecords = indexedClone[checkProp.entitySecond][checkProp.propertySecond].reduce((dataA, dataB) => _siFunciona.default.mergeArrays(dataA, (0, _where.where)(indexedClone[checkProp.entityFirst][checkProp.propertyFirst], {
       property: 'value',
       comparator: joinClause.comparator,
-      value: dataB.value
+      value: dataB.value,
+      type: (0, _fieldType.fieldType)(recordData[checkProp.entityFirst], checkProp.propertyFirst)
     })), []);
     const skipPush = checkProp.entityFirst === entity;
     if (!Object.prototype.hasOwnProperty.call(dataSets, checkProp.entityFirst)) {
