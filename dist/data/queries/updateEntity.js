@@ -34,6 +34,9 @@ const {
 const findEntryFile = async (record, primaryKey, primaryValue) => {
   for (const fileName of record.entries) {
     const data = await (0, _retrieveFile.retrieveFile)(`${record.path}/${fileName}`);
+    // Loose on purpose: writes are coerced to the schema's declared type, but stored values may not match it (ids
+    // declared string are stored as numbers), so the same value can be '3' in one record and 3 in another.
+    // eslint-disable-next-line eqeqeq
     if ((0, _computeKeyValue.computeKeyValue)(primaryKey.fields, data) == primaryValue) {
       return fileName;
     }
@@ -47,7 +50,11 @@ const findEntryFile = async (record, primaryKey, primaryValue) => {
  * @param oldData
  * @param newValues
  */
-const keyFieldsChanged = (key, oldData, newValues) => key.fields.some(field => Object.prototype.hasOwnProperty.call(newValues, field) && newValues[field] != oldData[field]);
+const keyFieldsChanged = (key, oldData, newValues) =>
+// Loose on purpose: writes are coerced to the schema's declared type, but stored values may not match it (ids
+// declared string are stored as numbers), so the same value can be '3' in one record and 3 in another.
+// eslint-disable-next-line eqeqeq
+key.fields.some(field => Object.prototype.hasOwnProperty.call(newValues, field) && newValues[field] != oldData[field]);
 /**
  * Only check uniqueness for a primary/unique key (single-field, or composite) whose value is
  * actually changing - checking an unchanged value would find the record's own existing entry and
@@ -85,6 +92,9 @@ const assertForeignKeysForUpdate = async (entity, record, oldData, newValues) =>
       continue;
     }
     const field = key.fields[0];
+    // Loose on purpose: writes are coerced to the schema's declared type, but stored values may not match it (ids
+    // declared string are stored as numbers), so the same value can be '3' in one record and 3 in another.
+    // eslint-disable-next-line eqeqeq
     if (!Object.prototype.hasOwnProperty.call(newValues, field) || newValues[field] == oldData[field]) {
       continue;
     }

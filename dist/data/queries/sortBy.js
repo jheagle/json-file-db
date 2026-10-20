@@ -12,6 +12,9 @@ const sortBy = (dataSet = [], sortClauses = []) => {
     for (const sortClause of sortClauses) {
       const property = sortClause.property;
       const direction = sortClause.direction;
+      // Loose on purpose: writes are coerced to the schema's declared type, but stored values may not match it (ids
+      // declared string are stored as numbers), so the same value can be '3' in one record and 3 in another.
+      // eslint-disable-next-line eqeqeq
       if (a[property] == b[property]) {
         continue;
       }
