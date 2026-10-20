@@ -9,6 +9,7 @@ import { indexEntry } from './updateIndex';
  * @param key
  * @param value
  * @param fileName
+ * @param type - The declared type of the indexed value (see keyValueType), so '3' and 3 are one entry.
  */
-export declare const removeFromIndex: (path?: recordPath, key?: keyDefinition, value?: any, fileName?: string) => Promise<indexEntry[] | null>;
+export declare const removeFromIndex: (path?: recordPath, key?: keyDefinition, value?: any, fileName?: string, type?: string) => Promise<indexEntry[] | null>;
 //# sourceMappingURL=removeFromIndex.d.ts.map

@@ -12,6 +12,29 @@ import { selectFields } from '../queries/selectFields'
 import { retrieveRecord } from './retrieveRecord'
 import { getConditionIndexedList } from './getConditionIndexedList'
 import { getJoinIndexedList } from './getJoinIndexedList'
+import { isEntityProperty } from './parsers/isEntityProperty'
+import { splitEntityProperty } from './parsers/splitEntityProperty'
+import { fieldType } from './fieldType'
+
+/**
+ * Give each condition its field's declared type, so where compares by it (a joined entity's field
+ * is looked up on that entity's record).
+ * @param parsed
+ * @param recordData
+ */
+const typeConditions = async (parsed, recordData) => {
+  for (const condition of parsed.conditions) {
+    let entity = parsed.entity
+    let property = condition.property
+    if (isEntityProperty(property)) {
+      ({ entity, property } = splitEntityProperty(property))
+    }
+    if (!Object.prototype.hasOwnProperty.call(recordData, entity)) {
+      recordData[entity] = await retrieveRecord(entity)
+    }
+    condition.type = fieldType(recordData[entity], property)
+  }
+}
 
 export const runQuery = async (parsed) => {
   const recordData = {
@@ -20,6 +43,8 @@ export const runQuery = async (parsed) => {
   if (typeof parsed.joinEntity !== 'undefined') {
     recordData[parsed.joinEntity] = await retrieveRecord(parsed.joinEntity)
   }
+
+  await typeConditions(parsed, recordData)
 
   let dataSet: any = { [parsed.entity]: [] }
 

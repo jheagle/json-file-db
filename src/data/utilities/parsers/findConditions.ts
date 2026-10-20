@@ -10,6 +10,8 @@ export type ParsedCondition = {
   property: string
   comparator: string
   value: ConditionValue
+  // The field's declared type, resolved from its record when the condition runs (see where)
+  type?: string
 }
 
 /**

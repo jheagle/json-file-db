@@ -9,6 +9,7 @@ require("core-js/modules/esnext.iterator.constructor.js");
 require("core-js/modules/esnext.iterator.filter.js");
 require("core-js/modules/esnext.iterator.map.js");
 var _config = require("./config");
+var _compareAs = require("./compareAs");
 const {
   readFile,
   writeFile
@@ -21,8 +22,9 @@ const {
  * @param key
  * @param value
  * @param fileName
+ * @param type - The declared type of the indexed value (see keyValueType), so '3' and 3 are one entry.
  */
-const removeFromIndex = async (path = '', key = null, value = undefined, fileName = '') => {
+const removeFromIndex = async (path = '', key = null, value = undefined, fileName = '', type = undefined) => {
   if (!key || !key.lookup) {
     return null;
   }
@@ -34,11 +36,7 @@ const removeFromIndex = async (path = '', key = null, value = undefined, fileNam
   } catch (err) {
     return null;
   }
-  index = index
-  // Loose on purpose: writes are coerced to the schema's declared type, but stored values may not match it (ids
-  // declared string are stored as numbers), so the same value can be '3' in one record and 3 in another.
-  // eslint-disable-next-line eqeqeq
-  .map(entry => entry.value == value ? {
+  index = index.map(entry => (0, _compareAs.sameValue)(type, entry.value, value) ? {
     value: entry.value,
     record: entry.record.filter(record => record !== fileName)
   } : entry).filter(entry => entry.record.length);

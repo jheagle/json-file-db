@@ -14,6 +14,8 @@ var _retrieveFile = require("../utilities/retrieveFile");
 var _updateIndex = require("../utilities/updateIndex");
 var _removeFromIndex = require("../utilities/removeFromIndex");
 var _computeKeyValue = require("../utilities/computeKeyValue");
+var _fieldType = require("../utilities/fieldType");
+var _compareAs = require("../utilities/compareAs");
 var _keyUnique = require("../introspect/policies/keyUnique");
 var _typeCheck = require("../introspect/policies/typeCheck");
 var _foreignKeyExists = require("../introspect/policies/foreignKeyExists");
@@ -34,10 +36,7 @@ const {
 const findEntryFile = async (record, primaryKey, primaryValue) => {
   for (const fileName of record.entries) {
     const data = await (0, _retrieveFile.retrieveFile)(`${record.path}/${fileName}`);
-    // Loose on purpose: writes are coerced to the schema's declared type, but stored values may not match it (ids
-    // declared string are stored as numbers), so the same value can be '3' in one record and 3 in another.
-    // eslint-disable-next-line eqeqeq
-    if ((0, _computeKeyValue.computeKeyValue)(primaryKey.fields, data) == primaryValue) {
+    if ((0, _compareAs.sameValue)((0, _fieldType.keyValueType)(record, primaryKey), (0, _computeKeyValue.computeKeyValue)(primaryKey.fields, data), primaryValue)) {
       return fileName;
     }
   }
@@ -46,15 +45,12 @@ const findEntryFile = async (record, primaryKey, primaryValue) => {
 /**
  * True if the update actually changes at least one of this key's fields - a key none of whose
  * fields appear in newValues, or whose given values are all unchanged, doesn't need re-checking.
+ * @param record
  * @param key
  * @param oldData
  * @param newValues
  */
-const keyFieldsChanged = (key, oldData, newValues) =>
-// Loose on purpose: writes are coerced to the schema's declared type, but stored values may not match it (ids
-// declared string are stored as numbers), so the same value can be '3' in one record and 3 in another.
-// eslint-disable-next-line eqeqeq
-key.fields.some(field => Object.prototype.hasOwnProperty.call(newValues, field) && newValues[field] != oldData[field]);
+const keyFieldsChanged = (record, key, oldData, newValues) => key.fields.some(field => Object.prototype.hasOwnProperty.call(newValues, field) && !(0, _compareAs.sameValue)((0, _fieldType.fieldType)(record, field), newValues[field], oldData[field]));
 /**
  * Only check uniqueness for a primary/unique key (single-field, or composite) whose value is
  * actually changing - checking an unchanged value would find the record's own existing entry and
@@ -67,7 +63,7 @@ key.fields.some(field => Object.prototype.hasOwnProperty.call(newValues, field) 
  */
 const assertUniqueForUpdate = async (entity, record, oldData, newData, newValues) => {
   for (const key of record.keys) {
-    if (key.type !== 'primary' && key.type !== 'unique' || !keyFieldsChanged(key, oldData, newValues)) {
+    if (key.type !== 'primary' && key.type !== 'unique' || !keyFieldsChanged(record, key, oldData, newValues)) {
       continue;
     }
     const checkKeys = key.fields.map(field => newData[field]);
@@ -92,10 +88,7 @@ const assertForeignKeysForUpdate = async (entity, record, oldData, newValues) =>
       continue;
     }
     const field = key.fields[0];
-    // Loose on purpose: writes are coerced to the schema's declared type, but stored values may not match it (ids
-    // declared string are stored as numbers), so the same value can be '3' in one record and 3 in another.
-    // eslint-disable-next-line eqeqeq
-    if (!Object.prototype.hasOwnProperty.call(newValues, field) || newValues[field] == oldData[field]) {
+    if (!Object.prototype.hasOwnProperty.call(newValues, field) || (0, _compareAs.sameValue)((0, _fieldType.fieldType)(record, field), newValues[field], oldData[field])) {
       continue;
     }
     const {
@@ -114,12 +107,13 @@ const assertForeignKeysForUpdate = async (entity, record, oldData, newValues) =>
  * dangling, since the row itself isn't gone, just re-keyed. Only meaningful for a single-field
  * primary key, matching foreign key support's own single-field-only scope.
  * @param entity
+ * @param record
  * @param primaryKey
  * @param oldData
  * @param newValues
  */
-const assertNoDependentsForUpdate = async (entity, primaryKey, oldData, newValues) => {
-  if (!(0, _config.getSetting)('enforceForeignKeys', true) || primaryKey.fields.length !== 1 || !keyFieldsChanged(primaryKey, oldData, newValues)) {
+const assertNoDependentsForUpdate = async (entity, record, primaryKey, oldData, newValues) => {
+  if (!(0, _config.getSetting)('enforceForeignKeys', true) || primaryKey.fields.length !== 1 || !keyFieldsChanged(record, primaryKey, oldData, newValues)) {
     return;
   }
   const property = primaryKey.fields[0];
@@ -138,11 +132,11 @@ const assertNoDependentsForUpdate = async (entity, primaryKey, oldData, newValue
  */
 const reconcileIndexes = async (record, oldData, newData, newValues, fileName) => {
   for (const key of record.keys) {
-    if (!keyFieldsChanged(key, oldData, newValues)) {
+    if (!keyFieldsChanged(record, key, oldData, newValues)) {
       continue;
     }
-    await (0, _removeFromIndex.removeFromIndex)(record.path, key, (0, _computeKeyValue.computeKeyValue)(key.fields, oldData), fileName);
-    await (0, _updateIndex.updateIndex)(record.path, key, (0, _computeKeyValue.computeKeyValue)(key.fields, newData), fileName);
+    await (0, _removeFromIndex.removeFromIndex)(record.path, key, (0, _computeKeyValue.computeKeyValue)(key.fields, oldData), fileName, (0, _fieldType.keyValueType)(record, key));
+    await (0, _updateIndex.updateIndex)(record.path, key, (0, _computeKeyValue.computeKeyValue)(key.fields, newData), fileName, (0, _fieldType.keyValueType)(record, key));
   }
 };
 const assertRequiredFields = (entity, record, newData) => {
@@ -188,7 +182,7 @@ const updateEntity = async (entity = '', values = {}, dataSet = {}) => {
     const newData = Object.assign({}, oldData, typedValues);
     await assertUniqueForUpdate(entity, record, oldData, newData, typedValues);
     await assertForeignKeysForUpdate(entity, record, oldData, typedValues);
-    await assertNoDependentsForUpdate(entity, primaryKey, oldData, typedValues);
+    await assertNoDependentsForUpdate(entity, record, primaryKey, oldData, typedValues);
     assertRequiredFields(entity, record, newData);
     await reconcileIndexes(record, oldData, newData, typedValues, fileName);
     await writeFile(`${databasePath}${record.path}/${fileName}`, JSON.stringify(newData, null, 2));

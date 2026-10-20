@@ -2,6 +2,7 @@ import { describe } from '../describe'
 import { retrieveRecord } from '../../utilities/retrieveRecord'
 import { retrieveRecords } from '../../utilities/retrieveRecords'
 import { where } from '../../queries/where'
+import { fieldType } from '../../utilities/fieldType'
 import { splitEntityProperty } from '../../utilities/parsers/splitEntityProperty'
 
 /**
@@ -29,7 +30,7 @@ export const hasDependents = async (entity: string, property: string, value: any
         continue
       }
       const records = await retrieveRecords(otherEntity)
-      const found = where(records, { property: key.fields[0], comparator: '=', value })
+      const found = where(records, { property: key.fields[0], comparator: '=', value, type: fieldType(otherRecord, key.fields[0]) })
       if (found.length) {
         return true
       }

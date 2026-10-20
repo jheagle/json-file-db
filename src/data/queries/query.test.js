@@ -1,4 +1,5 @@
 import { query } from './query'
+import { readFile } from 'fs/promises'
 import { create } from '../introspect/create'
 import { setUp } from 'test-filesystem'
 import { configure } from '../utilities/config'
@@ -329,5 +330,32 @@ describe('query', () => {
       { _id: 2, date: '2024-06-02' },
       { _id: 3, date: '2024-06-02' }
     ])
+  })
+
+  test('an inserted id is written as its declared string type, and joins the index entry of the same stored number', async () => {
+    const inserted = await query("insert workouts values _id = 99, exercise_id = 2, order = 0, date = '2024-06-10'")
+    expect(inserted[0][0]).toMatchObject({ exercise_id: '2' })
+
+    const index = JSON.parse(await readFile(`${databasePath}__indexes/workouts/fk_exercise_id.json`, 'utf8'))
+    const entries = index.filter(entry => String(entry.value) === '2')
+    expect(entries).toHaveLength(1)
+    expect(entries[0].record).toContain('99.json')
+  })
+
+  test('a condition compares by the field\'s declared type, matching ids stored as numbers and as strings', async () => {
+    await query("insert workouts values _id = 99, exercise_id = 2, order = 0, date = '2024-06-10'")
+
+    const equal = await query('read workouts where exercise_id = 2')
+    expect(equal[0].map(row => String(row._id)).sort()).toEqual(['2', '5', '99'])
+
+    // in compared strictly before, so a string list never matched the stored numbers
+    const listed = await query('read workouts where exercise_id in ["2"]')
+    expect(listed[0].map(row => String(row._id)).sort()).toEqual(['2', '5', '99'])
+  })
+
+  test('an int field matches numeric strings in an unindexed in condition', async () => {
+    const result = await query('read workouts where reps in ["10"]')
+    expect(result[0].length).toBeGreaterThan(0)
+    expect(result[0].every(row => row.reps === 10)).toBe(true)
   })
 })

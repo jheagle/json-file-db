@@ -8,6 +8,7 @@ var _describe = require("../describe");
 var _retrieveRecord = require("../../utilities/retrieveRecord");
 var _retrieveRecords = require("../../utilities/retrieveRecords");
 var _where = require("../../queries/where");
+var _fieldType = require("../../utilities/fieldType");
 var _splitEntityProperty = require("../../utilities/parsers/splitEntityProperty");
 /**
  * Check whether any other record, in any entity, still has a single-field foreign key pointing
@@ -40,7 +41,8 @@ const hasDependents = async (entity, property, value) => {
       const found = (0, _where.where)(records, {
         property: key.fields[0],
         comparator: '=',
-        value
+        value,
+        type: (0, _fieldType.fieldType)(otherRecord, key.fields[0])
       });
       if (found.length) {
         return true;

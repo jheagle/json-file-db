@@ -125,4 +125,29 @@ describe('where', () => {
     const result = where(dataSet, { property: 'date', comparator: 'like', value: '2024-06-02' })
     expect(result).toEqual(dataSet)
   })
+
+  test('= with a declared type matches a value stored with a different type', () => {
+    const result = where(dataSet, { property: 'exercise_id', comparator: '=', value: '2', type: 'string' })
+    expect(result.map(row => row._id)).toEqual([2])
+  })
+
+  test('!= with a declared type excludes a value stored with a different type', () => {
+    const result = where(dataSet, { property: 'exercise_id', comparator: '!=', value: '2', type: 'string' })
+    expect(result.map(row => row._id)).toEqual([1, 3])
+  })
+
+  test('in with a declared type matches values stored with a different type', () => {
+    const result = where(dataSet, { property: 'exercise_id', comparator: 'in', value: ['1', '3'], type: 'string' })
+    expect(result.map(row => row._id)).toEqual([1, 3])
+  })
+
+  test('in without a declared type still matches strictly', () => {
+    const result = where(dataSet, { property: 'exercise_id', comparator: 'in', value: ['1', '3'] })
+    expect(result).toEqual([])
+  })
+
+  test('ordering ignores the declared type and compares the stored values', () => {
+    const result = where(dataSet, { property: 'exercise_id', comparator: '>', value: 1, type: 'string' })
+    expect(result.map(row => row._id)).toEqual([2, 3])
+  })
 })

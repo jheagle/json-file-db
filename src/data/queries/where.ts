@@ -1,3 +1,5 @@
+import { sameValue } from '../utilities/compareAs'
+
 const likeMatch = (dataValue, pattern) => {
   if (typeof dataValue !== 'string' || typeof pattern !== 'string') {
     return false
@@ -9,22 +11,26 @@ const likeMatch = (dataValue, pattern) => {
   return new RegExp(`^${regexPattern}$`, 'i').test(dataValue)
 }
 
-const makeCondition = (data, property, comparator, value) => {
+/**
+ * Equality (=, !=, <>, in) compares by the field's declared type when given one (see sameValue), so
+ * '3' and 3 match in a string or int field. Ordering (>, <, between, like) compares the raw values.
+ * @param data
+ * @param property
+ * @param comparator
+ * @param value
+ * @param type
+ */
+const makeCondition = (data, property, comparator, value, type = undefined) => {
   if (!Object.prototype.hasOwnProperty.call(data, property)) {
     return false
   }
   const dataValue = data[property]
   switch (comparator) {
     case '=':
-      // Loose on purpose: a query literal and the stored value may differ in type ('2' matches 2), see where.test.js,
-      // and stored values may not match the schema's declared type either.
-      // eslint-disable-next-line eqeqeq
-      return dataValue == value
+      return sameValue(type, dataValue, value)
     case '!=':
     case '<>':
-      // Loose on purpose, as for '=' above
-      // eslint-disable-next-line eqeqeq
-      return dataValue != value
+      return !sameValue(type, dataValue, value)
     case '>':
       return dataValue > value
     case '>=':
@@ -34,7 +40,7 @@ const makeCondition = (data, property, comparator, value) => {
     case '<=':
       return dataValue <= value
     case 'in':
-      return Array.isArray(value) && value.includes(dataValue)
+      return Array.isArray(value) && (type ? value.some(item => sameValue(type, dataValue, item)) : value.includes(dataValue))
     case 'between':
       return Array.isArray(value) && value.length === 2 && dataValue >= value[0] && dataValue <= value[1]
     case 'like':
@@ -49,11 +55,12 @@ export const where = (
     property = '',
     joinEntity = undefined,
     comparator = '=',
-    value = null
+    value = null,
+    type = undefined
   } = {}
 ) => {
   return dataSet.filter((data) => {
     const testProperty = joinEntity ? `${joinEntity}.${property}` : property
-    return makeCondition(data, testProperty, comparator, value)
+    return makeCondition(data, testProperty, comparator, value, type)
   })
 }

@@ -28,6 +28,7 @@ var _retrieveRecord = require("../utilities/retrieveRecord");
 var _retrieveFile = require("../utilities/retrieveFile");
 var _removeFromIndex = require("../utilities/removeFromIndex");
 var _computeKeyValue = require("../utilities/computeKeyValue");
+var _fieldType = require("../utilities/fieldType");
 var _hasDependents = require("../introspect/policies/hasDependents");
 var _config = require("../utilities/config");
 const {
@@ -75,7 +76,7 @@ const removeMatchingEntries = async (entity, record, primaryKey, deletedValues) 
     }
     await rm(`${databasePath}${record.path}/${fileName}`);
     for (const key of record.keys) {
-      await (0, _removeFromIndex.removeFromIndex)(record.path, key, (0, _computeKeyValue.computeKeyValue)(key.fields, data), fileName);
+      await (0, _removeFromIndex.removeFromIndex)(record.path, key, (0, _computeKeyValue.computeKeyValue)(key.fields, data), fileName, (0, _fieldType.keyValueType)(record, key));
     }
   }
   return remainingEntries;

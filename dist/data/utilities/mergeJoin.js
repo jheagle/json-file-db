@@ -9,6 +9,8 @@ require("core-js/modules/esnext.iterator.map.js");
 var _readEntity = require("../queries/readEntity");
 var _splitEntityProperty = require("./parsers/splitEntityProperty");
 var _where = require("../queries/where");
+var _retrieveRecord = require("./retrieveRecord");
+var _fieldType = require("./fieldType");
 const mergeJoin = async (propertyA = '', propertyB = '', dataSets = {}) => {
   const {
     entity: entityA,
@@ -20,11 +22,13 @@ const mergeJoin = async (propertyA = '', propertyB = '', dataSets = {}) => {
   } = (0, _splitEntityProperty.splitEntityProperty)(propertyB);
   dataSets = await (0, _readEntity.readEntity)(entityA, dataSets);
   dataSets = await (0, _readEntity.readEntity)(entityB, dataSets);
+  const typeB = (0, _fieldType.fieldType)(await (0, _retrieveRecord.retrieveRecord)(entityB), propB);
   dataSets[entityA] = dataSets[entityA].map(dataA => {
     const matches = (0, _where.where)(dataSets[entityB], {
       property: propB,
       comparator: '=',
-      value: dataA[propA]
+      value: dataA[propA],
+      type: typeB
     });
     if (!matches.length) {
       return dataA;

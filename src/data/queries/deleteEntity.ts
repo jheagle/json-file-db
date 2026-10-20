@@ -2,6 +2,7 @@ import { retrieveRecord } from '../utilities/retrieveRecord'
 import { retrieveFile } from '../utilities/retrieveFile'
 import { removeFromIndex } from '../utilities/removeFromIndex'
 import { computeKeyValue } from '../utilities/computeKeyValue'
+import { keyValueType } from '../utilities/fieldType'
 import { hasDependents } from '../introspect/policies/hasDependents'
 import { recordDefinition } from '../introspect/definitions/record'
 import { keyDefinition } from '../introspect/definitions/key'
@@ -51,7 +52,7 @@ const removeMatchingEntries = async (entity: string, record: recordDefinition, p
     }
     await rm(`${databasePath}${record.path}/${fileName}`)
     for (const key of record.keys) {
-      await removeFromIndex(record.path, key, computeKeyValue(key.fields, data), fileName)
+      await removeFromIndex(record.path, key, computeKeyValue(key.fields, data), fileName, keyValueType(record, key))
     }
   }
   return remainingEntries
