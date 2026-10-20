@@ -27,6 +27,9 @@ export const removeFromIndex = async (path: recordPath = '', key: keyDefinition 
     return null
   }
   index = index
+    // Loose on purpose: writes are coerced to the schema's declared type, but stored values may not match it (ids
+    // declared string are stored as numbers), so the same value can be '3' in one record and 3 in another.
+    // eslint-disable-next-line eqeqeq
     .map(entry => entry.value == value ? { value: entry.value, record: entry.record.filter(record => record !== fileName) } : entry)
     .filter(entry => entry.record.length)
   await writeFile(indexPath, JSON.stringify(index, null, 2))

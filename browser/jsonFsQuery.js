@@ -911,6 +911,9 @@ const sortBy = (dataSet = [], sortClauses = []) => {
     for (const sortClause of sortClauses) {
       const property = sortClause.property;
       const direction = sortClause.direction;
+      // Loose on purpose: writes are coerced to the schema's declared type, but stored values may not match it (ids
+      // declared string are stored as numbers), so the same value can be '3' in one record and 3 in another.
+      // eslint-disable-next-line eqeqeq
       if (a[property] == b[property]) {
         continue;
       }
@@ -959,6 +962,9 @@ const {
 const findEntryFile = async (record, primaryKey, primaryValue) => {
   for (const fileName of record.entries) {
     const data = await (0, _retrieveFile.retrieveFile)(`${record.path}/${fileName}`);
+    // Loose on purpose: writes are coerced to the schema's declared type, but stored values may not match it (ids
+    // declared string are stored as numbers), so the same value can be '3' in one record and 3 in another.
+    // eslint-disable-next-line eqeqeq
     if ((0, _computeKeyValue.computeKeyValue)(primaryKey.fields, data) == primaryValue) {
       return fileName;
     }
@@ -972,7 +978,11 @@ const findEntryFile = async (record, primaryKey, primaryValue) => {
  * @param oldData
  * @param newValues
  */
-const keyFieldsChanged = (key, oldData, newValues) => key.fields.some(field => Object.prototype.hasOwnProperty.call(newValues, field) && newValues[field] != oldData[field]);
+const keyFieldsChanged = (key, oldData, newValues) =>
+// Loose on purpose: writes are coerced to the schema's declared type, but stored values may not match it (ids
+// declared string are stored as numbers), so the same value can be '3' in one record and 3 in another.
+// eslint-disable-next-line eqeqeq
+key.fields.some(field => Object.prototype.hasOwnProperty.call(newValues, field) && newValues[field] != oldData[field]);
 /**
  * Only check uniqueness for a primary/unique key (single-field, or composite) whose value is
  * actually changing - checking an unchanged value would find the record's own existing entry and
@@ -1010,6 +1020,9 @@ const assertForeignKeysForUpdate = async (entity, record, oldData, newValues) =>
       continue;
     }
     const field = key.fields[0];
+    // Loose on purpose: writes are coerced to the schema's declared type, but stored values may not match it (ids
+    // declared string are stored as numbers), so the same value can be '3' in one record and 3 in another.
+    // eslint-disable-next-line eqeqeq
     if (!Object.prototype.hasOwnProperty.call(newValues, field) || newValues[field] == oldData[field]) {
       continue;
     }
@@ -1137,9 +1150,14 @@ const makeCondition = (data, property, comparator, value) => {
   const dataValue = data[property];
   switch (comparator) {
     case '=':
+      // Loose on purpose: a query literal and the stored value may differ in type ('2' matches 2), see where.test.js,
+      // and stored values may not match the schema's declared type either.
+      // eslint-disable-next-line eqeqeq
       return dataValue == value;
     case '!=':
     case '<>':
+      // Loose on purpose, as for '=' above
+      // eslint-disable-next-line eqeqeq
       return dataValue != value;
     case '>':
       return dataValue > value;
@@ -2173,7 +2191,11 @@ const removeFromIndex = async (path = '', key = null, value = undefined, fileNam
   } catch (err) {
     return null;
   }
-  index = index.map(entry => entry.value == value ? {
+  index = index
+  // Loose on purpose: writes are coerced to the schema's declared type, but stored values may not match it (ids
+  // declared string are stored as numbers), so the same value can be '3' in one record and 3 in another.
+  // eslint-disable-next-line eqeqeq
+  .map(entry => entry.value == value ? {
     value: entry.value,
     record: entry.record.filter(record => record !== fileName)
   } : entry).filter(entry => entry.record.length);
@@ -2440,6 +2462,9 @@ const updateIndex = async (path = '', key = null, value = undefined, fileName = 
   } catch (err) {
     index = [];
   }
+  // Loose on purpose: writes are coerced to the schema's declared type, but stored values may not match it (ids
+  // declared string are stored as numbers), so the same value can be '3' in one record and 3 in another.
+  // eslint-disable-next-line eqeqeq
   const existingEntry = index.find(entry => entry.value == value);
   if (existingEntry) {
     if (!existingEntry.record.includes(fileName)) {

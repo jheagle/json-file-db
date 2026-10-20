@@ -25,6 +25,9 @@ const { writeFile } = require('fs/promises')
 const findEntryFile = async (record: recordDefinition, primaryKey: keyDefinition, primaryValue: any): Promise<string | null> => {
   for (const fileName of record.entries) {
     const data = await retrieveFile(`${record.path}/${fileName}`)
+    // Loose on purpose: writes are coerced to the schema's declared type, but stored values may not match it (ids
+    // declared string are stored as numbers), so the same value can be '3' in one record and 3 in another.
+    // eslint-disable-next-line eqeqeq
     if (computeKeyValue(primaryKey.fields, data) == primaryValue) {
       return fileName
     }
@@ -40,6 +43,9 @@ const findEntryFile = async (record: recordDefinition, primaryKey: keyDefinition
  * @param newValues
  */
 const keyFieldsChanged = (key: keyDefinition, oldData: Object, newValues: Object): boolean =>
+  // Loose on purpose: writes are coerced to the schema's declared type, but stored values may not match it (ids
+  // declared string are stored as numbers), so the same value can be '3' in one record and 3 in another.
+  // eslint-disable-next-line eqeqeq
   key.fields.some(field => Object.prototype.hasOwnProperty.call(newValues, field) && newValues[field] != oldData[field])
 
 /**
@@ -80,6 +86,9 @@ const assertForeignKeysForUpdate = async (entity: string, record: recordDefiniti
       continue
     }
     const field = key.fields[0]
+    // Loose on purpose: writes are coerced to the schema's declared type, but stored values may not match it (ids
+    // declared string are stored as numbers), so the same value can be '3' in one record and 3 in another.
+    // eslint-disable-next-line eqeqeq
     if (!Object.prototype.hasOwnProperty.call(newValues, field) || newValues[field] == oldData[field]) {
       continue
     }

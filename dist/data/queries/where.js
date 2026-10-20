@@ -21,9 +21,14 @@ const makeCondition = (data, property, comparator, value) => {
   const dataValue = data[property];
   switch (comparator) {
     case '=':
+      // Loose on purpose: a query literal and the stored value may differ in type ('2' matches 2), see where.test.js,
+      // and stored values may not match the schema's declared type either.
+      // eslint-disable-next-line eqeqeq
       return dataValue == value;
     case '!=':
     case '<>':
+      // Loose on purpose, as for '=' above
+      // eslint-disable-next-line eqeqeq
       return dataValue != value;
     case '>':
       return dataValue > value;

@@ -26,7 +26,7 @@ const sampleQueries = [
 
 describe('splitQueries', () => {
   test('can identify all queries', () => {
-    const queries = sampleQueries.reduce((concatQueries, query) => concatQueries = `${concatQueries} ${query}`, '')
+    const queries = sampleQueries.reduce((concatQueries, query) => `${concatQueries} ${query}`, '')
     const result = splitQueries(queries)
     expect(result).toEqual(sampleQueries)
   })
