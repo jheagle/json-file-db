@@ -6,6 +6,7 @@ export {
   bundle,
   docs,
   images,
+  lint,
   partials,
   readme,
   sass,
