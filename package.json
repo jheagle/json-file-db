@@ -43,7 +43,7 @@
   "homepage": "https://github.com/jheagle/json-file-db#readme",
   "devDependencies": {
     "gulp": "^5.0.1",
-    "js-build-tools": "^6.4.1",
+    "js-build-tools": "^6.6.0",
     "release-it": "^21.1.1",
     "test-filesystem": "^2.0.2",
     "typedoc": "^0.28.20"
