@@ -49,8 +49,11 @@
     "typedoc": "^0.28.20"
   },
   "dependencies": {
+    "@inquirer/prompts": "^8.7.4",
     "browser-or-node": "^3.0.0",
+    "commander": "^15.0.0",
     "core-js": "^3.51.0",
+    "prettytable": "^2.0.0",
     "si-funciona": "^2.8.0"
   },
   "standard": {
