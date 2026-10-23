@@ -17,7 +17,9 @@
     "enabled": true,
     "from": "src/data",
     "index": "MAIN.md",
-    "to": "../joshuaheagle.local/projects/json-file-db/docs"
+    "to": "../joshuaheagle.local/projects/json-file-db/docs",
+    "inBuild": false,
+    "gitRevision": "main"
   },
   "typescript": {
     "config": "tsconfig.json",
