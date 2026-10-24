@@ -27,8 +27,7 @@ To be considered in this effort or in another feature:
 
 ## Work Split
 
-- [ ] Create basic Interactive input; await query input and add to buffer, be able to exit. (done on `feature/basic-cli`, tick once its PR merges)
-    - Before its PR: remove the stray `src/cli/index.js` entry from `tsconfig.json` `include` (no such file); add `commander` and `prettytable` in the tasks that first use them instead of here.
+- [x] Create basic Interactive input; await query input and add to buffer, be able to exit. (done on `feature/basic-cli`, tick once its PR merges)
 - [ ] Detect when a query is complete: scan the buffer for open quotes and brackets instead of `endsWith(';')` (which also fires inside an unclosed quote), and strip the trailing `;` before parsing (`parser()` throws on `read foo;`). The continuation prompt shows what is still open, psql-style (e.g. `'>` for an open quote, `(>` for an open bracket).
 - [ ] Pass the buffer to the query parser so it can run the queries (`query()`). A parse or runtime error prints a message and returns to the prompt; it never ends the session. Results can print raw for now.
 - [ ] Display query results as a table in the interactive CLI (`prettytable`, added here). Table is the default output; handle an empty result and multiple queries in one buffer.
