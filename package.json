@@ -25,6 +25,10 @@
     "watch:test": "gulp watchTest",
     "lint": "gulp lint"
   },
+  "bin": {
+    "json-fs-query": "dist/cli/index.js",
+    "jfsq": "dist/cli/index.js"
+  },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/jheagle/json-file-db.git"
@@ -42,6 +46,7 @@
   },
   "homepage": "https://github.com/jheagle/json-file-db#readme",
   "devDependencies": {
+    "@types/node": "^26.6.5",
     "gulp": "^5.0.1",
     "js-build-tools": "^6.6.0",
     "release-it": "^21.1.1",
