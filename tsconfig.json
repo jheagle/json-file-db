@@ -1,5 +1,5 @@
 {
-  "include": ["src/**/*.ts"],
+  "include": ["src/**/*.ts", "src/cli/index.js"],
   "exclude": ["src/**/*.test.*"],
   "compilerOptions": {
     "noImplicitAny": false,
@@ -10,6 +10,8 @@
     "outDir": "dist",
     "declarationMap": true,
     "strictNullChecks": false,
-    "types": []
+    "types": [
+      "node"
+    ]
   }
 }
