@@ -54,7 +54,7 @@ Keep the existing `find*` steps of `parseQuery`, and make sure none of their reg
   which quote, inside a block comment, bracket depth, a trailing backslash. The parser gets a clear error for an
   unclosed string or comment; the CLI reads the end state instead. Unit tests for every rule above,
   including `'\\\''`, `"it's"`, `-- it's` and `/* ; */`.
-- [ ] **Split on `;`**: `splitQueries` uses the scanner: splits on `;` outside strings and comments, removes comments,
+- [x] **Split on `;`** (#46): `splitQueries` uses the scanner: splits on `;` outside strings and comments, removes comments,
   allows a trailing `;`. Regression test: `'please read this'` stays one query. `read a read b` (no `;`) is now an
   error, which is the breaking change of this epic.
 - [ ] **Strings through placeholders**: strings become placeholders before the `find*` steps; `parseLiteralValue`
