@@ -63,6 +63,13 @@ describe('scanQuery', () => {
       expect(scanned.semicolons).toEqual([text.length - 1])
     })
 
+    test('starts a line comment only at the start, or after whitespace or a ;, since names can contain -', () => {
+      expect(scanQuery('read my--table').comments).toEqual([])
+      expect(scanQuery('-- first\nread t').comments).toEqual([{ start: 0, end: 9, kind: 'line' }])
+      expect(scanQuery('read t;-- done').comments).toEqual([{ start: 7, end: 14, kind: 'line' }])
+      expect(scanQuery('read t\t--done').comments).toEqual([{ start: 7, end: 13, kind: 'line' }])
+    })
+
     test('finds a line comment at the very end, with no newline', () => {
       expect(scanQuery('read t -- the end').comments).toEqual([{ start: 7, end: 17, kind: 'line' }])
     })
@@ -80,6 +87,11 @@ describe('scanQuery', () => {
     test('finds every ; outside strings and comments', () => {
       const text = 'read a; read b where c = \';\'; -- ;\nread d'
       expect(scanQuery(text).semicolons).toEqual([6, 28])
+    })
+
+    test('does not count a ; inside brackets', () => {
+      expect(scanQuery('read t where a in [1;2]; read b').semicolons).toEqual([23])
+      expect(scanQuery('read t where a in (1;2').semicolons).toEqual([])
     })
 
     test('is terminated when the last thing outside whitespace and comments is a ;', () => {

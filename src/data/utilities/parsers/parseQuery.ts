@@ -67,6 +67,9 @@ export const parseQuery = (query: string): ParsedQuery => {
   )(query)
 
   if (query) {
+    if (/^\s*(delete|insert|read|update)\s/i.test(query)) {
+      throw new Error(`Missing ; before: ${query.trim()}`)
+    }
     throw new Error(`Unrecognized query value: ${query}`)
   }
   return parsedQuery

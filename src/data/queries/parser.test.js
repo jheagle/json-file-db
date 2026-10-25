@@ -293,7 +293,7 @@ describe('parser', () => {
       ' on workouts.exercise_id = exercises._id' +
       ' merge workouts.exercise_id with exercises._id' +
       ' limit 2' +
-      ' offset 1' +
+      ' offset 1;' +
       ' delete exercises'
     const result = parser(query)
     expect(result).toEqual([
@@ -339,5 +339,37 @@ describe('parser', () => {
         offset: undefined
       }
     ])
+  })
+
+  test('keeps a value containing a command keyword intact (it used to be split, then glued back without its space)', () => {
+    const result = parser("insert notes values text = 'please read this'")
+    expect(result[0].insertValues).toEqual([{ text: 'please read this' }])
+  })
+
+  test('parses queries separated by ;, with an optional ; at the end', () => {
+    const result = parser("read workouts where date = '2024-06-02'; read exercises;")
+    expect(result.map(({ command, entity }) => [command, entity])).toEqual([['read', 'workouts'], ['read', 'exercises']])
+  })
+
+  test('reports a missing ; between queries', () => {
+    expect(() => parser('read workouts read exercises')).toThrow('Failed to interpret: read workouts read exercises (Missing ; before: read exercises)')
+  })
+
+  test.each([
+    ["read a where x = 'y' read b", 'read b'],
+    ['update t set a = 1 read b', 'read b'],
+    ["update t set a = 'z' where b = 2 read c", 'read c'],
+    ["insert t values a = 1, b = 'w' delete c", 'delete c'],
+    ['read a sort x desc limit 2 read b', 'read b']
+  ])('reports a missing ; after a query with clauses: %s', (queries, second) => {
+    expect(() => parser(queries)).toThrow(`(Missing ; before: ${second})`)
+  })
+
+  test('reads a name containing -- as a name, not a comment', () => {
+    expect(parser('read my--table')[0].entity).toBe('my--table')
+  })
+
+  test('reports which query failed, with the reason', () => {
+    expect(() => parser('read workouts; read exercises sort')).toThrow('Failed to interpret query 2 of 2: read exercises sort (Unrecognized query value:')
   })
 })

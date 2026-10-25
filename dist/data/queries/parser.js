@@ -4,27 +4,19 @@ Object.defineProperty(exports, "__esModule", {
   value: true
 });
 exports.parser = void 0;
+require("core-js/modules/esnext.iterator.constructor.js");
+require("core-js/modules/esnext.iterator.map.js");
 var _splitQueries = require("../utilities/parsers/splitQueries");
 var _parseQuery = require("../utilities/parsers/parseQuery");
 const parser = (queries = '') => {
   const queryArray = (0, _splitQueries.splitQueries)(queries);
-  const parsedQueries = [];
-  let mergeQuery = '';
-  for (const query of queryArray) {
-    mergeQuery = mergeQuery ? `${mergeQuery}${query}` : query;
-    let parsedQuery = {};
+  return queryArray.map((query, index) => {
     try {
-      parsedQuery = (0, _parseQuery.parseQuery)(mergeQuery);
-      mergeQuery = '';
+      return (0, _parseQuery.parseQuery)(query);
     } catch (e) {
-      // attempt to combine queries to fix bad splits
-      continue;
+      const which = queryArray.length > 1 ? ` query ${index + 1} of ${queryArray.length}` : '';
+      throw new Error(`Failed to interpret${which}: ${query} (${e.message})`);
     }
-    parsedQueries.push(parsedQuery);
-  }
-  if (mergeQuery) {
-    throw new Error(`Failed to interpret: ${mergeQuery}`);
-  }
-  return parsedQueries;
+  });
 };
 exports.parser = parser;

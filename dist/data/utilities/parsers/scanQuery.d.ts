@@ -35,7 +35,9 @@ export type ScannedQuery = {
  * Strings use `'` or `"` and close only with the quote they opened with. Inside a string a backslash escapes the
  * next character: `\n` and `\t` are a newline and a tab, any other `\x` is `x` (so `\'`, `\"` and `\\` are a quote
  * and a backslash). Outside strings a backslash has no meaning. Comments run from `--` to the end of the line, or
- * from `/*` to `*\/`; anything inside a comment is ignored, and comment markers inside a string are just text.
+ * from `/*` to `*\/`; anything inside a comment is ignored, and comment markers inside a string are just text. A `--`
+ * starts a comment only at the start of the text or after whitespace or a `;`, since names can contain `-`
+ * (`my--table` is a name). A `;` inside brackets does not end a query.
  *
  * Never throws: whatever is left open is reported in `end`, for a prompt which asks for more input. Use
  * assertClosed to turn it into an error.
