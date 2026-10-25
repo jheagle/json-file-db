@@ -63,7 +63,7 @@ Keep the existing `find*` steps of `parseQuery`, and make sure none of their reg
   mismatched quotes (now an error), `'it\'s'`.
 - [x] **Arrays** (#49): values in `[...]` (e.g. `where id in [...]`) are read with the same rules, so they can hold strings
   with either quote and escapes, not only JSON. Today they go through `JSON.parse`.
-- [ ] **`quote()` helper**: exported from the package. Wraps a value in quotes with `\` and the quote escaped, for code
+- [x] **`quote()` helper** (#50): exported from the package. Wraps a value in quotes with `\` and the quote escaped, for code
   that builds query strings. Follow-up in workout-planner once released: replace `escapeQuoted` (which deletes
   apostrophes) with it.
 - [ ] **CLI hook**: export what the CLI's completion check needs from the scanner (complete or not, and what is still
@@ -75,6 +75,11 @@ Keep the existing `find*` steps of `parseQuery`, and make sure none of their reg
 - [ ] **Schema statements: `drop`**: the query form of `drop()`.
 - [ ] **Schema statements: `describe`**: the query form of `describe()`; the CLI shows it as a table.
 - [ ] **Schema statements: `show`**: list the records in the database (from the `__RECORDS` registry).
+
+- [ ] **Rebuild `dist/` and `browser/`** (last, before merging to `main`): from the CLI hook task on, task PRs run
+  the build as a check but don't commit its output (decided 2026-10-25). This task rebuilds and commits it once, unless
+  json-fs-query has stopped tracking build output by then (it's published to npm, so its build output isn't needed in
+  git; see TASKS.md).
 
 ## Out of scope (tracked separately in TASKS.md)
 
