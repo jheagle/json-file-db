@@ -64,4 +64,41 @@ describe('create', () => {
 
     expect(fileExists(`${databasePath}foo.json`)).toBeTruthy()
   })
+  describe('invalid definitions', () => {
+    const primary = [{ type: 'primary', fields: ['_id'], lookup: 'pk__id.json' }]
+
+    test('rejects a default that fails its field\'s type check, creating nothing', async () => {
+      await expect(create('foo', [
+        { name: '_id', type: 'string', autoGenerate: true },
+        { name: 'reps', type: 'int', useDefault: true, defaultValue: 'abc' }
+      ], primary)).rejects.toThrow('Invalid default for field "reps" of foo: Value "abc" is not a valid int')
+      expect(fileExists(`${databasePath}foo.json`)).toBeFalsy()
+      expect(fileExists(`${databasePath}foo`)).toBeFalsy()
+    })
+
+    test('rejects a null default on a field that is not nullable', async () => {
+      await expect(create('foo', [
+        { name: 'note', type: 'string', useDefault: true, defaultValue: null }
+      ], [])).rejects.toThrow('Invalid default for field "note" of foo: Value "null" is not allowed: the field is not nullable')
+    })
+
+    test('accepts a null default on a nullable field', async () => {
+      const result = await create('foo', [
+        { name: 'note', type: 'string', nullable: true, useDefault: true, defaultValue: null }
+      ], [])
+      expect(result.definition[0]).toEqual({ name: 'note', type: 'string', optional: false, autoGenerate: false, nullable: true, default: null })
+    })
+
+    test('accepts a default of an unrecognized type, as it accepts the type itself', async () => {
+      await expect(create('foo', [
+        { name: 'when', type: 'date', useDefault: true, defaultValue: 'today' }
+      ], [])).resolves.not.toBeNull()
+    })
+
+    test('rejects a nullable primary key field', async () => {
+      await expect(create('foo', [
+        { name: '_id', type: 'string', nullable: true }
+      ], primary)).rejects.toThrow('Primary key field "_id" of foo can\'t be nullable')
+    })
+  })
 })

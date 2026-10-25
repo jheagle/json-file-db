@@ -48,7 +48,8 @@ const keyFieldsChanged = (record: recordDefinition, key: keyDefinition, oldData:
 /**
  * Only check uniqueness for a primary/unique key (single-field, or composite) whose value is
  * actually changing - checking an unchanged value would find the record's own existing entry and
- * wrongly report it as a duplicate of itself.
+ * wrongly report it as a duplicate of itself. A value with a null in it is never a duplicate (as in
+ * SQL).
  * @param entity
  * @param record
  * @param oldData
@@ -61,6 +62,9 @@ const assertUniqueForUpdate = async (entity: string, record: recordDefinition, o
       continue
     }
     const checkKeys = key.fields.map(field => newData[field])
+    if (checkKeys.some(value => value === null)) {
+      continue
+    }
     const isUnique = await keyUnique(entity, key.fields, checkKeys)
     if (!isUnique) {
       throw new Error(`Duplicate value for ${key.type} key "${key.fields.join(', ')}" on ${entity}`)
@@ -71,7 +75,8 @@ const assertUniqueForUpdate = async (entity: string, record: recordDefinition, o
 /**
  * Same "only if it actually changed" scoping as assertUniqueForUpdate: re-checking an unchanged
  * foreign key value would re-validate a reference this update never touches, which could fail an
- * unrelated field's update if that parent record happened to be deleted since.
+ * unrelated field's update if that parent record happened to be deleted since. A null references
+ * nothing, so it isn't checked.
  * @param entity
  * @param record
  * @param oldData
@@ -83,7 +88,7 @@ const assertForeignKeysForUpdate = async (entity: string, record: recordDefiniti
       continue
     }
     const field = key.fields[0]
-    if (!Object.prototype.hasOwnProperty.call(newValues, field) || sameValue(fieldType(record, field), newValues[field], oldData[field])) {
+    if (!Object.prototype.hasOwnProperty.call(newValues, field) || newValues[field] === null || sameValue(fieldType(record, field), newValues[field], oldData[field])) {
       continue
     }
     const { entity: refEntity, property: refProperty } = splitEntityProperty(key.references[0].fields[0])
@@ -154,7 +159,7 @@ const applyFieldTypes = (record: recordDefinition, values: Object): Object => {
   const typedValues = Object.assign({}, values)
   for (const field of record.definition) {
     if (Object.prototype.hasOwnProperty.call(typedValues, field.name)) {
-      typedValues[field.name] = typeCheck(field.type, typedValues[field.name])
+      typedValues[field.name] = typeCheck(field.type, typedValues[field.name], field.nullable)
     }
   }
   return typedValues
