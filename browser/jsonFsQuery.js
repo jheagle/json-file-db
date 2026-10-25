@@ -1688,7 +1688,7 @@ exports.findConditions = void 0;
 var _removeFromQuery = require("./removeFromQuery");
 var _parseLiteralValue = require("./parseLiteralValue");
 var _maskStrings = require("./maskStrings");
-const conditionMatch = new RegExp(`(and|or)?\\s*(where)\\s+([a-z0-9_-]+\\.?[a-z0-9_-]*)\\s+(=|!=|>|<|>=|<=|in|between|like)\\s+(${_maskStrings.placeholderSource}|([0-9]+)|(\\[.*])|(null)|(true)|(false))`, 'ig');
+const conditionMatch = new RegExp(`(and|or)?\\s*(where)\\s+([a-z0-9_-]+\\.?[a-z0-9_-]*)\\s+(=|!=|>|<|>=|<=|in|between|like)\\s+(${_maskStrings.placeholderSource}|([0-9]+)|${_maskStrings.arraySource}|(null)|(true)|(false))`, 'ig');
 /**
  * Extract condition clauses from the query.
  * @param parsed
@@ -1741,9 +1741,9 @@ exports.findInsertValues = void 0;
 var _removeFromQuery = require("./removeFromQuery");
 var _parseLiteralValue = require("./parseLiteralValue");
 var _maskStrings = require("./maskStrings");
-const literal = `(?:${_maskStrings.placeholderSource.replace('(', '(?:')}|[0-9]+|\\[.*?]|null|true|false)`;
+const literal = `(?:${_maskStrings.placeholderSource.replace('(', '(?:')}|[0-9]+|${_maskStrings.arraySource.replace('(', '(?:')}|null|true|false)`;
 const valuesClauseMatch = new RegExp(`(values)\\s+([a-z0-9_-]+\\s*=\\s*${literal}(?:\\s*,\\s*[a-z0-9_-]+\\s*=\\s*${literal})*)`, 'i');
-const assignmentMatch = new RegExp(`([a-z0-9_-]+)\\s*=\\s*(${_maskStrings.placeholderSource}|([0-9]+)|(\\[.*?])|(null)|(true)|(false))`, 'ig');
+const assignmentMatch = new RegExp(`([a-z0-9_-]+)\\s*=\\s*(${_maskStrings.placeholderSource}|([0-9]+)|${_maskStrings.arraySource}|(null)|(true)|(false))`, 'ig');
 /**
  * Extract an insert's "values field = value, field2 = value2" clause from the query, the same way
  * findUpdateValues() does for "set". insertEntity() accepts an array of rows for bulk inserts, but
@@ -1963,9 +1963,9 @@ exports.findUpdateValues = void 0;
 var _removeFromQuery = require("./removeFromQuery");
 var _parseLiteralValue = require("./parseLiteralValue");
 var _maskStrings = require("./maskStrings");
-const literal = `(?:${_maskStrings.placeholderSource.replace('(', '(?:')}|[0-9]+|\\[.*?]|null|true|false)`;
+const literal = `(?:${_maskStrings.placeholderSource.replace('(', '(?:')}|[0-9]+|${_maskStrings.arraySource.replace('(', '(?:')}|null|true|false)`;
 const setClauseMatch = new RegExp(`(set)\\s+([a-z0-9_-]+\\s*=\\s*${literal}(?:\\s*,\\s*[a-z0-9_-]+\\s*=\\s*${literal})*)`, 'i');
-const assignmentMatch = new RegExp(`([a-z0-9_-]+)\\s*=\\s*(${_maskStrings.placeholderSource}|([0-9]+)|(\\[.*?])|(null)|(true)|(false))`, 'ig');
+const assignmentMatch = new RegExp(`([a-z0-9_-]+)\\s*=\\s*(${_maskStrings.placeholderSource}|([0-9]+)|${_maskStrings.arraySource}|(null)|(true)|(false))`, 'ig');
 /**
  * Extract an update's "set field = value, field2 = value2" clause from the query. Uses a two-pass
  * match, unlike the other parsers here: the set clause's own boundary is found first (so it can
@@ -2004,7 +2004,7 @@ exports.isEntityProperty = isEntityProperty;
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
-exports.unmaskStrings = exports.placeholderSource = exports.maskStrings = exports.fromPlaceholder = void 0;
+exports.unmaskStrings = exports.placeholderSource = exports.maskStrings = exports.maskArrays = exports.fromPlaceholder = exports.arraySource = void 0;
 require("core-js/modules/es.json.stringify.js");
 require("core-js/modules/esnext.iterator.constructor.js");
 require("core-js/modules/esnext.iterator.map.js");
@@ -2016,6 +2016,12 @@ var _scanQuery = require("./scanQuery");
  */
 const placeholderSource = exports.placeholderSource = '\\u0000([0-9a-f]*)\\u0000';
 const placeholderMatch = new RegExp(placeholderSource, 'g');
+/**
+ * Regex source matching one placeholder from maskArrays, with the hex-encoded JSON of the array as its only group.
+ * The find* parsers use it where they would otherwise match `[...]`.
+ */
+const arraySource = exports.arraySource = '\\u0001([0-9a-f]*)\\u0001';
+const arrayMatch = new RegExp(arraySource, 'g');
 /**
  * Encode a value as hex, four digits per UTF-16 code unit: only 0-9 and a-f, so no keyword, quote, space or
  * bracket a parser looks for can appear in it.
@@ -2031,20 +2037,22 @@ const fromPlaceholder = hex => (hex.match(/.{4}/g) || []).map(code => String.fro
  * Replace every quoted string in a query with a placeholder holding its value (with the escapes applied), so that
  * nothing inside a string (a keyword, a quote, `and`, a `]`) can be matched by the find* parsers.
  * @param query
- * @throws {Error} For an unclosed string, comment or bracket, or a NUL character outside a string (which could
- * otherwise pass for a placeholder).
+ * @throws {Error} For an unclosed string, comment or bracket, or a NUL or SOH character outside a string (which
+ * could otherwise pass for a placeholder).
  */
 exports.fromPlaceholder = fromPlaceholder;
 const maskStrings = query => {
   const {
     strings
   } = (0, _scanQuery.assertClosed)((0, _scanQuery.scanQuery)(query));
-  for (let index = query.indexOf('\u0000'); index !== -1; index = query.indexOf('\u0000', index + 1)) {
-    if (!strings.some(({
-      start,
-      end
-    }) => start < index && index < end)) {
-      throw new Error(`Unexpected NUL character at position ${index}`);
+  for (const [character, name] of [['\u0000', 'NUL'], ['\u0001', 'SOH']]) {
+    for (let index = query.indexOf(character); index !== -1; index = query.indexOf(character, index + 1)) {
+      if (!strings.some(({
+        start,
+        end
+      }) => start < index && index < end)) {
+        throw new Error(`Unexpected ${name} character at position ${index}`);
+      }
     }
   }
   return strings.reduceRight((masked, {
@@ -2054,17 +2062,66 @@ const maskStrings = query => {
   }) => `${masked.slice(0, start)}\u0000${toHex(value)}\u0000${masked.slice(end)}`, query);
 };
 /**
- * Put every placeholder back as a quoted string, the way it would be written in a query: for error messages, and
- * for array literals read as JSON.
+ * Put every placeholder back the way it would be written in a query: strings quoted, arrays as JSON. For error
+ * messages, and for reading an array's text as JSON.
  * @param text
- * @param quote - wrap with JSON's double quotes (the default) or with single quotes
+ * @param quote - wrap strings with JSON's double quotes (the default) or with single quotes
  */
 exports.maskStrings = maskStrings;
 const unmaskStrings = (text, quote = 'json') => text.replace(placeholderMatch, (placeholder, hex) => {
   const value = fromPlaceholder(hex);
   return quote === 'json' ? JSON.stringify(value) : `'${value.replace(/\\/g, '\\\\').replace(/'/g, '\\\'')}'`;
-});
+}).replace(arrayMatch, (placeholder, hex) => fromPlaceholder(hex));
+/**
+ * Read one array's text (its strings already placeholders) as JSON, so it is checked once, here, with a clear error.
+ * @param text
+ */
 exports.unmaskStrings = unmaskStrings;
+const arrayJson = text => {
+  try {
+    // A number too big for a double reads as Infinity, which JSON would write back as null: refuse it instead
+    return JSON.stringify(JSON.parse(unmaskStrings(text), (key, value) => {
+      if (typeof value === 'number' && !Number.isFinite(value)) {
+        throw new Error(`${value} is too large`);
+      }
+      return value;
+    }));
+  } catch (e) {
+    throw new Error(`Invalid array ${unmaskStrings(text, '\'')}: ${e.message}`);
+  }
+};
+/**
+ * Replace every array (outermost brackets only, so a nested array stays inside its parent) with a placeholder holding
+ * its JSON, so that the find* parsers never have to find where an array ends, and nothing inside one (a `.`, a `]`,
+ * a keyword) can be matched by them. Run it on the output of maskStrings, where no `[` or `]` is inside a string.
+ * @param masked
+ * @throws {Error} For an array which is not valid JSON once its strings are put back.
+ */
+const maskArrays = masked => {
+  let result = '';
+  let depth = 0;
+  let start = 0;
+  for (let index = 0; index < masked.length; index++) {
+    const char = masked[index];
+    if (char === '[') {
+      if (depth === 0) {
+        start = index;
+      }
+      depth++;
+    } else if (char === ']' && depth > 0) {
+      depth--;
+      if (depth === 0) {
+        result += `\u0001${toHex(arrayJson(masked.slice(start, index + 1)))}\u0001`;
+        continue;
+      }
+    }
+    if (depth === 0) {
+      result += char;
+    }
+  }
+  return depth > 0 ? result + masked.slice(start) : result;
+};
+exports.maskArrays = maskArrays;
 },{"./scanQuery":55,"core-js/modules/es.json.stringify.js":217,"core-js/modules/esnext.iterator.constructor.js":221,"core-js/modules/esnext.iterator.map.js":227,"core-js/modules/esnext.iterator.some.js":229}],52:[function(require,module,exports){
 "use strict";
 
@@ -2091,8 +2148,8 @@ const parseLiteralValue = (match, baseIndex) => {
     return Number(match[baseIndex + 1]);
   }
   if (typeof match[baseIndex + 2] !== 'undefined') {
-    // Strings inside the array are placeholders too: put them back as JSON strings first
-    return JSON.parse((0, _maskStrings.unmaskStrings)(match[baseIndex + 2]));
+    // An array is a placeholder from maskArrays, holding its JSON
+    return JSON.parse((0, _maskStrings.fromPlaceholder)(match[baseIndex + 2]));
   }
   if (typeof match[baseIndex + 3] !== 'undefined') {
     return null;
@@ -2149,8 +2206,8 @@ const parseQuery = query => {
     curry,
     pipe
   } = _siFunciona.default;
-  // No find* step may see inside a string: each one becomes a placeholder holding its value
-  query = (0, _maskStrings.maskStrings)(query);
+  // No find* step may see inside a string or an array: each one becomes a placeholder holding its value
+  query = (0, _maskStrings.maskArrays)((0, _maskStrings.maskStrings)(query));
   query = pipe(curry(_findCommand.findCommand)(parsedQuery), curry(_findInsertValues.findInsertValues)(parsedQuery), curry(_findUpdateValues.findUpdateValues)(parsedQuery), curry(_findJoinEntity.findJoinEntity)(parsedQuery), curry(_findSelects.findSelects)(parsedQuery), curry(_findConditions.findConditions)(parsedQuery), curry(_findJoinClauses.findJoinClauses)(parsedQuery), curry(_findMergeJoins.findMergeJoins)(parsedQuery), curry(_findSortClauses.findSortClauses)(parsedQuery), curry(_findGroupBy.findGroupBy)(parsedQuery), curry(_findLimit.findLimit)(parsedQuery), curry(_findOffset.findOffset)(parsedQuery))(query);
   if (query) {
     if (/^\s*(delete|insert|read|update)\s/i.test(query)) {

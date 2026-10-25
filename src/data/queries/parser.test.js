@@ -411,4 +411,30 @@ describe('parser', () => {
       expect(() => parser("read t where a = 'x' 'stray'")).toThrow("(Unrecognized query value: 'stray')")
     })
   })
+
+  describe('arrays', () => {
+    const only = (queries) => parser(queries)[0]
+
+    test('reads two array conditions as two arrays (each used to run to the last ])', () => {
+      expect(only('read t where a in [1,2] and where b in [3]').conditions.map(({ value }) => value)).toEqual([[1, 2], [3]])
+    })
+
+    test('reads nested arrays in insert and update (each used to stop at the first ])', () => {
+      expect(only('insert t values tags = [1,[2,3]], n = 4').insertValues).toEqual([{ tags: [1, [2, 3]], n: 4 }])
+      expect(only('update t set tags = [[1],[2]] where n = 1').updateValues).toEqual({ tags: [[1], [2]] })
+    })
+
+    test('keeps decimals, negatives and exponents (a decimal used to lose its fraction)', () => {
+      expect(only('read t where a in [1.5, -2, 1e3]').conditions[0].value).toEqual([1.5, -2, 1000])
+    })
+
+    test('keeps a ] or a keyword inside a string in an array', () => {
+      expect(only("read t where a in ['x]', 'sort b'] limit 2").conditions[0].value).toEqual(['x]', 'sort b'])
+      expect(only("read t where a in ['x]', 'sort b'] limit 2").limit).toBe(2)
+    })
+
+    test('reports an invalid array clearly', () => {
+      expect(() => parser('read t where a in [1,,2]')).toThrow('Invalid array [1,,2]:')
+    })
+  })
 })

@@ -1,9 +1,9 @@
 import { removeFromQuery } from './removeFromQuery'
 import { parseLiteralValue, LiteralValue } from './parseLiteralValue'
 import { ParsedQuery } from './parseQuery'
-import { placeholderSource } from './maskStrings'
+import { arraySource, placeholderSource } from './maskStrings'
 
-const conditionMatch: RegExp = new RegExp(`(and|or)?\\s*(where)\\s+([a-z0-9_-]+\\.?[a-z0-9_-]*)\\s+(=|!=|>|<|>=|<=|in|between|like)\\s+(${placeholderSource}|([0-9]+)|(\\[.*])|(null)|(true)|(false))`, 'ig')
+const conditionMatch: RegExp = new RegExp(`(and|or)?\\s*(where)\\s+([a-z0-9_-]+\\.?[a-z0-9_-]*)\\s+(=|!=|>|<|>=|<=|in|between|like)\\s+(${placeholderSource}|([0-9]+)|${arraySource}|(null)|(true)|(false))`, 'ig')
 
 export type ConditionValue = LiteralValue
 

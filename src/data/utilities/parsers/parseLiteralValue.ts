@@ -1,4 +1,4 @@
-import { fromPlaceholder, unmaskStrings } from './maskStrings'
+import { fromPlaceholder } from './maskStrings'
 
 export type LiteralValue = string | number | boolean | null | any[]
 
@@ -20,8 +20,8 @@ export const parseLiteralValue = (match: RegExpMatchArray, baseIndex: number): L
     return Number(match[baseIndex + 1])
   }
   if (typeof match[baseIndex + 2] !== 'undefined') {
-    // Strings inside the array are placeholders too: put them back as JSON strings first
-    return JSON.parse(unmaskStrings(match[baseIndex + 2]))
+    // An array is a placeholder from maskArrays, holding its JSON
+    return JSON.parse(fromPlaceholder(match[baseIndex + 2]))
   }
   if (typeof match[baseIndex + 3] !== 'undefined') {
     return null

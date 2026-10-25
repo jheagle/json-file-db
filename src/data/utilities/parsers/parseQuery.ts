@@ -11,7 +11,7 @@ import { findSortClauses, ParsedSortClause } from './findSortClauses'
 import { findGroupBy, ParsedGroupBy } from './findGroupBy'
 import { findLimit, ParsedLimit } from './findLimit'
 import { findOffset, ParsedOffset } from './findOffset'
-import { maskStrings, unmaskStrings } from './maskStrings'
+import { maskArrays, maskStrings, unmaskStrings } from './maskStrings'
 
 export type ParsedQuery = {
   command: ParsedCommand | undefined
@@ -52,8 +52,8 @@ export const parseQuery = (query: string): ParsedQuery => {
 
   const { curry, pipe } = siFunciona
 
-  // No find* step may see inside a string: each one becomes a placeholder holding its value
-  query = maskStrings(query)
+  // No find* step may see inside a string or an array: each one becomes a placeholder holding its value
+  query = maskArrays(maskStrings(query))
 
   query = pipe(
     curry(findCommand)(parsedQuery),

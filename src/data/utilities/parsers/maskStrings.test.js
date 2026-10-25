@@ -1,4 +1,4 @@
-import { fromPlaceholder, maskStrings, placeholderSource, unmaskStrings } from './maskStrings'
+import { arraySource, fromPlaceholder, maskArrays, maskStrings, placeholderSource, unmaskStrings } from './maskStrings'
 
 const placeholders = text => [...text.matchAll(new RegExp(placeholderSource, 'g'))].map(match => fromPlaceholder(match[1]))
 
@@ -22,6 +22,10 @@ describe('maskStrings', () => {
     expect(placeholders(maskStrings('a = \'Ça va? 你好 🏃\', b = \'\''))).toEqual(['Ça va? 你好 🏃', ''])
   })
 
+  test('rejects an SOH character (the array placeholder\'s marker) outside a string too', () => {
+    expect(() => maskStrings('a = \u00010078\u0001')).toThrow('Unexpected SOH character at position 4')
+  })
+
   test('rejects a NUL character outside a string, which could pass for a placeholder, but keeps one inside', () => {
     expect(() => maskStrings('a = \u00000078\u0000')).toThrow('Unexpected NUL character at position 4')
     expect(placeholders(maskStrings('a = \'x\u0000y\''))).toEqual(['x\u0000y'])
@@ -40,5 +44,37 @@ describe('unmaskStrings', () => {
   test('puts placeholders back as single-quoted strings, escaped as they would be written', () => {
     const text = 'a = \'it\\\'s\' and \'C:\\\\temp\''
     expect(unmaskStrings(maskStrings(text), '\'')).toBe(text)
+  })
+})
+
+describe('maskArrays', () => {
+  const arrays = text => [...text.matchAll(new RegExp(arraySource, 'g'))].map(match => JSON.parse(fromPlaceholder(match[1])))
+  const mask = text => maskArrays(maskStrings(text))
+
+  test('replaces each outermost array with a placeholder holding its JSON, nested arrays inside it', () => {
+    const masked = mask('a in [1, [2, 3]] and b in [4]')
+    expect(masked).toMatch(new RegExp(`^a in ${arraySource} and b in ${arraySource}$`))
+    expect(arrays(masked)).toEqual([[1, [2, 3]], [4]])
+  })
+
+  test('reads strings in an array with either quote and escapes, and ignores a ] inside one', () => {
+    expect(arrays(mask('a in [\'x]\', "it\'s", \'\\\'\']'))).toEqual([['x]', 'it\'s', '\'']])
+  })
+
+  test('keeps numbers as JSON reads them', () => {
+    expect(arrays(mask('a in [1.5, -2, 1e3, null, true]'))).toEqual([[1.5, -2, 1000, null, true]])
+  })
+
+  test('throws for an array which is not valid JSON, showing it as written', () => {
+    expect(() => mask('a in [1, \'x\',, 2]')).toThrow("Invalid array [1, 'x',, 2]:")
+  })
+
+  test('refuses a number too large to hold, rather than turning it into null', () => {
+    expect(() => mask('a in [1, 1e999]')).toThrow('Invalid array [1, 1e999]: Infinity is too large')
+    expect(() => mask('a in [-1e999]')).toThrow('-Infinity is too large')
+  })
+
+  test('puts arrays back as JSON when unmasking', () => {
+    expect(unmaskStrings(mask('a in [\'x\', 1]'), '\'')).toBe('a in ["x",1]')
   })
 })
