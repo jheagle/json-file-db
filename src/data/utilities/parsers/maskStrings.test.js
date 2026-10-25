@@ -22,6 +22,11 @@ describe('maskStrings', () => {
     expect(placeholders(maskStrings('a = \'Ça va? 你好 🏃\', b = \'\''))).toEqual(['Ça va? 你好 🏃', ''])
   })
 
+  test('rejects a NUL character outside a string, which could pass for a placeholder, but keeps one inside', () => {
+    expect(() => maskStrings('a = \u00000078\u0000')).toThrow('Unexpected NUL character at position 4')
+    expect(placeholders(maskStrings('a = \'x\u0000y\''))).toEqual(['x\u0000y'])
+  })
+
   test('throws for an unclosed string', () => {
     expect(() => maskStrings('a = \'abc"')).toThrow('Unclosed string')
   })

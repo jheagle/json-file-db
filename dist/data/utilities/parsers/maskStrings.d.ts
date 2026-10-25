@@ -12,7 +12,8 @@ export declare const fromPlaceholder: (hex: string) => string;
  * Replace every quoted string in a query with a placeholder holding its value (with the escapes applied), so that
  * nothing inside a string (a keyword, a quote, `and`, a `]`) can be matched by the find* parsers.
  * @param query
- * @throws {Error} For an unclosed string, comment or bracket.
+ * @throws {Error} For an unclosed string, comment or bracket, or a NUL character outside a string (which could
+ * otherwise pass for a placeholder).
  */
 export declare const maskStrings: (query: string) => string;
 /**

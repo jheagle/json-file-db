@@ -2008,6 +2008,7 @@ exports.unmaskStrings = exports.placeholderSource = exports.maskStrings = export
 require("core-js/modules/es.json.stringify.js");
 require("core-js/modules/esnext.iterator.constructor.js");
 require("core-js/modules/esnext.iterator.map.js");
+require("core-js/modules/esnext.iterator.some.js");
 var _scanQuery = require("./scanQuery");
 /**
  * Regex source matching one placeholder from maskStrings, with the hex-encoded value as its only group. The
@@ -2030,14 +2031,28 @@ const fromPlaceholder = hex => (hex.match(/.{4}/g) || []).map(code => String.fro
  * Replace every quoted string in a query with a placeholder holding its value (with the escapes applied), so that
  * nothing inside a string (a keyword, a quote, `and`, a `]`) can be matched by the find* parsers.
  * @param query
- * @throws {Error} For an unclosed string, comment or bracket.
+ * @throws {Error} For an unclosed string, comment or bracket, or a NUL character outside a string (which could
+ * otherwise pass for a placeholder).
  */
 exports.fromPlaceholder = fromPlaceholder;
-const maskStrings = query => (0, _scanQuery.assertClosed)((0, _scanQuery.scanQuery)(query)).strings.reduceRight((masked, {
-  start,
-  end,
-  value
-}) => `${masked.slice(0, start)}\u0000${toHex(value)}\u0000${masked.slice(end)}`, query);
+const maskStrings = query => {
+  const {
+    strings
+  } = (0, _scanQuery.assertClosed)((0, _scanQuery.scanQuery)(query));
+  for (let index = query.indexOf('\u0000'); index !== -1; index = query.indexOf('\u0000', index + 1)) {
+    if (!strings.some(({
+      start,
+      end
+    }) => start < index && index < end)) {
+      throw new Error(`Unexpected NUL character at position ${index}`);
+    }
+  }
+  return strings.reduceRight((masked, {
+    start,
+    end,
+    value
+  }) => `${masked.slice(0, start)}\u0000${toHex(value)}\u0000${masked.slice(end)}`, query);
+};
 /**
  * Put every placeholder back as a quoted string, the way it would be written in a query: for error messages, and
  * for array literals read as JSON.
@@ -2050,7 +2065,7 @@ const unmaskStrings = (text, quote = 'json') => text.replace(placeholderMatch, (
   return quote === 'json' ? JSON.stringify(value) : `'${value.replace(/\\/g, '\\\\').replace(/'/g, '\\\'')}'`;
 });
 exports.unmaskStrings = unmaskStrings;
-},{"./scanQuery":55,"core-js/modules/es.json.stringify.js":217,"core-js/modules/esnext.iterator.constructor.js":221,"core-js/modules/esnext.iterator.map.js":227}],52:[function(require,module,exports){
+},{"./scanQuery":55,"core-js/modules/es.json.stringify.js":217,"core-js/modules/esnext.iterator.constructor.js":221,"core-js/modules/esnext.iterator.map.js":227,"core-js/modules/esnext.iterator.some.js":229}],52:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
