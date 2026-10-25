@@ -83,7 +83,8 @@ Keep the existing `find*` steps of `parseQuery`, and make sure none of their reg
 
 ## Proposal: schema statements (`create`, `drop`, `describe`, `show`)
 
-> Draft for review (2026-10-25). Merging the PR that adds this section approves it; comments on it change it first.
+> **Status: questions still open.** Merged into the epic on 2026-10-25 (#53) before the questions below were
+> answered. The schema statements aren't built until they are; the answers get written in here first.
 
 ### `create`
 
