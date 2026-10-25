@@ -17,6 +17,7 @@ var _findSortClauses = require("./findSortClauses");
 var _findGroupBy = require("./findGroupBy");
 var _findLimit = require("./findLimit");
 var _findOffset = require("./findOffset");
+var _maskStrings = require("./maskStrings");
 function _interopRequireDefault(e) { return e && e.__esModule ? e : { default: e }; }
 /**
  * Break a query down into its components.
@@ -42,12 +43,14 @@ const parseQuery = query => {
     curry,
     pipe
   } = _siFunciona.default;
+  // No find* step may see inside a string: each one becomes a placeholder holding its value
+  query = (0, _maskStrings.maskStrings)(query);
   query = pipe(curry(_findCommand.findCommand)(parsedQuery), curry(_findInsertValues.findInsertValues)(parsedQuery), curry(_findUpdateValues.findUpdateValues)(parsedQuery), curry(_findJoinEntity.findJoinEntity)(parsedQuery), curry(_findSelects.findSelects)(parsedQuery), curry(_findConditions.findConditions)(parsedQuery), curry(_findJoinClauses.findJoinClauses)(parsedQuery), curry(_findMergeJoins.findMergeJoins)(parsedQuery), curry(_findSortClauses.findSortClauses)(parsedQuery), curry(_findGroupBy.findGroupBy)(parsedQuery), curry(_findLimit.findLimit)(parsedQuery), curry(_findOffset.findOffset)(parsedQuery))(query);
   if (query) {
     if (/^\s*(delete|insert|read|update)\s/i.test(query)) {
-      throw new Error(`Missing ; before: ${query.trim()}`);
+      throw new Error(`Missing ; before: ${(0, _maskStrings.unmaskStrings)(query.trim(), '\'')}`);
     }
-    throw new Error(`Unrecognized query value: ${query}`);
+    throw new Error(`Unrecognized query value: ${(0, _maskStrings.unmaskStrings)(query, '\'')}`);
   }
   return parsedQuery;
 };

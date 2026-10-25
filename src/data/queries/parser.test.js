@@ -372,4 +372,43 @@ describe('parser', () => {
   test('reports which query failed, with the reason', () => {
     expect(() => parser('read workouts; read exercises sort')).toThrow('Failed to interpret query 2 of 2: read exercises sort (Unrecognized query value:')
   })
+
+  describe('strings', () => {
+    const only = (queries) => parser(queries)[0]
+
+    test('reads each string of a two-condition where on its own (main read one condition: x\' and where b = \'y)', () => {
+      expect(only("read t where a = 'x' and where b = 'y'").conditions.map(({ value }) => value)).toEqual(['x', 'y'])
+    })
+
+    test('lets a string hold the other quote', () => {
+      expect(only('insert t values name = "it\'s"').insertValues).toEqual([{ name: 'it\'s' }])
+      expect(only('insert t values name = \'say "hi"\'').insertValues).toEqual([{ name: 'say "hi"' }])
+    })
+
+    test('applies escapes: \\\' is a quote, and \\\\\\\' is a backslash then a quote', () => {
+      expect(only("insert t values name = 'it\\'s'").insertValues).toEqual([{ name: 'it\'s' }])
+      expect(only("insert t values name = '\\\\\\''").insertValues).toEqual([{ name: '\\\'' }])
+    })
+
+    test('keeps keywords, commas and = inside a string out of the other clauses', () => {
+      const read = only("read t where a = 'x sort b desc limit 1'")
+      expect(read.conditions.map(({ value }) => value)).toEqual(['x sort b desc limit 1'])
+      expect(read.sortClauses).toEqual([])
+      expect(read.limit).toBeUndefined()
+      expect(only("update t set note = 'a, b = 2', n = 1").updateValues).toEqual({ note: 'a, b = 2', n: 1 })
+    })
+
+    test('reads strings inside an array, with either quote', () => {
+      expect(only('read t where a in ["x","y"]').conditions[0].value).toEqual(['x', 'y'])
+      expect(only("read t where a in ['x', 'it\\'s']").conditions[0].value).toEqual(['x', 'it\'s'])
+    })
+
+    test('rejects mismatched quotes instead of reading them as one string', () => {
+      expect(() => parser('insert t values name = \'abc"')).toThrow('Unclosed string')
+    })
+
+    test('shows a stray string as it was written in the error', () => {
+      expect(() => parser("read t where a = 'x' 'stray'")).toThrow("(Unrecognized query value: 'stray')")
+    })
+  })
 })

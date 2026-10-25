@@ -6,9 +6,10 @@ Object.defineProperty(exports, "__esModule", {
 exports.findInsertValues = void 0;
 var _removeFromQuery = require("./removeFromQuery");
 var _parseLiteralValue = require("./parseLiteralValue");
-const literal = '(?:["\'][^"\']*[\'"]|[0-9]+|\\[.*?]|null|true|false)';
+var _maskStrings = require("./maskStrings");
+const literal = `(?:${_maskStrings.placeholderSource.replace('(', '(?:')}|[0-9]+|\\[.*?]|null|true|false)`;
 const valuesClauseMatch = new RegExp(`(values)\\s+([a-z0-9_-]+\\s*=\\s*${literal}(?:\\s*,\\s*[a-z0-9_-]+\\s*=\\s*${literal})*)`, 'i');
-const assignmentMatch = /([a-z0-9_-]+)\s*=\s*(["'](.*?)['"]|([0-9]+)|(\[.*?])|(null)|(true)|(false))/ig;
+const assignmentMatch = new RegExp(`([a-z0-9_-]+)\\s*=\\s*(${_maskStrings.placeholderSource}|([0-9]+)|(\\[.*?])|(null)|(true)|(false))`, 'ig');
 /**
  * Extract an insert's "values field = value, field2 = value2" clause from the query, the same way
  * findUpdateValues() does for "set". insertEntity() accepts an array of rows for bulk inserts, but

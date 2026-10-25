@@ -6,7 +6,8 @@ Object.defineProperty(exports, "__esModule", {
 exports.findConditions = void 0;
 var _removeFromQuery = require("./removeFromQuery");
 var _parseLiteralValue = require("./parseLiteralValue");
-const conditionMatch = /(and|or)?\s*(where)\s+([a-z0-9_-]+\.?[a-z0-9_-]*)\s+(=|!=|>|<|>=|<=|in|between|like)\s+(["'](.*)['"]|([0-9]+)|(\[.*])|(null)|(true)|(false))/ig;
+var _maskStrings = require("./maskStrings");
+const conditionMatch = new RegExp(`(and|or)?\\s*(where)\\s+([a-z0-9_-]+\\.?[a-z0-9_-]*)\\s+(=|!=|>|<|>=|<=|in|between|like)\\s+(${_maskStrings.placeholderSource}|([0-9]+)|(\\[.*])|(null)|(true)|(false))`, 'ig');
 /**
  * Extract condition clauses from the query.
  * @param parsed
