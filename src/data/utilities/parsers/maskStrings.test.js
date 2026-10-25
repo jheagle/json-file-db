@@ -69,6 +69,11 @@ describe('maskArrays', () => {
     expect(() => mask('a in [1, \'x\',, 2]')).toThrow("Invalid array [1, 'x',, 2]:")
   })
 
+  test('refuses a number too large to hold, rather than turning it into null', () => {
+    expect(() => mask('a in [1, 1e999]')).toThrow('Invalid array [1, 1e999]: Infinity is too large')
+    expect(() => mask('a in [-1e999]')).toThrow('-Infinity is too large')
+  })
+
   test('puts arrays back as JSON when unmasking', () => {
     expect(unmaskStrings(mask('a in [\'x\', 1]'), '\'')).toBe('a in ["x",1]')
   })

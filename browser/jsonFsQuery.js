@@ -2079,7 +2079,13 @@ const unmaskStrings = (text, quote = 'json') => text.replace(placeholderMatch, (
 exports.unmaskStrings = unmaskStrings;
 const arrayJson = text => {
   try {
-    return JSON.stringify(JSON.parse(unmaskStrings(text)));
+    // A number too big for a double reads as Infinity, which JSON would write back as null: refuse it instead
+    return JSON.stringify(JSON.parse(unmaskStrings(text), (key, value) => {
+      if (typeof value === 'number' && !Number.isFinite(value)) {
+        throw new Error(`${value} is too large`);
+      }
+      return value;
+    }));
   } catch (e) {
     throw new Error(`Invalid array ${unmaskStrings(text, '\'')}: ${e.message}`);
   }
