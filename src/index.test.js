@@ -1,4 +1,4 @@
-import { query, quote, create, drop, describe as describeRecord, configure } from './index'
+import { query, quote, queryStatus, create, drop, describe as describeRecord, configure } from './index'
 import { setUp } from 'test-filesystem'
 
 const databasePath = 'public-api-database/'
@@ -62,5 +62,10 @@ describe('the public package entry point', () => {
     expect(found.map(({ note }) => note)).toEqual([note])
 
     await drop('foo')
+  })
+
+  test('queryStatus is exported, for prompts which read a query over several lines', () => {
+    expect(queryStatus("read foo where note = 'a;")).toEqual({ complete: false, waitingFor: "'" })
+    expect(queryStatus("read foo where note = 'a;';")).toEqual({ complete: true, waitingFor: '' })
   })
 })
