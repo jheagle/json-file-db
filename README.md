@@ -37,6 +37,109 @@ await query("delete workouts where date = '2024-06-02'")
 await drop('workouts')
 ```
 
+## Writing queries
+
+`query()` takes one query, or several separated by `;`, and resolves to one result per query:
+
+```js
+const [workouts, exercises] = await query("read workouts where date = '2024-06-02'; read exercises;")
+```
+
+The `;` after the last (or only) query is optional. A `;` inside a string, a comment or brackets doesn't end a query.
+
+### Strings
+
+Strings use single or double quotes. A string closes only with the quote it opened with, so the other quote is just
+a character inside it:
+
+```sql
+insert notes values text = "it's done"
+insert notes values text = 'say "hi"'
+```
+
+Inside a string, a backslash escapes the next character: `\'`, `\"` and `\\` are a quote and a backslash, `\n` and
+`\t` are a newline and a tab, and any other `\x` is just `x`. Escapes are read left to right, so `'\\\''` is a
+backslash followed by a quote:
+
+```sql
+insert notes values text = 'it\'s done'
+insert files values path = 'C:\\temp'
+```
+
+An unclosed string, or mismatched quotes (`'abc"`), is an error rather than a guess. Keywords, commas and `;` inside a
+string are only text: `where note = 'x sort b limit 1'` compares against that whole text.
+
+### Building a query from values: `quote()`
+
+To put any text into a query (such as user input), wrap it with `quote()`. It escapes the backslash and the quote, so
+the query reads back exactly the text given:
+
+```js
+const { query, quote } = require('json-fs-query')
+
+const name = "Farmer's walk"
+await query(`insert exercises values name = ${quote(name)}`)
+await query(`read exercises where name = ${quote(name)}`)
+```
+
+`quote(value, '"')` wraps in double quotes instead.
+
+### Arrays
+
+Arrays are JSON-style, and their strings can use either quote. They can be nested, and are used by `in` and
+`between`, or stored as a value:
+
+```sql
+read workouts where exercise_id in [3, 5, 8]
+read workouts where reps between [8, 12]
+read exercises where name in ['bench press', "farmer's walk"]
+insert routines values days = ['mon', 'thu'], sets = [[3, 10], [3, 8]]
+```
+
+### Comments
+
+`-- to the end of the line` and `/* anything, over several lines */`. A `--` starts a comment only at the start of a
+line or after whitespace or a `;`, since names can contain `-` (`my--table` is a name). Comment markers inside a
+string are just text.
+
+```sql
+-- this week's sessions
+read workouts where date = '2024-06-02' /* the Sunday */;
+```
+
+### Several conditions
+
+Each condition starts with `where`; join them with `and where`:
+
+```sql
+read workouts where reps > 8 and where date = '2024-06-02'
+```
+
+`or where` is not supported yet: it is currently read the same as `and where`. And/or with grouping and precedence is
+planned.
+
+### Reading a query over several lines: `queryStatus()`
+
+For a prompt which reads a query line by line (like the CLI), `queryStatus()` says whether the text so far is ready to
+run, and if not, what it is waiting for: `'` or `"` (a string), `/*` (a comment), `[` or `(` (a bracket), or `;`.
+Join the lines with `'\n'`, since a `--` comment ends at the end of its line.
+
+```js
+const { queryStatus } = require('json-fs-query')
+
+queryStatus("read notes where text = 'it")   // { complete: false, waitingFor: "'" }
+queryStatus('read notes')                    // { complete: false, waitingFor: ';' }
+queryStatus('read notes;')                   // { complete: true, waitingFor: '' }
+```
+
+### Upgrading from 1.x
+
+- Several queries in one string need a `;` between them: `read a; read b`. Before, they were split on command words,
+  which also split a value such as `'please read this'` and stored it as `pleaseread this`.
+- Unclosed strings and mismatched quotes are errors.
+- A backslash inside a string is an escape: write `\\` for a backslash (or use `quote()`).
+- `--` and `/* */` start comments outside strings.
+
 ## Configuration
 
 `configure()` sets where this package's data lives and how strictly it enforces foreign keys - call it once,
@@ -83,8 +186,8 @@ The reference for every function is in [`docs/`](https://joshuaheagle.com/projec
 | `queries` | Parse a query string and run it - reads, inserts, updates, deletes, joins, `where`, `sortBy`, `groupBy` |
 | `utilities` | Shared helpers the queries use - retrieving records/files/indexes and merging join results |
 
-`src/index.ts` is the package's public entry point - it re-exports `query`, `create`, `drop`, `describe`, and the
-schema-definition types (`fieldProperties`, `keyProperties`, etc.) needed to build a `create()` call. Everything else
+`src/index.ts` is the package's public entry point - it re-exports `query`, `quote`, `queryStatus`, `create`, `drop`,
+`describe`, `configure`, and the schema-definition types (`fieldProperties`, `keyProperties`, etc.) needed to build a `create()` call. Everything else
 under `src/data/` is an internal module, reachable but not part of the supported public API.
 
 ## Development
@@ -93,6 +196,6 @@ under `src/data/` is an internal module, reachable but not part of the supported
 npm install
 npm test          # the tests
 npm run typecheck # the types
-npm run build     # dist/ and docs/
-npm run docs      # only the documentation
+npm run build     # dist/ and browser/
+npm run docs      # the documentation (docs.to)
 ```
