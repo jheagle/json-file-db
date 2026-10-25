@@ -2,6 +2,7 @@ import { deleteEntity } from '../queries/deleteEntity'
 import { insertEntity } from '../queries/insertEntity'
 import { readEntity } from '../queries/readEntity'
 import { updateEntity } from '../queries/updateEntity'
+import { createRecord } from '../queries/createRecord'
 import { joinEntity } from '../queries/joinEntity'
 import { mergeJoins } from '../queries/mergeJoins'
 import { where } from '../queries/where'
@@ -37,6 +38,10 @@ const typeConditions = async (parsed, recordData) => {
 }
 
 export const runQuery = async (parsed) => {
+  // A create statement acts on the database, not on entries: there is no record to read yet
+  if (parsed.command === 'create') {
+    return { [parsed.entity]: await createRecord(parsed.entity, parsed.create) }
+  }
   const recordData = {
     [parsed.entity]: await retrieveRecord(parsed.entity)
   }

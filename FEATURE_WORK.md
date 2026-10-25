@@ -70,7 +70,7 @@ Keep the existing `find*` steps of `parseQuery`, and make sure none of their reg
   open, for the psql-style continuation prompt). The CLI epic's "Detect when a query is complete" task then uses it
   instead of its own quote and bracket scanning.
 - [x] **Docs** (#52): a README section on strings, quotes, escapes, comments and `;`, with examples.
-- [ ] **Nullable fields** (decided 2026-10-25, decision 4): a `nullable` flag on field definitions (`create()` takes
+- [x] **Nullable fields** (#55) (decided 2026-10-25, decision 4): a `nullable` flag on field definitions (`create()` takes
   `nullable: true`; default `false`). A nullable field stores a real JSON `null`; writing `null` to any other field is
   an error. Today `typeCheck` has no `null` case: a `string` field stores the text `"null"`, an `int` field stores `0`,
   and the other types throw. `create()` also checks each default against the field's type (and allows `default null`
@@ -79,7 +79,8 @@ Keep the existing `find*` steps of `parseQuery`, and make sure none of their reg
 - [ ] **Schema statements: `create`**: the query form of `create(recordName, definition, keys)`, as decided in the
   proposal below, including `create if not exists`.
 - [ ] **Schema statements: `drop`**: the query form of `drop()`, including `drop if exists`.
-- [ ] **Schema statements: `describe`**: the query form of `describe()`; the CLI shows it as a table.
+- [ ] **Schema statements: `describe`**: the query form of `describe()`; the CLI shows it as a table. Note: `describe()`
+  returns only the fields today, not the keys (found building `create`); the statement should show both.
 - [ ] **Schema statements: `show records`**: list the records in the database (from the `__RECORDS` registry).
 
 - [ ] **Rebuild `dist/` and `browser/`** (last, before merging to `main`): from the CLI hook task on, task PRs run
