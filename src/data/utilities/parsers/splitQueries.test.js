@@ -60,8 +60,18 @@ describe('splitQueries', () => {
     ])
   })
 
-  test('throws for an unclosed string or comment', () => {
+  test('keeps a ; inside brackets in the query', () => {
+    expect(splitQueries('read t where a in [1;2]; read b')).toEqual(['read t where a in [1;2]', 'read b'])
+  })
+
+  test('keeps a name containing --', () => {
+    expect(splitQueries('read my--table; read b')).toEqual(['read my--table', 'read b'])
+  })
+
+  test('throws for an unclosed string, comment or bracket, or a stray closing bracket', () => {
     expect(() => splitQueries('read t where a = \'x; read b')).toThrow('Unclosed string')
     expect(() => splitQueries('read t /* where a = 1')).toThrow('Unclosed comment')
+    expect(() => splitQueries('read t where a in [1, 2; read b')).toThrow('Unclosed bracket')
+    expect(() => splitQueries('read t where a in 1, 2]; read b')).toThrow('Unexpected ]')
   })
 })

@@ -355,6 +355,20 @@ describe('parser', () => {
     expect(() => parser('read workouts read exercises')).toThrow('Failed to interpret: read workouts read exercises (Missing ; before: read exercises)')
   })
 
+  test.each([
+    ["read a where x = 'y' read b", 'read b'],
+    ['update t set a = 1 read b', 'read b'],
+    ["update t set a = 'z' where b = 2 read c", 'read c'],
+    ["insert t values a = 1, b = 'w' delete c", 'delete c'],
+    ['read a sort x desc limit 2 read b', 'read b']
+  ])('reports a missing ; after a query with clauses: %s', (queries, second) => {
+    expect(() => parser(queries)).toThrow(`(Missing ; before: ${second})`)
+  })
+
+  test('reads a name containing -- as a name, not a comment', () => {
+    expect(parser('read my--table')[0].entity).toBe('my--table')
+  })
+
   test('reports which query failed, with the reason', () => {
     expect(() => parser('read workouts; read exercises sort')).toThrow('Failed to interpret query 2 of 2: read exercises sort (Unrecognized query value:')
   })
