@@ -57,7 +57,7 @@ Keep the existing `find*` steps of `parseQuery`, and make sure none of their reg
 - [x] **Split on `;`** (#46): `splitQueries` uses the scanner: splits on `;` outside strings and comments, removes comments,
   allows a trailing `;`. Regression test: `'please read this'` stays one query. `read a read b` (no `;`) is now an
   error, which is the breaking change of this epic.
-- [ ] **Strings through placeholders**: strings become placeholders before the `find*` steps; `parseLiteralValue`
+- [x] **Strings through placeholders** (#47): strings become placeholders before the `find*` steps; `parseLiteralValue`
   resolves them; the `literal` regexes in `findInsertValues`, `findUpdateValues` and `findConditions` match a
   placeholder instead of `["'][^"']*['"]` / `(.*)`. Regression tests: the two-condition `where`, `"it's"`,
   mismatched quotes (now an error), `'it\'s'`.
