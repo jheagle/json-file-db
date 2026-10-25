@@ -48,7 +48,7 @@ Keep the existing `find*` steps of `parseQuery`, and make sure none of their reg
 
 ## Work Split
 
-- [ ] **Scanner** (`src/data/utilities/parsers/scanQuery.ts`): one pass over the text, returning the string literals
+- [x] **Scanner** (#45) (`src/data/utilities/parsers/scanQuery.ts`): one pass over the text, returning the string literals
   (position, quote, unescaped value), the comment ranges, the `;` positions outside both, and the end state: inside
   which quote, inside a block comment, bracket depth, a trailing backslash. The parser gets a clear error for an
   unclosed string or comment; the CLI reads the end state instead. Unit tests for every rule above,
