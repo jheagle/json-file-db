@@ -1,11 +1,11 @@
 import { removeFromQuery } from './removeFromQuery'
 import { parseLiteralValue } from './parseLiteralValue'
 import { ParsedQuery } from './parseQuery'
-import { placeholderSource } from './maskStrings'
+import { arraySource, placeholderSource } from './maskStrings'
 
-const literal = `(?:${placeholderSource.replace('(', '(?:')}|[0-9]+|\\[.*?]|null|true|false)`
+const literal = `(?:${placeholderSource.replace('(', '(?:')}|[0-9]+|${arraySource.replace('(', '(?:')}|null|true|false)`
 const valuesClauseMatch: RegExp = new RegExp(`(values)\\s+([a-z0-9_-]+\\s*=\\s*${literal}(?:\\s*,\\s*[a-z0-9_-]+\\s*=\\s*${literal})*)`, 'i')
-const assignmentMatch: RegExp = new RegExp(`([a-z0-9_-]+)\\s*=\\s*(${placeholderSource}|([0-9]+)|(\\[.*?])|(null)|(true)|(false))`, 'ig')
+const assignmentMatch: RegExp = new RegExp(`([a-z0-9_-]+)\\s*=\\s*(${placeholderSource}|([0-9]+)|${arraySource}|(null)|(true)|(false))`, 'ig')
 
 export type ParsedInsertRow = { [field: string]: any }
 

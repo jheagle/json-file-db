@@ -7,9 +7,9 @@ exports.findInsertValues = void 0;
 var _removeFromQuery = require("./removeFromQuery");
 var _parseLiteralValue = require("./parseLiteralValue");
 var _maskStrings = require("./maskStrings");
-const literal = `(?:${_maskStrings.placeholderSource.replace('(', '(?:')}|[0-9]+|\\[.*?]|null|true|false)`;
+const literal = `(?:${_maskStrings.placeholderSource.replace('(', '(?:')}|[0-9]+|${_maskStrings.arraySource.replace('(', '(?:')}|null|true|false)`;
 const valuesClauseMatch = new RegExp(`(values)\\s+([a-z0-9_-]+\\s*=\\s*${literal}(?:\\s*,\\s*[a-z0-9_-]+\\s*=\\s*${literal})*)`, 'i');
-const assignmentMatch = new RegExp(`([a-z0-9_-]+)\\s*=\\s*(${_maskStrings.placeholderSource}|([0-9]+)|(\\[.*?])|(null)|(true)|(false))`, 'ig');
+const assignmentMatch = new RegExp(`([a-z0-9_-]+)\\s*=\\s*(${_maskStrings.placeholderSource}|([0-9]+)|${_maskStrings.arraySource}|(null)|(true)|(false))`, 'ig');
 /**
  * Extract an insert's "values field = value, field2 = value2" clause from the query, the same way
  * findUpdateValues() does for "set". insertEntity() accepts an array of rows for bulk inserts, but

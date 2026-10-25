@@ -23,8 +23,8 @@ const parseLiteralValue = (match, baseIndex) => {
     return Number(match[baseIndex + 1]);
   }
   if (typeof match[baseIndex + 2] !== 'undefined') {
-    // Strings inside the array are placeholders too: put them back as JSON strings first
-    return JSON.parse((0, _maskStrings.unmaskStrings)(match[baseIndex + 2]));
+    // An array is a placeholder from maskArrays, holding its JSON
+    return JSON.parse((0, _maskStrings.fromPlaceholder)(match[baseIndex + 2]));
   }
   if (typeof match[baseIndex + 3] !== 'undefined') {
     return null;

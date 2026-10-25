@@ -43,8 +43,8 @@ const parseQuery = query => {
     curry,
     pipe
   } = _siFunciona.default;
-  // No find* step may see inside a string: each one becomes a placeholder holding its value
-  query = (0, _maskStrings.maskStrings)(query);
+  // No find* step may see inside a string or an array: each one becomes a placeholder holding its value
+  query = (0, _maskStrings.maskArrays)((0, _maskStrings.maskStrings)(query));
   query = pipe(curry(_findCommand.findCommand)(parsedQuery), curry(_findInsertValues.findInsertValues)(parsedQuery), curry(_findUpdateValues.findUpdateValues)(parsedQuery), curry(_findJoinEntity.findJoinEntity)(parsedQuery), curry(_findSelects.findSelects)(parsedQuery), curry(_findConditions.findConditions)(parsedQuery), curry(_findJoinClauses.findJoinClauses)(parsedQuery), curry(_findMergeJoins.findMergeJoins)(parsedQuery), curry(_findSortClauses.findSortClauses)(parsedQuery), curry(_findGroupBy.findGroupBy)(parsedQuery), curry(_findLimit.findLimit)(parsedQuery), curry(_findOffset.findOffset)(parsedQuery))(query);
   if (query) {
     if (/^\s*(delete|insert|read|update)\s/i.test(query)) {

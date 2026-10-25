@@ -1,10 +1,10 @@
 import { findConditions } from './findConditions'
-import { maskStrings, unmaskStrings } from './maskStrings'
+import { maskArrays, maskStrings, unmaskStrings } from './maskStrings'
 
 const parse = (query) => {
   const parsed = { conditions: [] }
-  // parseQuery masks the strings before any find* step runs
-  const remaining = unmaskStrings(findConditions(parsed, maskStrings(query)), '\'')
+  // parseQuery masks the strings and arrays before any find* step runs
+  const remaining = unmaskStrings(findConditions(parsed, maskArrays(maskStrings(query))), '\'')
   return { parsed, remaining }
 }
 

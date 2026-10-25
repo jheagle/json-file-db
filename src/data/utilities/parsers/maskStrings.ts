@@ -9,6 +9,14 @@ export const placeholderSource = '\\u0000([0-9a-f]*)\\u0000'
 const placeholderMatch = new RegExp(placeholderSource, 'g')
 
 /**
+ * Regex source matching one placeholder from maskArrays, with the hex-encoded JSON of the array as its only group.
+ * The find* parsers use it where they would otherwise match `[...]`.
+ */
+export const arraySource = '\\u0001([0-9a-f]*)\\u0001'
+
+const arrayMatch = new RegExp(arraySource, 'g')
+
+/**
  * Encode a value as hex, four digits per UTF-16 code unit: only 0-9 and a-f, so no keyword, quote, space or
  * bracket a parser looks for can appear in it.
  * @param value
@@ -27,14 +35,16 @@ export const fromPlaceholder = (hex: string): string =>
  * Replace every quoted string in a query with a placeholder holding its value (with the escapes applied), so that
  * nothing inside a string (a keyword, a quote, `and`, a `]`) can be matched by the find* parsers.
  * @param query
- * @throws {Error} For an unclosed string, comment or bracket, or a NUL character outside a string (which could
- * otherwise pass for a placeholder).
+ * @throws {Error} For an unclosed string, comment or bracket, or a NUL or SOH character outside a string (which
+ * could otherwise pass for a placeholder).
  */
 export const maskStrings = (query: string): string => {
   const { strings } = assertClosed(scanQuery(query))
-  for (let index = query.indexOf('\u0000'); index !== -1; index = query.indexOf('\u0000', index + 1)) {
-    if (!strings.some(({ start, end }) => start < index && index < end)) {
-      throw new Error(`Unexpected NUL character at position ${index}`)
+  for (const [character, name] of [['\u0000', 'NUL'], ['\u0001', 'SOH']]) {
+    for (let index = query.indexOf(character); index !== -1; index = query.indexOf(character, index + 1)) {
+      if (!strings.some(({ start, end }) => start < index && index < end)) {
+        throw new Error(`Unexpected ${name} character at position ${index}`)
+      }
     }
   }
   return strings.reduceRight(
@@ -44,13 +54,59 @@ export const maskStrings = (query: string): string => {
 }
 
 /**
- * Put every placeholder back as a quoted string, the way it would be written in a query: for error messages, and
- * for array literals read as JSON.
+ * Put every placeholder back the way it would be written in a query: strings quoted, arrays as JSON. For error
+ * messages, and for reading an array's text as JSON.
  * @param text
- * @param quote - wrap with JSON's double quotes (the default) or with single quotes
+ * @param quote - wrap strings with JSON's double quotes (the default) or with single quotes
  */
 export const unmaskStrings = (text: string, quote: 'json' | '\'' = 'json'): string =>
-  text.replace(placeholderMatch, (placeholder, hex) => {
-    const value = fromPlaceholder(hex)
-    return quote === 'json' ? JSON.stringify(value) : `'${value.replace(/\\/g, '\\\\').replace(/'/g, '\\\'')}'`
-  })
+  text
+    .replace(placeholderMatch, (placeholder, hex) => {
+      const value = fromPlaceholder(hex)
+      return quote === 'json' ? JSON.stringify(value) : `'${value.replace(/\\/g, '\\\\').replace(/'/g, '\\\'')}'`
+    })
+    .replace(arrayMatch, (placeholder, hex) => fromPlaceholder(hex))
+
+/**
+ * Read one array's text (its strings already placeholders) as JSON, so it is checked once, here, with a clear error.
+ * @param text
+ */
+const arrayJson = (text: string): string => {
+  try {
+    return JSON.stringify(JSON.parse(unmaskStrings(text)))
+  } catch (e) {
+    throw new Error(`Invalid array ${unmaskStrings(text, '\'')}: ${(e as Error).message}`)
+  }
+}
+
+/**
+ * Replace every array (outermost brackets only, so a nested array stays inside its parent) with a placeholder holding
+ * its JSON, so that the find* parsers never have to find where an array ends, and nothing inside one (a `.`, a `]`,
+ * a keyword) can be matched by them. Run it on the output of maskStrings, where no `[` or `]` is inside a string.
+ * @param masked
+ * @throws {Error} For an array which is not valid JSON once its strings are put back.
+ */
+export const maskArrays = (masked: string): string => {
+  let result = ''
+  let depth = 0
+  let start = 0
+  for (let index = 0; index < masked.length; index++) {
+    const char = masked[index]
+    if (char === '[') {
+      if (depth === 0) {
+        start = index
+      }
+      depth++
+    } else if (char === ']' && depth > 0) {
+      depth--
+      if (depth === 0) {
+        result += `\u0001${toHex(arrayJson(masked.slice(start, index + 1)))}\u0001`
+        continue
+      }
+    }
+    if (depth === 0) {
+      result += char
+    }
+  }
+  return depth > 0 ? result + masked.slice(start) : result
+}
