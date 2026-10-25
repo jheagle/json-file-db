@@ -252,6 +252,7 @@ export const parseCreate = (query: string): ParsedCreateQuery => {
   const open = head[0].length - 1
   const close = findClose(query, open)
   if (close === -1) {
+    // Not reached through parser(): splitQueries' scanner already rejects an unclosed bracket
     throw new Error('Missing ) at the end of the field list')
   }
   const after = query.slice(close + 1).trim()

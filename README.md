@@ -162,7 +162,7 @@ A field is `<name> <type>`, then any of these, in any order:
 | `optional` | may be left out (see "Fields" above) |
 | `null` / `not null` | may hold `null` / may not (the default) |
 | `auto` | a UUID is generated on insert; the type must be `string` |
-| `default <value>` | used when the field is left out: a string, a number, an array, `null`, `true` or `false` |
+| `default <value>` | used when the field is left out: a string, a whole number, an array, `null`, `true` or `false` (so an `object` field can only default to `null` here; `create()` takes any default) |
 
 The types are `string`, `int`, `boolean`, `object` and `array`; any other is an error.
 

@@ -145,8 +145,8 @@ describe('parseCreate', () => {
       expect(() => parser(text)).toThrow(message)
     })
 
-    test('an unclosed field list is an error', () => {
-      expect(() => parser('create t (a string')).toThrow()
+    test('an unclosed field list is an error (from the scanner, before parseCreate sees it)', () => {
+      expect(() => parser('create t (a string')).toThrow('Unclosed bracket: ( never closed')
     })
   })
 })
