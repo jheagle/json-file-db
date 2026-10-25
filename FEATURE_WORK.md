@@ -61,7 +61,7 @@ Keep the existing `find*` steps of `parseQuery`, and make sure none of their reg
   resolves them; the `literal` regexes in `findInsertValues`, `findUpdateValues` and `findConditions` match a
   placeholder instead of `["'][^"']*['"]` / `(.*)`. Regression tests: the two-condition `where`, `"it's"`,
   mismatched quotes (now an error), `'it\'s'`.
-- [ ] **Arrays**: values in `[...]` (e.g. `where id in [...]`) are read with the same rules, so they can hold strings
+- [x] **Arrays** (#49): values in `[...]` (e.g. `where id in [...]`) are read with the same rules, so they can hold strings
   with either quote and escapes, not only JSON. Today they go through `JSON.parse`.
 - [ ] **`quote()` helper**: exported from the package. Wraps a value in quotes with `\` and the quote escaped, for code
   that builds query strings. Follow-up in workout-planner once released: replace `escapeQuoted` (which deletes
