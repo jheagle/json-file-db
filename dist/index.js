@@ -37,6 +37,13 @@ Object.defineProperty(exports, "query", {
     return _query.query;
   }
 });
+Object.defineProperty(exports, "quote", {
+  enumerable: true,
+  get: function () {
+    return _quote.quote;
+  }
+});
 var _query = require("./data/queries/query");
+var _quote = require("./data/queries/quote");
 var _introspect = require("./data/introspect");
 var _config = require("./data/utilities/config");
