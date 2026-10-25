@@ -1,10 +1,11 @@
 import { removeFromQuery } from './removeFromQuery'
 import { parseLiteralValue } from './parseLiteralValue'
 import { ParsedQuery } from './parseQuery'
+import { placeholderSource } from './maskStrings'
 
-const literal = '(?:["\'][^"\']*[\'"]|[0-9]+|\\[.*?]|null|true|false)'
+const literal = `(?:${placeholderSource.replace('(', '(?:')}|[0-9]+|\\[.*?]|null|true|false)`
 const setClauseMatch: RegExp = new RegExp(`(set)\\s+([a-z0-9_-]+\\s*=\\s*${literal}(?:\\s*,\\s*[a-z0-9_-]+\\s*=\\s*${literal})*)`, 'i')
-const assignmentMatch: RegExp = /([a-z0-9_-]+)\s*=\s*(["'](.*?)['"]|([0-9]+)|(\[.*?])|(null)|(true)|(false))/ig
+const assignmentMatch: RegExp = new RegExp(`([a-z0-9_-]+)\\s*=\\s*(${placeholderSource}|([0-9]+)|(\\[.*?])|(null)|(true)|(false))`, 'ig')
 
 export type ParsedUpdateValues = { [field: string]: any }
 

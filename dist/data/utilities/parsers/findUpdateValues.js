@@ -6,9 +6,10 @@ Object.defineProperty(exports, "__esModule", {
 exports.findUpdateValues = void 0;
 var _removeFromQuery = require("./removeFromQuery");
 var _parseLiteralValue = require("./parseLiteralValue");
-const literal = '(?:["\'][^"\']*[\'"]|[0-9]+|\\[.*?]|null|true|false)';
+var _maskStrings = require("./maskStrings");
+const literal = `(?:${_maskStrings.placeholderSource.replace('(', '(?:')}|[0-9]+|\\[.*?]|null|true|false)`;
 const setClauseMatch = new RegExp(`(set)\\s+([a-z0-9_-]+\\s*=\\s*${literal}(?:\\s*,\\s*[a-z0-9_-]+\\s*=\\s*${literal})*)`, 'i');
-const assignmentMatch = /([a-z0-9_-]+)\s*=\s*(["'](.*?)['"]|([0-9]+)|(\[.*?])|(null)|(true)|(false))/ig;
+const assignmentMatch = new RegExp(`([a-z0-9_-]+)\\s*=\\s*(${_maskStrings.placeholderSource}|([0-9]+)|(\\[.*?])|(null)|(true)|(false))`, 'ig');
 /**
  * Extract an update's "set field = value, field2 = value2" clause from the query. Uses a two-pass
  * match, unlike the other parsers here: the set clause's own boundary is found first (so it can

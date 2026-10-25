@@ -11,6 +11,7 @@ import { findSortClauses, ParsedSortClause } from './findSortClauses'
 import { findGroupBy, ParsedGroupBy } from './findGroupBy'
 import { findLimit, ParsedLimit } from './findLimit'
 import { findOffset, ParsedOffset } from './findOffset'
+import { maskStrings, unmaskStrings } from './maskStrings'
 
 export type ParsedQuery = {
   command: ParsedCommand | undefined
@@ -51,6 +52,9 @@ export const parseQuery = (query: string): ParsedQuery => {
 
   const { curry, pipe } = siFunciona
 
+  // No find* step may see inside a string: each one becomes a placeholder holding its value
+  query = maskStrings(query)
+
   query = pipe(
     curry(findCommand)(parsedQuery),
     curry(findInsertValues)(parsedQuery),
@@ -68,9 +72,9 @@ export const parseQuery = (query: string): ParsedQuery => {
 
   if (query) {
     if (/^\s*(delete|insert|read|update)\s/i.test(query)) {
-      throw new Error(`Missing ; before: ${query.trim()}`)
+      throw new Error(`Missing ; before: ${unmaskStrings(query.trim(), '\'')}`)
     }
-    throw new Error(`Unrecognized query value: ${query}`)
+    throw new Error(`Unrecognized query value: ${unmaskStrings(query, '\'')}`)
   }
   return parsedQuery
 }
