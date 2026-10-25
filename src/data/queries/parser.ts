@@ -3,22 +3,12 @@ import { parseQuery } from '../utilities/parsers/parseQuery'
 
 export const parser = (queries: string = '') => {
   const queryArray: string[] = splitQueries(queries)
-  const parsedQueries = []
-  let mergeQuery = ''
-  for (const query of queryArray) {
-    mergeQuery = mergeQuery ? `${mergeQuery}${query}` : query
-    let parsedQuery = {}
+  return queryArray.map((query, index) => {
     try {
-      parsedQuery = parseQuery(mergeQuery)
-      mergeQuery = ''
+      return parseQuery(query)
     } catch (e) {
-      // attempt to combine queries to fix bad splits
-      continue
+      const which = queryArray.length > 1 ? ` query ${index + 1} of ${queryArray.length}` : ''
+      throw new Error(`Failed to interpret${which}: ${query} (${(e as Error).message})`)
     }
-    parsedQueries.push(parsedQuery)
-  }
-  if (mergeQuery) {
-    throw new Error(`Failed to interpret: ${mergeQuery}`)
-  }
-  return parsedQueries
+  })
 }
