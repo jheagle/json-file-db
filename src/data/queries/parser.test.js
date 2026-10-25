@@ -437,4 +437,42 @@ describe('parser', () => {
       expect(() => parser('read t where a in [1,,2]')).toThrow('Invalid array [1,,2]:')
     })
   })
+
+  describe('sort', () => {
+    const only = (queries) => parser(queries)[0]
+
+    test('a sort without asc/desc stops before the next clause, so the limit is kept', () => {
+      const read = only('read t sort a limit 1')
+      expect(read.sortClauses).toEqual([{ property: 'a', direction: 'asc' }])
+      expect(read.limit).toBe(1)
+    })
+
+    test('several fields, separated by commas, before offset and limit', () => {
+      const read = only('read t sort a, b desc, c offset 2 limit 3')
+      expect(read.sortClauses).toEqual([
+        { property: 'a', direction: 'asc' },
+        { property: 'b', direction: 'desc' },
+        { property: 'c', direction: 'asc' }
+      ])
+      expect(read.offset).toBe(2)
+      expect(read.limit).toBe(3)
+    })
+
+    test('before group by', () => {
+      const read = only('read t sort a group by b')
+      expect(read.sortClauses).toEqual([{ property: 'a', direction: 'asc' }])
+      expect(read.groupBy).toBeDefined()
+    })
+
+    test('asc/desc only as a whole word: a field after a comma may start with them', () => {
+      expect(only('read t sort a, description').sortClauses).toEqual([
+        { property: 'a', direction: 'asc' },
+        { property: 'description', direction: 'asc' }
+      ])
+    })
+
+    test('fields without commas between them are an error, not extra sort fields', () => {
+      expect(() => parser('read t sort a b')).toThrow('Unrecognized query value')
+    })
+  })
 })
