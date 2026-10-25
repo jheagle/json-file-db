@@ -32,8 +32,9 @@ brackets, a `;` inside a string or comment. One scanner, used by both, means the
   `\\` give a quote or a backslash; `\n` and `\t` give a newline and a tab; any other `\x` gives `x`. So `'\\\''`
   is a backslash then a quote: the value `\'`. Outside strings a backslash has no meaning.
 - **Comments**: `-- to the end of the line` and `/* block */`. Quotes, `;` and brackets inside a comment are ignored,
-  and comment markers inside a string are just text.
-- **Statement endings**: `;` ends a query, and is optional after the last (or only) one. Several queries in one
+  and comment markers inside a string are just text. `--` starts a comment only at the start or after whitespace or
+  `;`, since names can contain `-` (`my--table` is a name; found in the agent review of #46).
+- **Statement endings**: `;` ends a query (not inside brackets), and is optional after the last (or only) one. Several queries in one
   string need a `;` between them; command keywords no longer split queries. Checked 2026-10-25: workout-planner,
   the only project using json-fs-query, sends one query per call.
 
