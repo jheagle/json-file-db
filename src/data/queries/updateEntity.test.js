@@ -356,12 +356,42 @@ describe('updateEntity', () => {
       expect(result.exercises[0]._id).toBe('new-id')
     })
   })
+
   describe('null values', () => {
     const nullableDefinition = [
       { name: '_id', type: 'string', optional: false, autoGenerate: true },
       { name: 'note', type: 'string', optional: true, nullable: true },
       { name: 'bar', type: 'string', optional: true }
     ]
+
+    const parentDefinition = [{ name: '_id', type: 'string', optional: false, autoGenerate: true }]
+    const childDefinition = [
+      { name: '_id', type: 'string', optional: false, autoGenerate: true },
+      { name: 'parent_id', type: 'string', optional: true, nullable: true },
+      { name: 'code', type: 'string', optional: true, nullable: true }
+    ]
+    const childKeys = [
+      { type: 'primary', fields: ['_id'], lookup: 'pk__id.json' },
+      { type: 'unique', fields: ['code'], lookup: 'unique_code.json' },
+      { type: 'foreign', fields: ['parent_id'], lookup: 'fk_parent_id.json', references: [{ fields: ['parents._id'], lookup: 'parents.json' }] }
+    ]
+
+    test('setting a foreign key to null is not checked against the referenced record', async () => {
+      await create('parents', parentDefinition, keys)
+      const parents = await insertEntity('parents', [{}], {})
+      await create('children', childDefinition, childKeys)
+      const inserted = await insertEntity('children', [{ parent_id: parents.parents[0]._id }], {})
+      const result = await updateEntity('children', { parent_id: null }, { children: [inserted.children[0]] })
+      expect(result.children[0].parent_id).toBeNull()
+    })
+
+    test('setting a nullable unique field to null does not collide with another null', async () => {
+      await create('parents', parentDefinition, keys)
+      await create('children', childDefinition, childKeys)
+      const inserted = await insertEntity('children', [{ code: null }, { code: 'a' }], {})
+      const result = await updateEntity('children', { code: null }, { children: [inserted.children[1]] })
+      expect(result.children[0].code).toBeNull()
+    })
 
     test('sets a nullable field to a real null', async () => {
       await create('foo', nullableDefinition, keys)

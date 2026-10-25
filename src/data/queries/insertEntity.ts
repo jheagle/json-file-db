@@ -42,7 +42,8 @@ const buildEntityValues = async (entity: string, record: recordDefinition, rowVa
 
 /**
  * Reject the insert if it collides with an existing primary or unique key value - a single field,
- * or a composite of several for a multi-field key.
+ * or a composite of several for a multi-field key. As in SQL, a value with a null in it is never a
+ * duplicate, so a nullable unique field can hold null in any number of rows.
  * @param entity
  * @param record
  * @param entityValues
@@ -53,6 +54,9 @@ const assertUnique = async (entity: string, record: recordDefinition, entityValu
       continue
     }
     const checkKeys = key.fields.map(field => entityValues[field])
+    if (checkKeys.some(value => value === null)) {
+      continue
+    }
     const isUnique = await keyUnique(entity, key.fields, checkKeys)
     if (!isUnique) {
       throw new Error(`Duplicate value for ${key.type} key "${key.fields.join(', ')}" on ${entity}`)
@@ -62,7 +66,7 @@ const assertUnique = async (entity: string, record: recordDefinition, entityValu
 
 /**
  * Reject the insert if a single-field foreign key's value doesn't exist in the record it
- * references.
+ * references. A null references nothing, so it isn't checked (as in SQL).
  * @param entity
  * @param record
  * @param entityValues
@@ -73,7 +77,7 @@ const assertForeignKeys = async (entity: string, record: recordDefinition, entit
       continue
     }
     const field = key.fields[0]
-    if (!Object.prototype.hasOwnProperty.call(entityValues, field)) {
+    if (!Object.prototype.hasOwnProperty.call(entityValues, field) || entityValues[field] === null) {
       continue
     }
     const { entity: refEntity, property: refProperty } = splitEntityProperty(key.references[0].fields[0])

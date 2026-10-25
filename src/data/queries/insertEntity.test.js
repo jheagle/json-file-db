@@ -203,12 +203,62 @@ describe('insertEntity', () => {
       expect(result.workouts[0].exercise_id).toBeUndefined()
     })
   })
+
   describe('null values', () => {
     const nullableDefinition = [
       { name: '_id', type: 'string', optional: false, autoGenerate: true },
       { name: 'note', type: 'string', optional: true, nullable: true },
       { name: 'reps', type: 'int', optional: true }
     ]
+
+    const parentDefinition = [{ name: '_id', type: 'string', optional: false, autoGenerate: true }]
+    const childDefinition = [
+      { name: '_id', type: 'string', optional: false, autoGenerate: true },
+      { name: 'parent_id', type: 'string', optional: true, nullable: true },
+      { name: 'code', type: 'string', optional: true, nullable: true }
+    ]
+    const childKeys = [
+      { type: 'primary', fields: ['_id'], lookup: 'pk__id.json' },
+      { type: 'unique', fields: ['code'], lookup: 'unique_code.json' },
+      { type: 'foreign', fields: ['parent_id'], lookup: 'fk_parent_id.json', references: [{ fields: ['parents._id'], lookup: 'parents.json' }] }
+    ]
+
+    test('a null foreign key references nothing, so it is not checked', async () => {
+      await create('parents', parentDefinition, keys)
+      await create('children', childDefinition, childKeys)
+      const result = await insertEntity('children', [{ parent_id: null }], {})
+      expect(result.children[0].parent_id).toBeNull()
+    })
+
+    test('a nullable unique field can hold null in more than one row, as in SQL', async () => {
+      await create('parents', parentDefinition, keys)
+      await create('children', childDefinition, childKeys)
+      await insertEntity('children', [{ code: null }, { code: null }], {})
+      await insertEntity('children', [{ code: 'a' }], {})
+      await expect(insertEntity('children', [{ code: 'a' }], {}))
+        .rejects.toThrow('Duplicate value for unique key "code" on children')
+    })
+
+    test('a composite unique key with a null in it is never a duplicate', async () => {
+      await create('foo', [
+        { name: '_id', type: 'string', optional: false, autoGenerate: true },
+        { name: 'a', type: 'string' },
+        { name: 'b', type: 'string', nullable: true }
+      ], [...keys, { type: 'unique', fields: ['a', 'b'], lookup: 'unique_a_b.json' }])
+      await insertEntity('foo', [{ a: 'x', b: null }, { a: 'x', b: null }], {})
+      await insertEntity('foo', [{ a: 'x', b: 'y' }], {})
+      await expect(insertEntity('foo', [{ a: 'x', b: 'y' }], {}))
+        .rejects.toThrow('Duplicate value for unique key "a, b" on foo')
+    })
+
+    test('an explicit null is not replaced by the default, so a field that is not nullable rejects it', async () => {
+      await create('foo', [
+        { name: '_id', type: 'string', optional: false, autoGenerate: true },
+        { name: 'status', type: 'string', useDefault: true, defaultValue: 'pending' }
+      ], keys)
+      await expect(insertEntity('foo', [{ status: null }], {}))
+        .rejects.toThrow('Value "null" is not allowed: the field is not nullable')
+    })
 
     test('stores a real null in a nullable field', async () => {
       await create('foo', nullableDefinition, keys)
