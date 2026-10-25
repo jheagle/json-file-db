@@ -66,7 +66,7 @@ Keep the existing `find*` steps of `parseQuery`, and make sure none of their reg
 - [x] **`quote()` helper** (#50): exported from the package. Wraps a value in quotes with `\` and the quote escaped, for code
   that builds query strings. Follow-up in workout-planner once released: replace `escapeQuoted` (which deletes
   apostrophes) with it.
-- [ ] **CLI hook**: export what the CLI's completion check needs from the scanner (complete or not, and what is still
+- [x] **CLI hook** (#51): export what the CLI's completion check needs from the scanner (complete or not, and what is still
   open, for the psql-style continuation prompt). The CLI epic's "Detect when a query is complete" task then uses it
   instead of its own quote and bracket scanning.
 - [ ] **Docs**: a README section on strings, quotes, escapes, comments and `;`, with examples.
