@@ -37,6 +37,22 @@ await query("delete workouts where date = '2024-06-02'")
 await drop('workouts')
 ```
 
+### Fields: `optional`, `nullable` and defaults
+
+A field is required and can't be `null` unless its definition says otherwise. The two flags are separate, because
+JSON can leave a key out or store it as `null`:
+
+| Definition | Left out | `null` |
+|---|---|---|
+| `{ name: 'note', type: 'string' }` | error | error |
+| `{ name: 'note', type: 'string', optional: true }` | allowed | error |
+| `{ name: 'note', type: 'string', nullable: true }` | error | stored as `null` |
+| `{ name: 'note', type: 'string', optional: true, nullable: true }` | allowed | stored as `null` |
+
+`useDefault: true, defaultValue: …` fills in a field that is left out. `create()` checks the default against the
+field's type (a `null` default needs `nullable: true`) and throws if it doesn't fit. Primary key fields can't be
+nullable.
+
 ## Writing queries
 
 `query()` takes one query, or several separated by `;`, and resolves to one result per query:
@@ -139,6 +155,9 @@ queryStatus('read notes;')                   // { complete: true, waitingFor: ''
 - Unclosed strings and mismatched quotes are errors.
 - A backslash inside a string is an escape: write `\\` for a backslash (or use `quote()`).
 - `--` and `/* */` start comments outside strings.
+- `null` is only accepted by fields with `nullable: true`, and is stored as a real `null`. Before, a `string` field
+  stored the text `"null"` and an `int` field stored `0`.
+- `create()` throws for a default that doesn't fit its field's type, and for a nullable primary key field.
 
 ## Configuration
 

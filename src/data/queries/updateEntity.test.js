@@ -356,4 +356,28 @@ describe('updateEntity', () => {
       expect(result.exercises[0]._id).toBe('new-id')
     })
   })
+  describe('null values', () => {
+    const nullableDefinition = [
+      { name: '_id', type: 'string', optional: false, autoGenerate: true },
+      { name: 'note', type: 'string', optional: true, nullable: true },
+      { name: 'bar', type: 'string', optional: true }
+    ]
+
+    test('sets a nullable field to a real null', async () => {
+      await create('foo', nullableDefinition, keys)
+      const inserted = await insertEntity('foo', [{ note: 'x' }], {})
+      const id = inserted.foo[0]._id
+      const result = await updateEntity('foo', { note: null }, { foo: [inserted.foo[0]] })
+      expect(result.foo[0].note).toBeNull()
+      const entryFile = JSON.parse(await readFile(`${databasePath}foo/${id}.json`, 'utf8'))
+      expect(entryFile).toHaveProperty('note', null)
+    })
+
+    test('rejects null for a field that is not nullable', async () => {
+      await create('foo', nullableDefinition, keys)
+      const inserted = await insertEntity('foo', [{ bar: 'x' }], {})
+      await expect(updateEntity('foo', { bar: null }, { foo: [inserted.foo[0]] }))
+        .rejects.toThrow('Value "null" is not allowed: the field is not nullable')
+    })
+  })
 })

@@ -5,12 +5,22 @@
  * happen, since nothing enforced this before) is left alone until something actually updates it.
  * An unrecognized type name is treated as unconstrained rather than rejected, so a typo in a
  * schema's field type can't silently block every write to that field.
+ *
+ * A null is a real JSON null, kept as it is for a nullable field and rejected for any other, of
+ * any type: it is never coerced, so a string field can't store the text "null" or an int field 0.
  * @param type
  * @param value
+ * @param nullable - Whether the field may hold null (the field definition's `nullable`).
  */
-export const typeCheck = (type: string = 'string', value: any = undefined): any => {
+export const typeCheck = (type: string = 'string', value: any = undefined, nullable: boolean = false): any => {
   if (typeof value === 'undefined') {
     return value
+  }
+  if (value === null) {
+    if (nullable) {
+      return value
+    }
+    throw new Error('Value "null" is not allowed: the field is not nullable')
   }
   switch (type) {
     case 'string':

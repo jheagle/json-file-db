@@ -20,4 +20,9 @@ describe('field', () => {
       })
     ).toEqual(generatedField)
   })
+  test('stores nullable only when it is true', () => {
+    expect(field({ name: 'a', nullable: true })).toEqual({ name: 'a', type: 'string', optional: false, autoGenerate: false, nullable: true })
+    expect(field({ name: 'a', nullable: false })).not.toHaveProperty('nullable')
+    expect(field({ name: 'a' })).not.toHaveProperty('nullable')
+  })
 })

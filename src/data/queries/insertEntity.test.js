@@ -203,4 +203,46 @@ describe('insertEntity', () => {
       expect(result.workouts[0].exercise_id).toBeUndefined()
     })
   })
+  describe('null values', () => {
+    const nullableDefinition = [
+      { name: '_id', type: 'string', optional: false, autoGenerate: true },
+      { name: 'note', type: 'string', optional: true, nullable: true },
+      { name: 'reps', type: 'int', optional: true }
+    ]
+
+    test('stores a real null in a nullable field', async () => {
+      await create('foo', nullableDefinition, keys)
+      const dataSet = await insertEntity('foo', [{ note: null }], {})
+      const inserted = dataSet.foo[0]
+      expect(inserted.note).toBeNull()
+      const entryFile = JSON.parse(await readFile(`${databasePath}foo/${inserted._id}.json`, 'utf8'))
+      expect(entryFile).toHaveProperty('note', null)
+    })
+
+    test('rejects null in a field that is not nullable, instead of storing it as 0 or "null"', async () => {
+      await create('foo', nullableDefinition, keys)
+      await expect(insertEntity('foo', [{ reps: null }], {}))
+        .rejects.toThrow('Value "null" is not allowed: the field is not nullable')
+      const recordFile = JSON.parse(await readFile(`${databasePath}foo.json`, 'utf8'))
+      expect(recordFile.entries).toEqual([])
+    })
+
+    test('applies a null default to a nullable field', async () => {
+      await create('foo', [
+        { name: '_id', type: 'string', optional: false, autoGenerate: true },
+        { name: 'note', type: 'string', nullable: true, useDefault: true, defaultValue: null }
+      ], keys)
+      const dataSet = await insertEntity('foo', [{}], {})
+      expect(dataSet.foo[0]).toHaveProperty('note', null)
+    })
+
+    test('a nullable field that is not optional still has to be given', async () => {
+      await create('foo', [
+        { name: '_id', type: 'string', optional: false, autoGenerate: true },
+        { name: 'note', type: 'string', nullable: true }
+      ], keys)
+      await expect(insertEntity('foo', [{}], {}))
+        .rejects.toThrow('Missing required field "note" for foo')
+    })
+  })
 })

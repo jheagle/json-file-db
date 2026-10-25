@@ -35,7 +35,7 @@ const buildEntityValues = async (entity: string, record: recordDefinition, rowVa
       }
       continue
     }
-    entityValues[field.name] = typeCheck(field.type, value)
+    entityValues[field.name] = typeCheck(field.type, value, field.nullable)
   }
   return entityValues
 }

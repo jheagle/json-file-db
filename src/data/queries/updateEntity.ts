@@ -154,7 +154,7 @@ const applyFieldTypes = (record: recordDefinition, values: Object): Object => {
   const typedValues = Object.assign({}, values)
   for (const field of record.definition) {
     if (Object.prototype.hasOwnProperty.call(typedValues, field.name)) {
-      typedValues[field.name] = typeCheck(field.type, typedValues[field.name])
+      typedValues[field.name] = typeCheck(field.type, typedValues[field.name], field.nullable)
     }
   }
   return typedValues
