@@ -70,11 +70,17 @@ Keep the existing `find*` steps of `parseQuery`, and make sure none of their reg
   open, for the psql-style continuation prompt). The CLI epic's "Detect when a query is complete" task then uses it
   instead of its own quote and bracket scanning.
 - [x] **Docs** (#52): a README section on strings, quotes, escapes, comments and `;`, with examples.
-- [ ] **Schema statements: `create`**: the query form of `create(recordName, definition, keys)`. Design the syntax
-  first (fields with their types, keys), as a short proposal in this file, before building it.
-- [ ] **Schema statements: `drop`**: the query form of `drop()`.
+- [ ] **Nullable fields** (decided 2026-10-25, decision 4): a `nullable` flag on field definitions (`create()` takes
+  `nullable: true`; default `false`). A nullable field stores a real JSON `null`; writing `null` to any other field is
+  an error. Today `typeCheck` has no `null` case: a `string` field stores the text `"null"`, an `int` field stores `0`,
+  and the other types throw. `create()` also checks each default against the field's type (and allows `default null`
+  only on a nullable field), so a bad default fails once, at create time, instead of on every insert. Changing what
+  `null` does is breaking, which the 2.0.0 release already is.
+- [ ] **Schema statements: `create`**: the query form of `create(recordName, definition, keys)`, as decided in the
+  proposal below, including `create if not exists`.
+- [ ] **Schema statements: `drop`**: the query form of `drop()`, including `drop if exists`.
 - [ ] **Schema statements: `describe`**: the query form of `describe()`; the CLI shows it as a table.
-- [ ] **Schema statements: `show`**: list the records in the database (from the `__RECORDS` registry).
+- [ ] **Schema statements: `show records`**: list the records in the database (from the `__RECORDS` registry).
 
 - [ ] **Rebuild `dist/` and `browser/`** (last, before merging to `main`): from the CLI hook task on, task PRs run
   the build as a check but don't commit its output (decided 2026-10-25). This task rebuilds and commits it once, unless
@@ -83,18 +89,19 @@ Keep the existing `find*` steps of `parseQuery`, and make sure none of their reg
 
 ## Proposal: schema statements (`create`, `drop`, `describe`, `show`)
 
-> **Status: questions still open.** Merged into the epic on 2026-10-25 (#53) before the questions below were
-> answered. The schema statements aren't built until they are; the answers get written in here first.
+> **Status: decided 2026-10-25.** Proposed in #53; the five questions were answered together on 2026-10-25 and are
+> written into the syntax below. The decisions and their reasons are under "Decisions" at the end of this section.
 
 ### `create`
 
 ```sql
-create exercise_muscle (
+create if not exists exercise_muscle (
   _id string auto,
   exercise_id string,
   muscle_id string,
   muscle_rank int,
   note string optional default '',
+  replaced_by string null default null,
   primary key (_id),
   foreign key (exercise_id) references exercises (_id),
   foreign key (muscle_id) references muscles (_id)
@@ -103,14 +110,19 @@ create exercise_muscle (
 
 Inside the brackets, a comma-separated list of fields, then keys. Everything is case-insensitive except names.
 
-**Fields**: `<name> <type> [optional] [auto] [default <value>]`, the modifiers in any order.
+**Fields**: `<name> <type> [optional] [null | not null] [auto] [default <value>]`, the modifiers in any order.
 
 | Part | Means | `create()` equivalent |
 |---|---|---|
-| `<type>` | `string`, `int`, `boolean`, `object` or `array` | `type` |
-| `optional` | the field may be left out | `optional: true` (fields are required by default, as today) |
-| `auto` | the value is generated on insert | `autoGenerate: true` |
-| `default <value>` | any literal the parser reads: a string, number, array, `null`, `true`, `false` | `useDefault: true, defaultValue` |
+| `<type>` | `string`, `int`, `boolean`, `object` or `array`; anything else is an error (decision 3) | `type` |
+| `optional` | the field may be left out (absent from the stored JSON) | `optional: true` (fields are required by default, as today) |
+| `null` | the field may hold a JSON `null` | `nullable: true` (new, see the Nullable fields task) |
+| `not null` | the default, accepted to say so explicitly | `nullable: false` |
+| `auto` | the value is generated on insert (today a random UUID, `keyGenerate`) | `autoGenerate: true` |
+| `default <value>` | any literal the parser reads: a string, number, array, `null`, `true`, `false`. It must pass the field's type check; `default null` needs `null` | `useDefault: true, defaultValue` |
+
+`optional` and `null` are separate on purpose: JSON can leave a key out or store it as `null`, and a field can allow
+either, both or neither. `null` after `default` is the default's value, not the modifier.
 
 **Keys**:
 
@@ -119,7 +131,7 @@ Inside the brackets, a comma-separated list of fields, then keys. Everything is 
 | `primary key (a)` | `primary` | `pk_a.json` |
 | `unique (a)` | `unique` | `unique_a.json` |
 | `index (a)` | `index` | `index_a.json` |
-| `index (a, b)` | `multi` (see question 2) | `multi_a_b.json` (new: nothing names one yet) |
+| `index (a, b)` | `index` (decision 2) | `index_a_b.json` |
 | `foreign key (a) references other (b)` | `foreign`, referencing `other.b` | `fk_a.json`, reference lookup `other.json` |
 
 Several fields join with `_` in the file name: `primary key (a, b)` is `pk_a_b.json`. The index file names are made
@@ -131,36 +143,49 @@ for you, which is the main thing the query form saves over calling `create()`.
 lookup `exercises.json`). The tests name unique keys the same way (`unique_email.json`, `unique_a_b.json`).
 
 **Errors** rather than guesses: an unknown type or key, a key naming a field that isn't in the list, a foreign key
-whose referenced record or field doesn't exist, the same field twice, and a record that already exists (see question 1).
+whose referenced record or field doesn't exist, the same field twice, a default that fails its type check (or
+`default null` without `null`), and a record that already exists unless the statement says `if not exists`.
 
 **Result**: `query()` resolves to the new record's definition, like `create()`.
 
 ### `drop`, `describe`, `show`
 
 ```sql
-drop exercise_muscle;             -- like drop(); an error if it doesn't exist (see question 1)
+drop exercise_muscle;             -- like drop(); an error if it doesn't exist
+drop if exists exercise_muscle;   -- a no-op if it doesn't exist
 describe exercise_muscle;         -- like describe(): the fields and keys (the CLI prints them as a table)
 show records;                     -- the names of every record, from __RECORDS
 ```
 
-### Questions for you
+A bare `show` is an error that lists what can be shown (only `records` for now). `create if not exists` on an existing
+record is also a no-op, resolving to `null` like `create()` does today.
 
-1. **Existing records**: `create` on a record that exists, and `drop` on one that doesn't, are errors by default.
-   Add `create if not exists` / `drop if exists` for scripts that seed a database (no-ops instead)? I'd say yes:
-   task-manager's setup is exactly that case. (Today `create()` quietly returns `null` for an existing record.)
-2. **`multi` keys**: `key.ts` requires two or more fields for `multi`, but `primary`, `unique` and `index` also work
-   with several fields. Is `multi` meant to be "a non-unique index on several fields"? If so, `index (a, b)` maps to
-   it as above and nobody writes `multi`. If it's something else, it gets its own keyword.
-3. **Unknown types**: `create()` accepts any type name and treats an unknown one as "anything" (so a typo can't block
-   writes). For the query form I'd reject unknown types instead, since the statement is typed by hand. OK?
-4. **Names**: `auto` and `optional` (short, and `optional` matches the stored definition) rather than SQL's
-   `auto_increment` and `null` / `not null`. OK?
-5. **`show records`** or plain **`show`**? (`show` alone leaves room for later `show indexes`, `show databases`.)
+### Decisions (2026-10-25)
+
+1. **Existing / missing records**: errors by default, plus `create if not exists` and `drop if exists` (no-ops), for
+   setup scripts such as task-manager's. `create()` in JS keeps quietly returning `null` for an existing record;
+   changing that would be a separate breaking change.
+2. **`multi`**: it was meant as "an index on several fields", and the code treats it exactly like `index`. So
+   `index (a, b)` is stored as `index` (as SQL writes composite indexes with the same `create index`), and nothing
+   in the query form writes `multi`. `create()` still accepts `multi`. Keeps the name free for array indexes later.
+3. **Unknown types**: the query form rejects them, with an error listing the valid types; `create()` stays lenient
+   for now. The type list isn't complete yet: more types (and aliases) come from a types spike and its own epic.
+4. **`auto` and `optional`**: kept. `auto` generates a UUID, so SQL's `auto_increment` would mislead, and `auto`
+   leaves room for a format later (e.g. `auto uuid`, `auto increment`). `optional` means "may be absent", which JSON
+   can express and SQL can't. SQL's `null` / `not null` are added for what they mean in SQL: the field may hold
+   `null`. Not null is the default here (unlike MySQL), matching required-by-default and existing schemas. Lean
+   towards SQL, but do what makes sense for JSON.
+5. **`show records`**, not bare `show`: as MySQL's `show tables`, and it leaves room for `show indexes`,
+   `show databases`.
 
 ## Out of scope (tracked separately in TASKS.md)
 
 - **Transactions** (`begin` / `commit` / `rollback`): a time-boxed spike first.
 - **Multiple databases**, **user sessions**, **dump output**: after the schema statements.
+- **More field types**: a spike first (JSON storage like MongoDB, SQL-style structure): `float`/`number` (with care
+  for precision loss), `date` and `timestamp` (locale, changeable defaults), an array type. Then its own epic.
+- **Type aliases** for names people commonly mix up (e.g. a programming language's type names): after the spike.
+- **Array indexes** (MongoDB's multikey) and **using a composite index for its leftmost fields** in `where`.
 - **The CLI itself**: its own epic, `feature/create-cli`. It only consumes the scanner (CLI hook task above).
 
 ## Release
