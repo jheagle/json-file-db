@@ -69,7 +69,7 @@ Keep the existing `find*` steps of `parseQuery`, and make sure none of their reg
 - [x] **CLI hook** (#51): export what the CLI's completion check needs from the scanner (complete or not, and what is still
   open, for the psql-style continuation prompt). The CLI epic's "Detect when a query is complete" task then uses it
   instead of its own quote and bracket scanning.
-- [ ] **Docs**: a README section on strings, quotes, escapes, comments and `;`, with examples.
+- [x] **Docs** (#52): a README section on strings, quotes, escapes, comments and `;`, with examples.
 - [ ] **Schema statements: `create`**: the query form of `create(recordName, definition, keys)`. Design the syntax
   first (fields with their types, keys), as a short proposal in this file, before building it.
 - [ ] **Schema statements: `drop`**: the query form of `drop()`.
@@ -80,6 +80,81 @@ Keep the existing `find*` steps of `parseQuery`, and make sure none of their reg
   the build as a check but don't commit its output (decided 2026-10-25). This task rebuilds and commits it once, unless
   json-fs-query has stopped tracking build output by then (it's published to npm, so its build output isn't needed in
   git; see TASKS.md).
+
+## Proposal: schema statements (`create`, `drop`, `describe`, `show`)
+
+> Draft for review (2026-10-25). Merging the PR that adds this section approves it; comments on it change it first.
+
+### `create`
+
+```sql
+create exercise_muscle (
+  _id string auto,
+  exercise_id string,
+  muscle_id string,
+  muscle_rank int,
+  note string optional default '',
+  primary key (_id),
+  foreign key (exercise_id) references exercises (_id),
+  foreign key (muscle_id) references muscles (_id)
+);
+```
+
+Inside the brackets, a comma-separated list of fields, then keys. Everything is case-insensitive except names.
+
+**Fields**: `<name> <type> [optional] [auto] [default <value>]`, the modifiers in any order.
+
+| Part | Means | `create()` equivalent |
+|---|---|---|
+| `<type>` | `string`, `int`, `boolean`, `object` or `array` | `type` |
+| `optional` | the field may be left out | `optional: true` (fields are required by default, as today) |
+| `auto` | the value is generated on insert | `autoGenerate: true` |
+| `default <value>` | any literal the parser reads: a string, number, array, `null`, `true`, `false` | `useDefault: true, defaultValue` |
+
+**Keys**:
+
+| Syntax | Key | Index file (as `create()` users name them today) |
+|---|---|---|
+| `primary key (a)` | `primary` | `pk_a.json` |
+| `unique (a)` | `unique` | `unique_a.json` |
+| `index (a)` | `index` | `index_a.json` |
+| `index (a, b)` | `multi` (see question 2) | `multi_a_b.json` (new: nothing names one yet) |
+| `foreign key (a) references other (b)` | `foreign`, referencing `other.b` | `fk_a.json`, reference lookup `other.json` |
+
+Several fields join with `_` in the file name: `primary key (a, b)` is `pk_a_b.json`. The index file names are made
+for you, which is the main thing the query form saves over calling `create()`.
+
+**Checked against real data**: written this way, workout-planner's `exercises`, `muscles`, `workouts` and
+`exercise_muscle` produce exactly the definitions and keys in its `database/*.json` today, index file names included
+(all 11 index and reference file names, e.g. `pk__id.json`, `index_date.json`, `fk_exercise_id.json`, reference
+lookup `exercises.json`). The tests name unique keys the same way (`unique_email.json`, `unique_a_b.json`).
+
+**Errors** rather than guesses: an unknown type or key, a key naming a field that isn't in the list, a foreign key
+whose referenced record or field doesn't exist, the same field twice, and a record that already exists (see question 1).
+
+**Result**: `query()` resolves to the new record's definition, like `create()`.
+
+### `drop`, `describe`, `show`
+
+```sql
+drop exercise_muscle;             -- like drop(); an error if it doesn't exist (see question 1)
+describe exercise_muscle;         -- like describe(): the fields and keys (the CLI prints them as a table)
+show records;                     -- the names of every record, from __RECORDS
+```
+
+### Questions for you
+
+1. **Existing records**: `create` on a record that exists, and `drop` on one that doesn't, are errors by default.
+   Add `create if not exists` / `drop if exists` for scripts that seed a database (no-ops instead)? I'd say yes:
+   task-manager's setup is exactly that case. (Today `create()` quietly returns `null` for an existing record.)
+2. **`multi` keys**: `key.ts` requires two or more fields for `multi`, but `primary`, `unique` and `index` also work
+   with several fields. Is `multi` meant to be "a non-unique index on several fields"? If so, `index (a, b)` maps to
+   it as above and nobody writes `multi`. If it's something else, it gets its own keyword.
+3. **Unknown types**: `create()` accepts any type name and treats an unknown one as "anything" (so a typo can't block
+   writes). For the query form I'd reject unknown types instead, since the statement is typed by hand. OK?
+4. **Names**: `auto` and `optional` (short, and `optional` matches the stored definition) rather than SQL's
+   `auto_increment` and `null` / `not null`. OK?
+5. **`show records`** or plain **`show`**? (`show` alone leaves room for later `show indexes`, `show databases`.)
 
 ## Out of scope (tracked separately in TASKS.md)
 
