@@ -48,7 +48,8 @@ export const parseSchemaStatement = (query: string): ParsedSchemaStatement => {
   const command = query.match(schemaStatementMatch)[1].toLowerCase()
   if (command === 'drop') {
     const found = query.match(dropMatch)
-    if (!found) {
+    // `drop if exists` with no name would otherwise read `if` as the name
+    if (!found || /^\s*drop\s+if\s+exists\s*$/i.test(query)) {
       throw new Error('Expected: drop [if exists] <name>')
     }
     assertNotRegistry(found[2])

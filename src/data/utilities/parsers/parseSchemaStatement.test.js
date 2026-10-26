@@ -29,7 +29,7 @@ describe('parseSchemaStatement', () => {
   describe('errors', () => {
     test.each([
       ['drop', 'Expected: drop [if exists] <name>'],
-      ['drop if exists', 'Unrecognized query value: exists'],
+      ['drop if exists', 'Expected: drop [if exists] <name>'],
       ['describe', 'Expected: describe <name>'],
       ['show', 'Expected: show records (the only thing that can be shown so far)'],
       ['show indexes', 'Expected: show records (the only thing that can be shown so far)'],
