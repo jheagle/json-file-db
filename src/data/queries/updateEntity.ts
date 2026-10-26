@@ -139,6 +139,34 @@ const reconcileIndexes = async (record: recordDefinition, oldData: Object, newDa
   }
 }
 
+/**
+ * The rows of one update are checked before any is written, so a check can't see the batch's own new values on disk.
+ * Reject the update if two of its rows would end with the same value for a primary or unique key that it changes (a
+ * value with a null in it is never a duplicate, as in assertUniqueForUpdate).
+ * @param entity
+ * @param record
+ * @param planned
+ * @param newValues
+ */
+const assertUniqueWithinUpdate = (entity: string, record: recordDefinition, planned: Array<{ oldData: Object, newData: Object }>, newValues: Object): void => {
+  for (const key of record.keys) {
+    if (key.type !== 'primary' && key.type !== 'unique') {
+      continue
+    }
+    const claimed = []
+    for (const { oldData, newData } of planned) {
+      if (!keyFieldsChanged(record, key, oldData, newValues) || key.fields.some(field => newData[field] === null)) {
+        continue
+      }
+      const value = computeKeyValue(key.fields, newData)
+      if (claimed.some(other => sameValue(keyValueType(record, key), other, value))) {
+        throw new Error(`Duplicate value for ${key.type} key "${key.fields.join(', ')}" on ${entity}`)
+      }
+      claimed.push(value)
+    }
+  }
+}
+
 const assertRequiredFields = (entity: string, record: recordDefinition, newData: Object): void => {
   for (const field of record.definition) {
     if (!field.optional && typeof newData[field.name] === 'undefined') {
@@ -174,26 +202,32 @@ export const updateEntity = async (entity: string = '', values: Object = {}, dat
   }
   const typedValues = applyFieldTypes(record, values)
 
-  const toUpdate = dataSet[entity] || []
-  const updatedRows = []
-  for (const row of toUpdate) {
+  // Check every row first and write only once all of them pass, so a row that fails leaves the others unchanged too
+  const planned = []
+  for (const row of dataSet[entity] || []) {
     const fileName = await findEntryFile(record, primaryKey, computeKeyValue(primaryKey.fields, row))
     if (!fileName) {
       throw new Error(`Could not find entry for ${entity} where "${primaryKey.fields.join(', ')}" = ${computeKeyValue(primaryKey.fields, row)}`)
+    }
+    if (planned.some(other => other.fileName === fileName)) {
+      // The same entry given twice is one row: updating it once is enough, and it can't collide with itself
+      continue
     }
     const oldData = await retrieveFile(`${record.path}/${fileName}`)
     const newData = Object.assign({}, oldData, typedValues)
     await assertUniqueForUpdate(entity, record, oldData, newData, typedValues)
     await assertForeignKeysForUpdate(entity, record, oldData, typedValues)
     await assertNoDependentsForUpdate(entity, record, primaryKey, oldData, typedValues)
-
     assertRequiredFields(entity, record, newData)
+    planned.push({ fileName, oldData, newData })
+  }
+  assertUniqueWithinUpdate(entity, record, planned, typedValues)
 
+  for (const { fileName, oldData, newData } of planned) {
     await reconcileIndexes(record, oldData, newData, typedValues, fileName)
     await writeFile(`${databasePath}${record.path}/${fileName}`, JSON.stringify(newData, null, 2))
-    updatedRows.push(newData)
   }
 
-  dataSet[entity] = updatedRows
+  dataSet[entity] = planned.map(({ newData }) => newData)
   return dataSet
 }

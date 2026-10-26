@@ -132,8 +132,8 @@ Each condition starts with `where`; join them with `and where`:
 read workouts where reps > 8 and where date = '2024-06-02'
 ```
 
-`or where` is not supported yet: it is currently read the same as `and where`. And/or with grouping and precedence is
-planned.
+`or where` is not supported yet, and is an error (in 1.x it was silently read as `and where`). And/or with grouping
+and precedence is planned.
 
 ### Creating a record: `create`
 
@@ -217,6 +217,7 @@ queryStatus('read notes;')                   // { complete: true, waitingFor: ''
 - `null` is only accepted by fields with `nullable: true`, and is stored as a real `null`. Before, a `string` field
   stored the text `"null"` and an `int` field stored `0`.
 - `create()` throws for a default that doesn't fit its field's type, and for a nullable primary key field.
+- `or where` is an error until or is supported. Before, it was read as `and where`, returning the wrong rows.
 - A select alias needs `as`: `select name as n`. Before, the first field took the next word as its alias, so
   `select name where a = 1` failed and `select name limit 1` lost its limit; `select name n` is now an error.
 - Sort fields need a comma between them: `sort a, b desc`. Before, the list ran on into the next clause, so
@@ -239,6 +240,17 @@ configure({
 
 Turning `enforceForeignKeys` off restores the pre-1.0 behavior (no referential integrity checks at all) - useful if
 it doesn't fit a particular workflow, mirroring MySQL's own toggleable `foreign_key_checks`.
+
+## Several calls at once
+
+Calls to `query()`, `create()`, `drop()` and `describe()` on one database (one `databasePath`) run one at a time, in
+the order they were made, so concurrent requests (for example in a web server) can't overwrite each other's
+changes. All the queries in one `query()` string run together, with no other call in between. This covers one Node
+process: two processes writing to the same folder (say a server and a CLI) are not protected from each other.
+
+`configure()` can't point `databasePath` at another folder while calls are still running or queued (it throws:
+await them first), since each call reads the setting again at every step. The same folder written another way
+(`database/`, `./database`, its absolute path) counts as one database.
 
 ## In the browser
 
