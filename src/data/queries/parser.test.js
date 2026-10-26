@@ -475,4 +475,34 @@ describe('parser', () => {
       expect(() => parser('read t sort a b')).toThrow('Unrecognized query value')
     })
   })
+
+  describe('conditions', () => {
+    const only = (queries) => parser(queries)[0]
+
+    test('or where is refused, instead of being read as and where', () => {
+      expect(() => parser('read t where a = 1 or where b = 2'))
+        .toThrow('`or where` is not supported yet: use `and where`, or run one query per alternative')
+      expect(() => parser('read t where a = 1 OR WHERE b = 2')).toThrow('`or where` is not supported yet')
+    })
+
+    test('and where still joins conditions, in any case', () => {
+      expect(only('read t where a = 1 AND WHERE b = 2').conditions.map(({ property }) => property)).toEqual(['a', 'b'])
+    })
+
+    test.each(['color', 'brand', 'floor', 'band'])('a join field ending in and/or (%s) keeps its whole name', name => {
+      const read = only(`read t.u on t.x = u.${name} where a = 1`)
+      expect(read.joinClauses[0].propertyB).toBe(`u.${name}`)
+      expect(read.conditions).toEqual([{ property: 'a', comparator: '=', value: 1 }])
+    })
+
+    test('where only as a whole word', () => {
+      const read = only('read t.u on t.x = u.somewhere where a = 1')
+      expect(read.joinClauses[0].propertyB).toBe('u.somewhere')
+      expect(read.conditions).toHaveLength(1)
+    })
+
+    test('or inside a string is just text', () => {
+      expect(only("read t where a = 'x or where b = 2'").conditions[0].value).toBe('x or where b = 2')
+    })
+  })
 })

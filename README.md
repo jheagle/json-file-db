@@ -132,8 +132,8 @@ Each condition starts with `where`; join them with `and where`:
 read workouts where reps > 8 and where date = '2024-06-02'
 ```
 
-`or where` is not supported yet: it is currently read the same as `and where`. And/or with grouping and precedence is
-planned.
+`or where` is not supported yet, and is an error (in 1.x it was silently read as `and where`). And/or with grouping
+and precedence is planned.
 
 ### Creating a record: `create`
 
@@ -217,6 +217,7 @@ queryStatus('read notes;')                   // { complete: true, waitingFor: ''
 - `null` is only accepted by fields with `nullable: true`, and is stored as a real `null`. Before, a `string` field
   stored the text `"null"` and an `int` field stored `0`.
 - `create()` throws for a default that doesn't fit its field's type, and for a nullable primary key field.
+- `or where` is an error until or is supported. Before, it was read as `and where`, returning the wrong rows.
 - Sort fields need a comma between them: `sort a, b desc`. Before, the list ran on into the next clause, so
   `sort a limit 1` sorted by `a`, `limit` and `1` and lost the limit; `sort a b` is now an error.
 
