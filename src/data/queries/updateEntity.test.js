@@ -455,7 +455,7 @@ describe('updateEntity', () => {
       expect(pkIndex.map(entry => entry.value)).toEqual(['n1', 'n2'])
     })
 
-    test('a missing foreign key on the last row: the earlier rows stay unchanged', async () => {
+    test('a foreign key that does not exist: no row changes, and a real one then applies to every row', async () => {
       const rows = await setUpRows()
       const parents = await insertEntity('parents', [{}], {})
       const parentId = parents.parents[0]._id
