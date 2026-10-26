@@ -35,6 +35,13 @@ describe('typeCheck', () => {
     test('rejects a value that cannot be coerced to a number', () => {
       expect(() => typeCheck('int', 'not a number')).toThrow('Value "not a number" is not a valid int')
     })
+
+    test('rejects an integer too large to hold exactly, rather than storing it rounded', () => {
+      expect(() => typeCheck('int', '9007199254740993')).toThrow('Value "9007199254740993" is too large for an int (the largest is 9007199254740991)')
+      expect(() => typeCheck('int', -(2 ** 53))).toThrow('is too large for an int')
+      expect(typeCheck('int', Number.MAX_SAFE_INTEGER)).toBe(Number.MAX_SAFE_INTEGER)
+      expect(typeCheck('int', Number.MIN_SAFE_INTEGER)).toBe(Number.MIN_SAFE_INTEGER)
+    })
   })
 
   describe('boolean', () => {

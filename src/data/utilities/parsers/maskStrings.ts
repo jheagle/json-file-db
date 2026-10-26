@@ -73,6 +73,13 @@ export const unmaskStrings = (text: string, quote: 'json' | '\'' = 'json'): stri
  */
 const arrayJson = (text: string): string => {
   try {
+    // JSON.parse would round a whole number past Number.MAX_SAFE_INTEGER without a word: refuse it, as parseNumber
+    // does outside arrays (the strings are left out first, their placeholders' hex can hold digits)
+    for (const whole of text.replace(placeholderMatch, '""').match(/(?<![0-9.e+-])-?[0-9]+(?![0-9.e])/gi) || []) {
+      if (!Number.isSafeInteger(Number(whole))) {
+        throw new Error(`${whole} is too large to store exactly (the largest whole number is ${Number.MAX_SAFE_INTEGER}): quote it to keep it as text`)
+      }
+    }
     // A number too big for a double reads as Infinity, which JSON would write back as null: refuse it instead
     return JSON.stringify(JSON.parse(unmaskStrings(text), (key, value) => {
       if (typeof value === 'number' && !Number.isFinite(value)) {

@@ -2,6 +2,7 @@ import { fieldProperties } from '../../introspect/definitions/field'
 import { keyProperties } from '../../introspect/definitions/key'
 import { fieldTypes } from '../../introspect/policies/typeCheck'
 import { arraySource, fromPlaceholder, placeholderSource, unmaskStrings } from './maskStrings'
+import { numberSource, parseNumber } from './parseLiteralValue'
 import { startsQueryMatch } from './startsQuery'
 
 export type ParsedCreate = {
@@ -20,6 +21,7 @@ export const createMatch: RegExp = /^\s*create(?![a-z0-9_-])/i
 const headMatch: RegExp = /^\s*create\s+(if\s+not\s+exists\s+)?([a-z0-9_-]+)\s*\(/i
 const nameSource = '[a-z0-9_-]+'
 const nameMatch: RegExp = new RegExp(`^${nameSource}$`, 'i')
+const numberMatch: RegExp = new RegExp(`^${numberSource}$`, 'i')
 const fieldMatch: RegExp = new RegExp(`^(${nameSource})\\s+(${nameSource})((?:\\s[\\s\\S]*)?)$`, 'i')
 const primaryMatch: RegExp = /^primary\s+key\s*\(([^()]*)\)$/i
 const uniqueMatch: RegExp = /^unique\s*\(([^()]*)\)$/i
@@ -111,8 +113,8 @@ const parseDefault = (token: string | undefined): any => {
   if (array) {
     return JSON.parse(fromPlaceholder(array[1]))
   }
-  if (/^[0-9]+$/.test(token)) {
-    return Number(token)
+  if (numberMatch.test(token)) {
+    return parseNumber(token)
   }
   switch (token.toLowerCase()) {
     case 'null':

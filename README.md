@@ -101,6 +101,19 @@ await query(`read exercises where name = ${quote(name)}`)
 
 `quote(value, '"')` wraps in double quotes instead.
 
+### Numbers
+
+A number may be negative, have a fraction and an exponent: `12`, `-3`, `1.5`, `2.5e-4`. They work the same in
+`values`, `set`, `where`, arrays and defaults:
+
+```sql
+read workouts where reps > -1
+update workouts set weight = 102.5 where _id = 4
+```
+
+A whole number past 9007199254740991 (`Number.MAX_SAFE_INTEGER`) is an error rather than being stored rounded: quote
+it to keep it as text. A fraction is stored as the nearest double, as in JSON.
+
 ### Arrays
 
 Arrays are JSON-style, and their strings can use either quote. They can be nested, and are used by `in` and
@@ -162,7 +175,7 @@ A field is `<name> <type>`, then any of these, in any order:
 | `optional` | may be left out (see "Fields" above) |
 | `null` / `not null` | may hold `null` / may not (the default) |
 | `auto` | a UUID is generated on insert; the type must be `string` |
-| `default <value>` | used when the field is left out: a string, a whole number, an array, `null`, `true` or `false` (so an `object` field can only default to `null` here; `create()` takes any default) |
+| `default <value>` | used when the field is left out: a string, a number, an array, `null`, `true` or `false` (so an `object` field can only default to `null` here; `create()` takes any default) |
 
 The types are `string`, `int`, `boolean`, `object` and `array`; any other is an error.
 

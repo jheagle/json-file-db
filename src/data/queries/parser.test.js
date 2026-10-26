@@ -551,4 +551,55 @@ describe('parser', () => {
       expect(() => parser('read t select name n')).toThrow('Unrecognized query value: n')
     })
   })
+
+  describe('numbers', () => {
+    const only = (queries) => parser(queries)[0]
+
+    test.each([
+      ['12', 12],
+      ['-3', -3],
+      ['1.5', 1.5],
+      ['-0.25', -0.25],
+      ['1e3', 1000],
+      ['2.5E-4', 0.00025],
+      ['-1e-2', -0.01],
+      ['9007199254740991', 9007199254740991]
+    ])('reads %s in insert, update and where', (written, value) => {
+      expect(only(`insert t values n = ${written}, s = 'x'`).insertValues).toEqual([{ n: value, s: 'x' }])
+      expect(only(`update t set n = ${written} where s = 'x'`).updateValues).toEqual({ n: value })
+      expect(only(`read t where n > ${written} and where s = 'x'`).conditions).toEqual([
+        { property: 'n', comparator: '>', value },
+        { property: 's', comparator: '=', value: 'x' }
+      ])
+    })
+
+    test('reads 1.5 as a number, not as the field 5 of a record named 1 (main tried to read 5.json)', () => {
+      expect(only('read t where n = 1.5').conditions).toEqual([{ property: 'n', comparator: '=', value: 1.5 }])
+      expect(only('insert t values n = 1.5').insertValues).toEqual([{ n: 1.5 }])
+    })
+
+    test('still reads name.field (a join\'s field) as a name', () => {
+      expect(only('read t where u.n = 1').conditions).toEqual([{ property: 'u.n', comparator: '=', value: 1 }])
+    })
+
+    test.each(['1.5.2', '5abc', '1.', '--3', '1e'])('refuses %s, which is not a number', (written) => {
+      expect(() => parser(`read t where n = ${written}`)).toThrow('Failed to interpret')
+    })
+
+    test('refuses a whole number too large to store exactly, wherever it is written', () => {
+      for (const query of [
+        'insert t values n = 9007199254740993',
+        'update t set n = -9007199254740993',
+        'read t where n = 12345678901234567890',
+        'read t where n in [1, 9007199254740993]'
+      ]) {
+        expect(() => parser(query)).toThrow('too large to store exactly')
+      }
+      expect(() => parser('read t where n = 1e999')).toThrow('1e999 is too large')
+    })
+
+    test('keeps a large number written as a string, as text', () => {
+      expect(only("insert t values n = '9007199254740993'").insertValues).toEqual([{ n: '9007199254740993' }])
+    })
+  })
 })

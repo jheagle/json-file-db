@@ -1,10 +1,10 @@
 import { removeFromQuery } from './removeFromQuery'
-import { parseLiteralValue, LiteralValue } from './parseLiteralValue'
+import { numberSource, parseLiteralValue, LiteralValue } from './parseLiteralValue'
 import { ParsedQuery } from './parseQuery'
 import { arraySource, placeholderSource } from './maskStrings'
 
 // `and`/`or`/`where` count only as whole words: in `on t.x = u.color where ...` the `or` is part of the name `color`
-const conditionMatch: RegExp = new RegExp(`(^|[^a-z0-9._-])(?:(and|or)\\s+)?(where)\\s+([a-z0-9_-]+\\.?[a-z0-9_-]*)\\s+(=|!=|>|<|>=|<=|in|between|like)\\s+(${placeholderSource}|([0-9]+)|${arraySource}|(null)|(true)|(false))`, 'ig')
+const conditionMatch: RegExp = new RegExp(`(^|[^a-z0-9._-])(?:(and|or)\\s+)?(where)\\s+([a-z0-9_-]+\\.?[a-z0-9_-]*)\\s+(=|!=|>|<|>=|<=|in|between|like)\\s+(${placeholderSource}|(${numberSource})|${arraySource}|(null)|(true)|(false))`, 'ig')
 
 export type ConditionValue = LiteralValue
 

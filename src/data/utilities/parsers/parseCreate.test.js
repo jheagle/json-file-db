@@ -54,12 +54,24 @@ describe('parseCreate', () => {
       ['\'it\\\'s, (fine)\'', 'it\'s, (fine)'],
       ['"two words"', 'two words'],
       ['42', 42],
+      ['-3', -3],
+      ['1.5', 1.5],
+      ['-0.25', -0.25],
+      ['1e3', 1000],
+      ['2.5E-4', 0.00025],
       ['[1, \'a\', [2]]', [1, 'a', [2]]],
       ['true', true],
       ['false', false],
       ['NULL', null]
     ])('reads the default %s', (written, value) => {
       expect(createOf(`create t (a string null default ${written})`).definition[0].defaultValue).toEqual(value)
+    })
+
+    test('refuses a default number it can\'t hold exactly, or one that isn\'t a number', () => {
+      expect(() => createOf('create t (a int default 9007199254740993)')).toThrow('9007199254740993 is too large to store exactly')
+      expect(() => createOf('create t (a int default 1e999)')).toThrow('1e999 is too large')
+      expect(() => createOf('create t (a int default 1.5.2)')).toThrow('Unrecognized default value: 1.5.2')
+      expect(() => createOf('create t (a int default 5abc)')).toThrow('Unrecognized default value: 5abc')
     })
 
     test('fields and keys may span lines and hold comments', () => {
