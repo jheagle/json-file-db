@@ -12,6 +12,7 @@ import { findGroupBy, ParsedGroupBy } from './findGroupBy'
 import { findLimit, ParsedLimit } from './findLimit'
 import { findOffset, ParsedOffset } from './findOffset'
 import { maskArrays, maskStrings, unmaskStrings } from './maskStrings'
+import { createMatch, parseCreate, ParsedCreate } from './parseCreate'
 
 export type ParsedQuery = {
   command: ParsedCommand | undefined
@@ -27,6 +28,7 @@ export type ParsedQuery = {
   groupBy: ParsedGroupBy | undefined
   limit: ParsedLimit | undefined
   offset: ParsedOffset | undefined
+  create: ParsedCreate | undefined
 }
 
 /**
@@ -48,12 +50,19 @@ export const parseQuery = (query: string): ParsedQuery => {
     groupBy: undefined,
     limit: undefined,
     offset: undefined,
+    create: undefined,
   }
 
   const { curry, pipe } = siFunciona
 
   // No find* step may see inside a string or an array: each one becomes a placeholder holding its value
   query = maskArrays(maskStrings(query))
+
+  // A create statement has its own shape (a bracketed list of fields and keys), so it gets its own parser
+  if (createMatch.test(query)) {
+    const { entity, create } = parseCreate(query)
+    return Object.assign(parsedQuery, { command: 'create', entity, create })
+  }
 
   query = pipe(
     curry(findCommand)(parsedQuery),
@@ -71,7 +80,7 @@ export const parseQuery = (query: string): ParsedQuery => {
   )(query)
 
   if (query) {
-    if (/^\s*(delete|insert|read|update)\s/i.test(query)) {
+    if (/^\s*(create|delete|insert|read|update)\s/i.test(query)) {
       throw new Error(`Missing ; before: ${unmaskStrings(query.trim(), '\'')}`)
     }
     throw new Error(`Unrecognized query value: ${unmaskStrings(query, '\'')}`)

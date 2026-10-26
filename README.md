@@ -135,6 +135,50 @@ read workouts where reps > 8 and where date = '2024-06-02'
 `or where` is not supported yet: it is currently read the same as `and where`. And/or with grouping and precedence is
 planned.
 
+### Creating a record: `create`
+
+The query form of `create()`. Inside the brackets: the fields, then the keys, separated by commas. Everything is
+case-insensitive except names.
+
+```sql
+create if not exists exercise_muscle (
+  _id string auto,
+  exercise_id string,
+  muscle_id string,
+  muscle_rank int,
+  note string optional default '',
+  replaced_by string null default null,
+  primary key (_id),
+  index (muscle_id, muscle_rank),
+  foreign key (exercise_id) references exercises (_id),
+  foreign key (muscle_id) references muscles (_id)
+);
+```
+
+A field is `<name> <type>`, then any of these, in any order:
+
+| Modifier | Means |
+|---|---|
+| `optional` | may be left out (see "Fields" above) |
+| `null` / `not null` | may hold `null` / may not (the default) |
+| `auto` | a UUID is generated on insert; the type must be `string` |
+| `default <value>` | used when the field is left out: a string, a whole number, an array, `null`, `true` or `false` (so an `object` field can only default to `null` here; `create()` takes any default) |
+
+The types are `string`, `int`, `boolean`, `object` and `array`; any other is an error.
+
+| Key | Index file |
+|---|---|
+| `primary key (a)` | `pk_a.json` |
+| `unique (a)` | `unique_a.json` |
+| `index (a)` | `index_a.json` |
+| `foreign key (a) references other (b)` | `fk_a.json` (other's record file: `other.json`) |
+
+Several fields join with `_`: `index (a, b)` is `index_a_b.json`. Foreign keys are single-field for now.
+
+The result is the new record's definition, as from `create()`. Creating a record that already exists is an error;
+with `if not exists` it is left as it is and the result is `null`. A foreign key's record and field must exist
+already (or be the record being created).
+
 ### Reading a query over several lines: `queryStatus()`
 
 For a prompt which reads a query line by line (like the CLI), `queryStatus()` says whether the text so far is ready to

@@ -1,4 +1,9 @@
 /**
+ * The type names typeCheck knows. The create statement accepts only these; create() accepts any name (see below).
+ */
+export const fieldTypes = ['string', 'int', 'boolean', 'object', 'array']
+
+/**
  * Validate (and where sensible, coerce) a value against a field's declared type. Runs only
  * against values being written by insertEntity/updateEntity - it never re-validates data already
  * on disk, so a field whose declared type doesn't match its already-stored values (which can
