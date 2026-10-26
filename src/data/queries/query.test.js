@@ -434,4 +434,50 @@ describe('query', () => {
       expect(await names('read scores')).toEqual(['five', 'was null', 'zero'])
     })
   })
+
+  describe('several indexed conditions (date has an index, exercise_id a foreign key index)', () => {
+    const ids = async (text) => (await query(text))[0].map(row => String(row._id)).sort()
+
+    test('every indexed condition must match, in either order (each used to replace the one before)', async () => {
+      expect(await ids("read workouts where date = '2024-06-02' and where exercise_id = 1")).toEqual(['1'])
+      expect(await ids("read workouts where exercise_id = 1 and where date = '2024-06-02'")).toEqual(['1'])
+      expect(await ids("read workouts where exercise_id = 1 and where date = '2024-06-05'")).toEqual(['4'])
+      expect(await ids("read workouts where exercise_id = 1 and where date = '2024-06-09'")).toEqual([])
+    })
+
+    test('an indexed and an unindexed condition together', async () => {
+      expect(await ids("read workouts where date = '2024-06-05' and where reps = 10 and where exercise_id in [2, 3]")).toEqual(['5', '6'])
+    })
+
+    test('update changes only the rows every condition matches', async () => {
+      await query("update workouts set note = 'x' where date = '2024-06-02' and where exercise_id = 1")
+      expect(await ids("read workouts where note = 'x'")).toEqual(['1'])
+    })
+
+    test('delete removes only the rows every condition matches (it used to delete every row with exercise_id 1)', async () => {
+      await query("delete workouts where date = '2024-06-02' and where exercise_id = 1")
+      expect(await ids('read workouts')).toEqual(['2', '3', '4', '5', '6'])
+    })
+  })
+
+  describe('a field that is part of a composite index', () => {
+    beforeEach(async () => {
+      await query('create both (_id string auto, name string, x int, y int, primary key (_id), index (x), index (x, y))')
+      await query('create composite (_id string auto, name string, x int, y int, primary key (_id), index (x, y))')
+      for (const record of ['both', 'composite']) {
+        for (const [name, x, y] of [['one', 1, 1], ['two', 1, 2], ['three', 2, 1]]) {
+          await query(`insert ${record} values name = '${name}', x = ${x}, y = ${y}`)
+        }
+      }
+    })
+    const names = async (text) => (await query(text))[0].map(row => row.name).sort()
+
+    // The composite index holds ["1",1]-style values, so it can't answer a condition on x or y alone: it used to be
+    // picked anyway (it came last) and matched nothing
+    test.each(['both', 'composite'])('%s: conditions on either field find their rows', async (record) => {
+      expect(await names(`read ${record} where x = 1`)).toEqual(['one', 'two'])
+      expect(await names(`read ${record} where y = 1`)).toEqual(['one', 'three'])
+      expect(await names(`read ${record} where x = 1 and where y = 2`)).toEqual(['two'])
+    })
+  })
 })
