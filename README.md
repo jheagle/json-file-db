@@ -179,6 +179,20 @@ The result is the new record's definition, as from `create()`. Creating a record
 with `if not exists` it is left as it is and the result is `null`. A foreign key's record and field must exist
 already (or be the record being created).
 
+### Dropping, describing and listing records: `drop`, `describe`, `show records`
+
+```sql
+drop exercise_muscle;            -- removes the record, its entries and its indexes
+drop if exists exercise_muscle;  -- the same, or nothing if there is no such record
+describe exercises;              -- the record's fields and keys
+show records;                    -- the name of every record, in the order they were created
+```
+
+`drop` resolves to the definition the record had, or `null` with `if exists` for a record that doesn't exist; without
+it, that is an error. A record that another record's foreign key references can't be dropped until that one is
+(unless `enforceForeignKeys` is turned off, see Configuration). `describe` resolves to `{ path, definition, keys }`
+(the `describe()` function gives only the fields), and `show records` to an array of names.
+
 ### Reading a query over several lines: `queryStatus()`
 
 For a prompt which reads a query line by line (like the CLI), `queryStatus()` says whether the text so far is ready to

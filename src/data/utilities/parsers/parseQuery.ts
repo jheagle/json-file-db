@@ -13,6 +13,8 @@ import { findLimit, ParsedLimit } from './findLimit'
 import { findOffset, ParsedOffset } from './findOffset'
 import { maskArrays, maskStrings, unmaskStrings } from './maskStrings'
 import { createMatch, parseCreate, ParsedCreate } from './parseCreate'
+import { parseSchemaStatement, schemaStatementMatch } from './parseSchemaStatement'
+import { startsQueryMatch } from './startsQuery'
 
 export type ParsedQuery = {
   command: ParsedCommand | undefined
@@ -29,6 +31,7 @@ export type ParsedQuery = {
   limit: ParsedLimit | undefined
   offset: ParsedOffset | undefined
   create: ParsedCreate | undefined
+  ifExists: boolean | undefined
 }
 
 /**
@@ -51,6 +54,7 @@ export const parseQuery = (query: string): ParsedQuery => {
     limit: undefined,
     offset: undefined,
     create: undefined,
+    ifExists: undefined,
   }
 
   const { curry, pipe } = siFunciona
@@ -62,6 +66,9 @@ export const parseQuery = (query: string): ParsedQuery => {
   if (createMatch.test(query)) {
     const { entity, create } = parseCreate(query)
     return Object.assign(parsedQuery, { command: 'create', entity, create })
+  }
+  if (schemaStatementMatch.test(query)) {
+    return Object.assign(parsedQuery, parseSchemaStatement(query))
   }
 
   query = pipe(
@@ -80,7 +87,7 @@ export const parseQuery = (query: string): ParsedQuery => {
   )(query)
 
   if (query) {
-    if (/^\s*(create|delete|insert|read|update)\s/i.test(query)) {
+    if (startsQueryMatch.test(query)) {
       throw new Error(`Missing ; before: ${unmaskStrings(query.trim(), '\'')}`)
     }
     throw new Error(`Unrecognized query value: ${unmaskStrings(query, '\'')}`)
