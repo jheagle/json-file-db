@@ -358,4 +358,80 @@ describe('query', () => {
     expect(result[0].length).toBeGreaterThan(0)
     expect(result[0].every(row => row.reps === 10)).toBe(true)
   })
+  test('a null literal in a query is stored as a real null in a nullable field, and rejected in any other', async () => {
+    await create('notes', [
+      { name: '_id', type: 'string', optional: false, autoGenerate: true },
+      { name: 'text', type: 'string', optional: true, nullable: true },
+      { name: 'count', type: 'int', optional: true }
+    ], [
+      { type: 'primary', fields: ['_id'], lookup: 'pk__id.json' }
+    ])
+
+    const inserted = await query('insert notes values text = null')
+    expect(inserted[0][0].text).toBeNull()
+
+    await expect(query('insert notes values count = null'))
+      .rejects.toThrow('Value "null" is not allowed: the field is not nullable')
+  })
+
+  test('reads negative, decimal and exponent numbers end to end', async () => {
+    const above = await query('read workouts where reps > -1')
+    expect(above[0]).toHaveLength(6)
+
+    // main read 1.5 as the field 5 of a record 1, and failed with "Could not read 5.json"
+    await expect(query("insert workouts values _id = 98, reps = 1.5, order = 0, date = '2024-06-10', exercise_id = 1"))
+      .rejects.toThrow('Value "1.5" is not a valid int')
+
+    const [[inserted]] = await query("insert workouts values _id = 99, weight_effort = 2.5e1, reps = -3, order = 0, date = '2024-06-10', exercise_id = 1")
+    expect(inserted).toMatchObject({ weight_effort: '25', reps: -3 })
+    const [found] = await query('read workouts where reps < 0')
+    expect(found.map(row => String(row._id))).toEqual(['99'])
+  })
+
+  test('refuses a whole number too large to store exactly, instead of storing it rounded', async () => {
+    await expect(query("insert workouts values _id = 98, reps = 9007199254740993, order = 0, date = '2024-06-10', exercise_id = 1"))
+      .rejects.toThrow('9007199254740993 is too large to store exactly')
+    const [rows] = await query("read workouts where date = '2024-06-10'")
+    expect(rows).toEqual([])
+  })
+
+  describe('null and missing, through an index and without one', () => {
+    beforeEach(async () => {
+      await query('create scores (_id string auto, name string, n int optional null, m int optional null, primary key (_id), index (n))')
+      for (const row of ["name = 'five', n = 5, m = 5", "name = 'zero', n = 0, m = 0", "name = 'null', n = null, m = null", "name = 'missing'"]) {
+        await query(`insert scores values ${row}`)
+      }
+    })
+    const names = async (text) => (await query(text))[0].map(row => row.name).sort()
+
+    // n has an index (the condition is answered from the index file first), m doesn't
+    test.each(['n', 'm'])('%s: ordering never matches null or missing', async (field) => {
+      expect(await names(`read scores where ${field} < 6`)).toEqual(['five', 'zero'])
+      expect(await names(`read scores where ${field} between [-1, 5]`)).toEqual(['five', 'zero'])
+      expect(await names(`read scores where ${field} != 5`)).toEqual(['zero'])
+    })
+
+    test.each(['n', 'm'])('%s: is null, is not null, exists, does not exist', async (field) => {
+      expect(await names(`read scores where ${field} is null`)).toEqual(['null'])
+      expect(await names(`read scores where ${field} is not null`)).toEqual(['five', 'zero'])
+      expect(await names(`read scores where ${field} exists`)).toEqual(['five', 'null', 'zero'])
+      expect(await names(`read scores where ${field} does not exist`)).toEqual(['missing'])
+    })
+
+    test('= null is an error that points to is null', async () => {
+      await expect(query('read scores where n = null')).rejects.toThrow('use `n is null` or `n is not null`')
+    })
+
+    test('sorts missing, then null, then the values', async () => {
+      const [rows] = await query('read scores sort n asc')
+      expect(rows.map(row => row.name)).toEqual(['missing', 'null', 'zero', 'five'])
+    })
+
+    test('update and delete use the same rules', async () => {
+      await query("update scores set name = 'was null' where m is null")
+      expect(await names('read scores where m is null')).toEqual(['was null'])
+      await query('delete scores where n does not exist')
+      expect(await names('read scores')).toEqual(['five', 'was null', 'zero'])
+    })
+  })
 })

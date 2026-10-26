@@ -1,7 +1,9 @@
 import { removeFromQuery } from './removeFromQuery'
 import { ParsedQuery } from './parseQuery'
 
-const joinEntityMatch: RegExp = /\.([a-z0-9_-]+)/i
+// Only straight after the entity (findCommand leaves `.joined ...`): a `.` later on is a number's (`1.5`) or a
+// condition's `entity.field`, not the join
+const joinEntityMatch: RegExp = /^\.([a-z0-9_-]+)/i
 
 export type ParsedJoinEntity = string
 

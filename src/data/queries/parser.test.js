@@ -293,7 +293,7 @@ describe('parser', () => {
       ' on workouts.exercise_id = exercises._id' +
       ' merge workouts.exercise_id with exercises._id' +
       ' limit 2' +
-      ' offset 1' +
+      ' offset 1;' +
       ' delete exercises'
     const result = parser(query)
     expect(result).toEqual([
@@ -339,5 +339,278 @@ describe('parser', () => {
         offset: undefined
       }
     ])
+  })
+
+  test('keeps a value containing a command keyword intact (it used to be split, then glued back without its space)', () => {
+    const result = parser("insert notes values text = 'please read this'")
+    expect(result[0].insertValues).toEqual([{ text: 'please read this' }])
+  })
+
+  test('parses queries separated by ;, with an optional ; at the end', () => {
+    const result = parser("read workouts where date = '2024-06-02'; read exercises;")
+    expect(result.map(({ command, entity }) => [command, entity])).toEqual([['read', 'workouts'], ['read', 'exercises']])
+  })
+
+  test('reports a missing ; between queries', () => {
+    expect(() => parser('read workouts read exercises')).toThrow('Failed to interpret: read workouts read exercises (Missing ; before: read exercises)')
+  })
+
+  test.each([
+    ["read a where x = 'y' read b", 'read b'],
+    ['update t set a = 1 read b', 'read b'],
+    ["update t set a = 'z' where b = 2 read c", 'read c'],
+    ["insert t values a = 1, b = 'w' delete c", 'delete c'],
+    ['read a sort x desc limit 2 read b', 'read b']
+  ])('reports a missing ; after a query with clauses: %s', (queries, second) => {
+    expect(() => parser(queries)).toThrow(`(Missing ; before: ${second})`)
+  })
+
+  test('reads a name containing -- as a name, not a comment', () => {
+    expect(parser('read my--table')[0].entity).toBe('my--table')
+  })
+
+  test('reports which query failed, with the reason', () => {
+    expect(() => parser('read workouts; read exercises sort')).toThrow('Failed to interpret query 2 of 2: read exercises sort (Unrecognized query value:')
+  })
+
+  describe('strings', () => {
+    const only = (queries) => parser(queries)[0]
+
+    test('reads each string of a two-condition where on its own (main read one condition: x\' and where b = \'y)', () => {
+      expect(only("read t where a = 'x' and where b = 'y'").conditions.map(({ value }) => value)).toEqual(['x', 'y'])
+    })
+
+    test('lets a string hold the other quote', () => {
+      expect(only('insert t values name = "it\'s"').insertValues).toEqual([{ name: 'it\'s' }])
+      expect(only('insert t values name = \'say "hi"\'').insertValues).toEqual([{ name: 'say "hi"' }])
+    })
+
+    test('applies escapes: \\\' is a quote, and \\\\\\\' is a backslash then a quote', () => {
+      expect(only("insert t values name = 'it\\'s'").insertValues).toEqual([{ name: 'it\'s' }])
+      expect(only("insert t values name = '\\\\\\''").insertValues).toEqual([{ name: '\\\'' }])
+    })
+
+    test('keeps keywords, commas and = inside a string out of the other clauses', () => {
+      const read = only("read t where a = 'x sort b desc limit 1'")
+      expect(read.conditions.map(({ value }) => value)).toEqual(['x sort b desc limit 1'])
+      expect(read.sortClauses).toEqual([])
+      expect(read.limit).toBeUndefined()
+      expect(only("update t set note = 'a, b = 2', n = 1").updateValues).toEqual({ note: 'a, b = 2', n: 1 })
+    })
+
+    test('reads strings inside an array, with either quote', () => {
+      expect(only('read t where a in ["x","y"]').conditions[0].value).toEqual(['x', 'y'])
+      expect(only("read t where a in ['x', 'it\\'s']").conditions[0].value).toEqual(['x', 'it\'s'])
+    })
+
+    test('rejects mismatched quotes instead of reading them as one string', () => {
+      expect(() => parser('insert t values name = \'abc"')).toThrow('Unclosed string')
+    })
+
+    test('shows a stray string as it was written in the error', () => {
+      expect(() => parser("read t where a = 'x' 'stray'")).toThrow("(Unrecognized query value: 'stray')")
+    })
+  })
+
+  describe('arrays', () => {
+    const only = (queries) => parser(queries)[0]
+
+    test('reads two array conditions as two arrays (each used to run to the last ])', () => {
+      expect(only('read t where a in [1,2] and where b in [3]').conditions.map(({ value }) => value)).toEqual([[1, 2], [3]])
+    })
+
+    test('reads nested arrays in insert and update (each used to stop at the first ])', () => {
+      expect(only('insert t values tags = [1,[2,3]], n = 4').insertValues).toEqual([{ tags: [1, [2, 3]], n: 4 }])
+      expect(only('update t set tags = [[1],[2]] where n = 1').updateValues).toEqual({ tags: [[1], [2]] })
+    })
+
+    test('keeps decimals, negatives and exponents (a decimal used to lose its fraction)', () => {
+      expect(only('read t where a in [1.5, -2, 1e3]').conditions[0].value).toEqual([1.5, -2, 1000])
+    })
+
+    test('keeps a ] or a keyword inside a string in an array', () => {
+      expect(only("read t where a in ['x]', 'sort b'] limit 2").conditions[0].value).toEqual(['x]', 'sort b'])
+      expect(only("read t where a in ['x]', 'sort b'] limit 2").limit).toBe(2)
+    })
+
+    test('reports an invalid array clearly', () => {
+      expect(() => parser('read t where a in [1,,2]')).toThrow('Invalid array [1,,2]:')
+    })
+  })
+
+  describe('sort', () => {
+    const only = (queries) => parser(queries)[0]
+
+    test('a sort without asc/desc stops before the next clause, so the limit is kept', () => {
+      const read = only('read t sort a limit 1')
+      expect(read.sortClauses).toEqual([{ property: 'a', direction: 'asc' }])
+      expect(read.limit).toBe(1)
+    })
+
+    test('several fields, separated by commas, before offset and limit', () => {
+      const read = only('read t sort a, b desc, c offset 2 limit 3')
+      expect(read.sortClauses).toEqual([
+        { property: 'a', direction: 'asc' },
+        { property: 'b', direction: 'desc' },
+        { property: 'c', direction: 'asc' }
+      ])
+      expect(read.offset).toBe(2)
+      expect(read.limit).toBe(3)
+    })
+
+    test('before group by', () => {
+      const read = only('read t sort a group by b')
+      expect(read.sortClauses).toEqual([{ property: 'a', direction: 'asc' }])
+      expect(read.groupBy).toBeDefined()
+    })
+
+    test('asc/desc only as a whole word: a field after a comma may start with them', () => {
+      expect(only('read t sort a, description').sortClauses).toEqual([
+        { property: 'a', direction: 'asc' },
+        { property: 'description', direction: 'asc' }
+      ])
+    })
+
+    test('fields without commas between them are an error, not extra sort fields', () => {
+      expect(() => parser('read t sort a b')).toThrow('Unrecognized query value')
+    })
+  })
+
+  describe('conditions', () => {
+    const only = (queries) => parser(queries)[0]
+
+    test('or where is refused, instead of being read as and where', () => {
+      expect(() => parser('read t where a = 1 or where b = 2'))
+        .toThrow('`or where` is not supported yet: use `and where`, or run one query per alternative')
+      expect(() => parser('read t where a = 1 OR WHERE b = 2')).toThrow('`or where` is not supported yet')
+    })
+
+    test('and where still joins conditions, in any case', () => {
+      expect(only('read t where a = 1 AND WHERE b = 2').conditions.map(({ property }) => property)).toEqual(['a', 'b'])
+    })
+
+    test.each(['color', 'brand', 'floor', 'band'])('a join field ending in and/or (%s) keeps its whole name', name => {
+      const read = only(`read t.u on t.x = u.${name} where a = 1`)
+      expect(read.joinClauses[0].propertyB).toBe(`u.${name}`)
+      expect(read.conditions).toEqual([{ property: 'a', comparator: '=', value: 1 }])
+    })
+
+    test('where only as a whole word', () => {
+      const read = only('read t.u on t.x = u.somewhere where a = 1')
+      expect(read.joinClauses[0].propertyB).toBe('u.somewhere')
+      expect(read.conditions).toHaveLength(1)
+    })
+
+    test('a condition between a join and a sort: all three parse', () => {
+      const read = only('read t.u on t.x = u.y where a = 1 and where b = 2 sort a')
+      expect(read.joinClauses).toEqual([{ propertyA: 't.x', comparator: '=', propertyB: 'u.y' }])
+      expect(read.conditions.map(({ property }) => property)).toEqual(['a', 'b'])
+      expect(read.sortClauses).toEqual([{ property: 'a', direction: 'asc' }])
+    })
+
+    test('connectors after a newline or a tab', () => {
+      expect(only('read t where a = 1\nand\twhere b = 2').conditions).toHaveLength(2)
+      expect(() => parser('read t where a = 1\nor\twhere b = 2')).toThrow('`or where` is not supported yet')
+    })
+
+    test('or inside a string is just text', () => {
+      expect(only("read t where a = 'x or where b = 2'").conditions[0].value).toBe('x or where b = 2')
+    })
+  })
+
+  describe('select', () => {
+    const only = (queries) => parser(queries)[0]
+
+    test.each([
+      ['where a = 1', 'conditions'],
+      ['sort a', 'sortClauses'],
+      ['limit 1', 'limit'],
+      ['group by a', 'groupBy']
+    ])('one field before %s: the next clause is not read as its alias', (clause, part) => {
+      const read = only(`read t select name ${clause}`)
+      expect(read.selectClauses).toEqual([{ property: 'name', alias: undefined }])
+      expect(read[part]).toBeTruthy()
+    })
+
+    test('aliases with as, on any field, in any case', () => {
+      expect(only('read t select a AS x, b, c as y where a = 1').selectClauses).toEqual([
+        { property: 'a', alias: 'x' },
+        { property: 'b', alias: undefined },
+        { property: 'c', alias: 'y' }
+      ])
+    })
+
+    test('as only as a whole word: a field may start with it', () => {
+      expect(only('read t select a, ascent').selectClauses).toEqual([
+        { property: 'a', alias: undefined },
+        { property: 'ascent', alias: undefined }
+      ])
+    })
+
+    test('an alias without as is an error, not a silent guess', () => {
+      expect(() => parser('read t select name n')).toThrow('Unrecognized query value: n')
+    })
+  })
+
+  describe('numbers', () => {
+    const only = (queries) => parser(queries)[0]
+
+    test.each([
+      ['12', 12],
+      ['-3', -3],
+      ['1.5', 1.5],
+      ['-0.25', -0.25],
+      ['1e3', 1000],
+      ['2.5E-4', 0.00025],
+      ['-1e-2', -0.01],
+      ['9007199254740991', 9007199254740991]
+    ])('reads %s in insert, update and where', (written, value) => {
+      expect(only(`insert t values n = ${written}, s = 'x'`).insertValues).toEqual([{ n: value, s: 'x' }])
+      expect(only(`update t set n = ${written} where s = 'x'`).updateValues).toEqual({ n: value })
+      expect(only(`read t where n > ${written} and where s = 'x'`).conditions).toEqual([
+        { property: 'n', comparator: '>', value },
+        { property: 's', comparator: '=', value: 'x' }
+      ])
+    })
+
+    test('reads 1.5 as a number, not as the field 5 of a record named 1 (main tried to read 5.json)', () => {
+      expect(only('read t where n = 1.5').conditions).toEqual([{ property: 'n', comparator: '=', value: 1.5 }])
+      expect(only('insert t values n = 1.5').insertValues).toEqual([{ n: 1.5 }])
+    })
+
+    test('still reads a join entity, with or without a space before its dot, next to a decimal', () => {
+      expect(only('read workouts.muscles where n = 1.5')).toMatchObject({ joinEntity: 'muscles', conditions: [{ property: 'n', comparator: '=', value: 1.5 }] })
+      expect(only('read workouts .muscles').joinEntity).toBe('muscles')
+      expect(only('read workouts where n = 1.5').joinEntity).toBeUndefined()
+    })
+
+    test('still reads name.field (a join\'s field) as a name', () => {
+      expect(only('read t where u.n = 1').conditions).toEqual([{ property: 'u.n', comparator: '=', value: 1 }])
+    })
+
+    test.each(['1.5.2', '5abc', '1.', '--3', '1e'])('refuses %s, which is not a number', (written) => {
+      expect(() => parser(`read t where n = ${written}`)).toThrow('Failed to interpret')
+    })
+
+    test('refuses a whole number too large to store exactly, wherever it is written', () => {
+      for (const query of [
+        'insert t values n = 9007199254740993',
+        'update t set n = -9007199254740993',
+        'read t where n = 12345678901234567890',
+        'read t where n in [1, 9007199254740993]',
+        'read t where n = 9007199254740993.0',
+        'read t where n = 9007199254740993e0',
+        'read t where n = 90071992547409930e-1',
+        'insert t values s = 1e20',
+        'create t (a string default 9007199254740993.0)'
+      ]) {
+        expect(() => parser(query)).toThrow('too large to store exactly')
+      }
+      expect(() => parser('read t where n = 1e999')).toThrow('1e999 is too large')
+    })
+
+    test('keeps a large number written as a string, as text', () => {
+      expect(only("insert t values n = '9007199254740993'").insertValues).toEqual([{ n: '9007199254740993' }])
+    })
   })
 })

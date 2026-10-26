@@ -1,8 +1,10 @@
 import { findUpdateValues } from './findUpdateValues'
+import { maskArrays, maskStrings, unmaskStrings } from './maskStrings'
 
 const parse = (query) => {
   const parsed = {}
-  const remaining = findUpdateValues(parsed, query)
+  // parseQuery masks the strings and arrays before any find* step runs
+  const remaining = unmaskStrings(findUpdateValues(parsed, maskArrays(maskStrings(query))), '\'')
   return { parsed, remaining }
 }
 
