@@ -11,5 +11,5 @@ Each module of the documentation is a folder of `src/data/`:
 * `queries`: parse a query string and run it - reads, inserts, updates, deletes, joins, `where`, `sortBy`, `groupBy`.
 * `utilities`: shared helpers the queries use - retrieving records/files/indexes and merging join results.
 
-Note: `src/index.ts` (the package's top-level entry point) is still an empty stub - there is no public
-`require('json-file-db')` API yet, only the individual modules above.
+The package's public entry point is `src/index.ts` (`require('json-fs-query')`): `query`, `quote`, `queryStatus`,
+`create`, `drop`, `describe`, `configure` and the schema-definition types. Everything else is internal.

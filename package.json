@@ -1,6 +1,6 @@
 {
   "name": "json-fs-query",
-  "version": "1.1.0",
+  "version": "2.0.0",
   "description": "Use json files to manage and read data.",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -23,7 +23,8 @@
     "test:quick": "gulp testQuick",
     "watch": "gulp watchFull",
     "watch:test": "gulp watchTest",
-    "lint": "gulp lint"
+    "lint": "gulp lint",
+    "prepublishOnly": "npm run build"
   },
   "bin": {
     "json-fs-query": "dist/cli/index.js",

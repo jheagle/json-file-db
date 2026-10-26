@@ -11,6 +11,10 @@ import { findSortClauses, ParsedSortClause } from './findSortClauses'
 import { findGroupBy, ParsedGroupBy } from './findGroupBy'
 import { findLimit, ParsedLimit } from './findLimit'
 import { findOffset, ParsedOffset } from './findOffset'
+import { maskArrays, maskStrings, unmaskStrings } from './maskStrings'
+import { createMatch, parseCreate, ParsedCreate } from './parseCreate'
+import { parseSchemaStatement, schemaStatementMatch } from './parseSchemaStatement'
+import { startsQueryMatch } from './startsQuery'
 
 export type ParsedQuery = {
   command: ParsedCommand | undefined
@@ -26,6 +30,8 @@ export type ParsedQuery = {
   groupBy: ParsedGroupBy | undefined
   limit: ParsedLimit | undefined
   offset: ParsedOffset | undefined
+  create: ParsedCreate | undefined
+  ifExists: boolean | undefined
 }
 
 /**
@@ -47,9 +53,23 @@ export const parseQuery = (query: string): ParsedQuery => {
     groupBy: undefined,
     limit: undefined,
     offset: undefined,
+    create: undefined,
+    ifExists: undefined,
   }
 
   const { curry, pipe } = siFunciona
+
+  // No find* step may see inside a string or an array: each one becomes a placeholder holding its value
+  query = maskArrays(maskStrings(query))
+
+  // A create statement has its own shape (a bracketed list of fields and keys), so it gets its own parser
+  if (createMatch.test(query)) {
+    const { entity, create } = parseCreate(query)
+    return Object.assign(parsedQuery, { command: 'create', entity, create })
+  }
+  if (schemaStatementMatch.test(query)) {
+    return Object.assign(parsedQuery, parseSchemaStatement(query))
+  }
 
   query = pipe(
     curry(findCommand)(parsedQuery),
@@ -67,7 +87,10 @@ export const parseQuery = (query: string): ParsedQuery => {
   )(query)
 
   if (query) {
-    throw new Error(`Unrecognized query value: ${query}`)
+    if (startsQueryMatch.test(query)) {
+      throw new Error(`Missing ; before: ${unmaskStrings(query.trim(), '\'')}`)
+    }
+    throw new Error(`Unrecognized query value: ${unmaskStrings(query, '\'')}`)
   }
   return parsedQuery
 }

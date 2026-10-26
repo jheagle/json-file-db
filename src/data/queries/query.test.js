@@ -358,4 +358,19 @@ describe('query', () => {
     expect(result[0].length).toBeGreaterThan(0)
     expect(result[0].every(row => row.reps === 10)).toBe(true)
   })
+  test('a null literal in a query is stored as a real null in a nullable field, and rejected in any other', async () => {
+    await create('notes', [
+      { name: '_id', type: 'string', optional: false, autoGenerate: true },
+      { name: 'text', type: 'string', optional: true, nullable: true },
+      { name: 'count', type: 'int', optional: true }
+    ], [
+      { type: 'primary', fields: ['_id'], lookup: 'pk__id.json' }
+    ])
+
+    const inserted = await query('insert notes values text = null')
+    expect(inserted[0][0].text).toBeNull()
+
+    await expect(query('insert notes values count = null'))
+      .rejects.toThrow('Value "null" is not allowed: the field is not nullable')
+  })
 })
