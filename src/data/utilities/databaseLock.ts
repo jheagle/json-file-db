@@ -1,5 +1,5 @@
 import * as jsEnv from 'browser-or-node'
-import { getSetting } from './config'
+import { getSetting, resolveDatabasePath, trackDatabaseCall } from './config'
 
 const queues: Map<string, Promise<void>> = new Map()
 
@@ -12,13 +12,17 @@ const queues: Map<string, Promise<void>> = new Map()
  *
  * Only the public functions (query, create, drop, describe) take the lock; what they call inside doesn't take it
  * again, so it can't deadlock. In the browser nothing can be written, so tasks just run.
+ *
+ * The queue is per folder (`database/` and `./database` share one). Every step of a task reads databasePath when it
+ * runs, so configure() refuses to change it while tasks are queued or running (see trackDatabaseCall).
  * @param task
  */
 export const withDatabaseLock = async <T>(task: () => Promise<T>): Promise<T> => {
   if (!jsEnv.isNode) {
     return task()
   }
-  const database = getSetting('databasePath', 'database/')
+  const database = resolveDatabasePath(getSetting('databasePath', 'database/'))
+  const ended = trackDatabaseCall()
   const previous = queues.get(database) || Promise.resolve()
   let release: () => void
   const turn = new Promise<void>(resolve => { release = resolve })
@@ -28,6 +32,7 @@ export const withDatabaseLock = async <T>(task: () => Promise<T>): Promise<T> =>
   try {
     return await task()
   } finally {
+    ended()
     release()
     if (queues.get(database) === queued) {
       queues.delete(database)

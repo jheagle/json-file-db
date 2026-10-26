@@ -38,14 +38,36 @@ describe('withDatabaseLock', () => {
     await expect(next).resolves.toBe('ran')
   })
 
-  test('tasks on different databases do not wait for each other', async () => {
+  test('configure() refuses to change databasePath while calls are running or queued, and the calls still finish', async () => {
+    const running = withDatabaseLock(() => wait(10))
+    const queued = withDatabaseLock(() => wait(0))
+    expect(() => configure({ databasePath: 'elsewhere/' }))
+      .toThrow('Can\'t change databasePath while 2 database call(s) are still running or queued: await them first')
+    await Promise.all([running, queued])
+    configure({ databasePath: 'elsewhere/' })
+    configure({ databasePath })
+  })
+
+  test('configure() of other settings, or of the same folder spelled differently, is fine while calls run', async () => {
+    const running = withDatabaseLock(() => wait(10))
+    configure({ enforceForeignKeys: true })
+    configure({ databasePath: `./${databasePath}` })
+    configure({ databasePath: `${process.cwd()}/${databasePath}` })
+    await running
+  })
+
+  test('one folder spelled differently shares one queue', async () => {
     const events = []
-    configure({ databasePath: 'one/' })
-    const slow = withDatabaseLock(async () => { await wait(20); events.push('one') })
-    configure({ databasePath: 'two/' })
-    const fast = withDatabaseLock(async () => { events.push('two') })
+    const slow = withDatabaseLock(async () => { await wait(20); events.push('slow') })
+    configure({ databasePath: `./${databasePath}` })
+    const fast = withDatabaseLock(async () => { events.push('fast') })
     await Promise.all([slow, fast])
-    expect(events).toEqual(['two', 'one'])
+    expect(events).toEqual(['slow', 'fast'])
+  })
+
+  test('a call that throws is no longer counted', async () => {
+    await expect(withDatabaseLock(async () => { throw new Error('boom') })).rejects.toThrow('boom')
+    configure({ databasePath: 'elsewhere/' })
   })
 })
 

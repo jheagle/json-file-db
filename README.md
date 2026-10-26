@@ -245,6 +245,10 @@ the order they were made, so concurrent requests (for example in a web server) c
 changes. All the queries in one `query()` string run together, with no other call in between. This covers one Node
 process: two processes writing to the same folder (say a server and a CLI) are not protected from each other.
 
+`configure()` can't point `databasePath` at another folder while calls are still running or queued (it throws:
+await them first), since each call reads the setting again at every step. The same folder written another way
+(`database/`, `./database`, its absolute path) counts as one database.
+
 ## In the browser
 
 A pre-built bundle is included (`browser/jsonFsQuery.js`, `.min.js` - also served directly via
