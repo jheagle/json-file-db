@@ -238,6 +238,17 @@ configure({
 Turning `enforceForeignKeys` off restores the pre-1.0 behavior (no referential integrity checks at all) - useful if
 it doesn't fit a particular workflow, mirroring MySQL's own toggleable `foreign_key_checks`.
 
+## Several calls at once
+
+Calls to `query()`, `create()`, `drop()` and `describe()` on one database (one `databasePath`) run one at a time, in
+the order they were made, so concurrent requests (for example in a web server) can't overwrite each other's
+changes. All the queries in one `query()` string run together, with no other call in between. This covers one Node
+process: two processes writing to the same folder (say a server and a CLI) are not protected from each other.
+
+`configure()` can't point `databasePath` at another folder while calls are still running or queued (it throws:
+await them first), since each call reads the setting again at every step. The same folder written another way
+(`database/`, `./database`, its absolute path) counts as one database.
+
 ## In the browser
 
 A pre-built bundle is included (`browser/jsonFsQuery.js`, `.min.js` - also served directly via
