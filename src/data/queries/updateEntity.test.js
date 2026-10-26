@@ -410,4 +410,75 @@ describe('updateEntity', () => {
         .rejects.toThrow('Value "null" is not allowed: the field is not nullable')
     })
   })
+
+  describe('all or nothing: every row is checked before any is written', () => {
+    const uniqueDefinition = [
+      { name: '_id', type: 'string', optional: false, autoGenerate: true },
+      { name: 'code', type: 'string', optional: true, nullable: true },
+      { name: 'parent_id', type: 'string', optional: true }
+    ]
+    const uniqueKeys = [
+      { type: 'primary', fields: ['_id'], lookup: 'pk__id.json' },
+      { type: 'unique', fields: ['code'], lookup: 'unique_code.json' },
+      { type: 'foreign', fields: ['parent_id'], lookup: 'fk_parent_id.json', references: [{ fields: ['parents._id'], lookup: 'parents.json' }] }
+    ]
+    const setUpRows = async () => {
+      await create('parents', [{ name: '_id', type: 'string', optional: false, autoGenerate: true }], keys)
+      await create('foo', uniqueDefinition, uniqueKeys)
+      return (await insertEntity('foo', [{ code: 'a' }, { code: 'b' }, { code: 'c' }], {})).foo
+    }
+    const stored = async rows => Promise.all(rows.map(row => readFile(`${databasePath}foo/${row._id}.json`, 'utf8').then(JSON.parse)))
+    const index = async () => JSON.parse(await readFile(`${databasePath}__indexes/foo/unique_code.json`, 'utf8'))
+
+    test('two rows given the same unique value: rejected, and neither row changes', async () => {
+      const rows = await setUpRows()
+      const indexBefore = await index()
+      await expect(updateEntity('foo', { code: 'x' }, { foo: rows.slice(0, 2) }))
+        .rejects.toThrow('Duplicate value for unique key "code" on foo')
+      expect((await stored(rows)).map(row => row.code)).toEqual(['a', 'b', 'c'])
+      expect(await index()).toEqual(indexBefore)
+    })
+
+    test('a row that fails a check after an earlier row passed: the earlier row is not written', async () => {
+      await create('nodes', [{ name: '_id', type: 'string' }, { name: 'name', type: 'string', optional: true }], keys)
+      await create('refs', [{ name: '_id', type: 'string', autoGenerate: true }, { name: 'node_id', type: 'string' }], [
+        ...keys,
+        { type: 'foreign', fields: ['node_id'], lookup: 'fk_node_id.json', references: [{ fields: ['nodes._id'], lookup: 'nodes.json' }] }
+      ])
+      const nodes = (await insertEntity('nodes', [{ _id: 'n1', name: 'one' }, { _id: 'n2', name: 'two' }], {})).nodes
+      await insertEntity('refs', [{ node_id: 'n2' }], {})
+      // n1 is free to change its key; n2 is still referenced, so the update is refused at the second row
+      await expect(updateEntity('nodes', { _id: 'n9' }, { nodes }))
+        .rejects.toThrow('Cannot update "nodes" where "_id" = n2 - other records still reference it')
+      expect(JSON.parse(await readFile(`${databasePath}nodes/n1.json`, 'utf8'))).toEqual({ _id: 'n1', name: 'one' })
+      const pkIndex = JSON.parse(await readFile(`${databasePath}__indexes/nodes/pk__id.json`, 'utf8'))
+      expect(pkIndex.map(entry => entry.value)).toEqual(['n1', 'n2'])
+    })
+
+    test('a missing foreign key on the last row: the earlier rows stay unchanged', async () => {
+      const rows = await setUpRows()
+      const parents = await insertEntity('parents', [{}], {})
+      const parentId = parents.parents[0]._id
+      await expect(updateEntity('foo', { parent_id: 'nope' }, { foo: rows }))
+        .rejects.toThrow('references a nonexistent parents._id = nope')
+      expect((await stored(rows)).map(row => row.parent_id)).toEqual([undefined, undefined, undefined])
+      const result = await updateEntity('foo', { parent_id: parentId }, { foo: rows })
+      expect(result.foo.map(row => row.parent_id)).toEqual([parentId, parentId, parentId])
+    })
+
+    test('a passing update of several rows still writes them all and moves their index entries', async () => {
+      const rows = await setUpRows()
+      const result = await updateEntity('foo', { code: null }, { foo: rows.slice(0, 2) })
+      expect(result.foo).toHaveLength(2)
+      expect((await stored(rows)).map(row => row.code)).toEqual([null, null, 'c'])
+      expect((await index()).map(entry => entry.value).sort()).toEqual(['c', null].sort())
+    })
+
+    test('the same row given twice is updated once, not reported as a duplicate of itself', async () => {
+      const rows = await setUpRows()
+      const result = await updateEntity('foo', { code: 'x' }, { foo: [rows[0], rows[0]] })
+      expect(result.foo).toHaveLength(1)
+      expect((await stored(rows)).map(row => row.code)).toEqual(['x', 'b', 'c'])
+    })
+  })
 })
