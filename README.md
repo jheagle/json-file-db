@@ -101,6 +101,19 @@ await query(`read exercises where name = ${quote(name)}`)
 
 `quote(value, '"')` wraps in double quotes instead.
 
+### Numbers
+
+A number may be negative, have a fraction and an exponent: `12`, `-3`, `1.5`, `2.5e-4`. They work the same in
+`values`, `set`, `where`, arrays and defaults:
+
+```sql
+read workouts where reps > -1
+update workouts set weight = 102.5 where _id = 4
+```
+
+A whole number past 9007199254740991 (`Number.MAX_SAFE_INTEGER`), however it is written (`1e20`,
+`9007199254740993.0`), is an error rather than being stored rounded: quote it to keep it as text. A fraction is stored as the nearest double, as in JSON.
+
 ### Arrays
 
 Arrays are JSON-style, and their strings can use either quote. They can be nested, and are used by `in` and
@@ -135,6 +148,24 @@ read workouts where reps > 8 and where date = '2024-06-02'
 `or where` is not supported yet, and is an error (in 1.x it was silently read as `and where`). And/or with grouping
 and precedence is planned.
 
+### Null and missing fields
+
+A field can be missing (left out) or hold `null`, and both are their own cases, as in SQL: they match no
+comparison (`=`, `!=`, `<`, `between`, `in`, `like`...), and a `null` never equals anything, not even another
+`null`. These test for them instead:
+
+| Condition | Matches when the field |
+|---|---|
+| `where note is null` | is there and holds `null` |
+| `where note is not null` | is there and holds a value |
+| `where note exists` | is there (`null` counts) |
+| `where note does not exist` | is missing |
+
+`where note = null` is an error that points to `is null`, since it could never match. Sorting puts missing first,
+then `null`, then the values (`asc`; `desc` is the reverse).
+
+In 2.0 and earlier, a `null` acted as `0` in comparisons and sorting (`where n < 5` matched it), and `= null` matched it.
+
 ### Creating a record: `create`
 
 The query form of `create()`. Inside the brackets: the fields, then the keys, separated by commas. Everything is
@@ -162,7 +193,7 @@ A field is `<name> <type>`, then any of these, in any order:
 | `optional` | may be left out (see "Fields" above) |
 | `null` / `not null` | may hold `null` / may not (the default) |
 | `auto` | a UUID is generated on insert; the type must be `string` |
-| `default <value>` | used when the field is left out: a string, a whole number, an array, `null`, `true` or `false` (so an `object` field can only default to `null` here; `create()` takes any default) |
+| `default <value>` | used when the field is left out: a string, a number, an array, `null`, `true` or `false` (so an `object` field can only default to `null` here; `create()` takes any default) |
 
 The types are `string`, `int`, `boolean`, `object` and `array`; any other is an error.
 

@@ -73,10 +73,14 @@ export const unmaskStrings = (text: string, quote: 'json' | '\'' = 'json'): stri
  */
 const arrayJson = (text: string): string => {
   try {
-    // A number too big for a double reads as Infinity, which JSON would write back as null: refuse it instead
+    // A number too big for a double reads as Infinity, which JSON would write back as null, and a whole number past
+    // Number.MAX_SAFE_INTEGER may already be rounded: refuse both, as parseNumber does outside arrays
     return JSON.stringify(JSON.parse(unmaskStrings(text), (key, value) => {
       if (typeof value === 'number' && !Number.isFinite(value)) {
         throw new Error(`${value} is too large`)
+      }
+      if (Number.isInteger(value) && !Number.isSafeInteger(value)) {
+        throw new Error(`${value} is too large to store exactly (the largest whole number is ${Number.MAX_SAFE_INTEGER}): quote it to keep it as text`)
       }
       return value
     }))

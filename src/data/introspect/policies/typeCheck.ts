@@ -35,6 +35,10 @@ export const typeCheck = (type: string = 'string', value: any = undefined, nulla
       if (Number.isNaN(coerced) || !Number.isInteger(coerced)) {
         throw new Error(`Value "${value}" is not a valid int`)
       }
+      // Past Number.MAX_SAFE_INTEGER an int can't be held exactly: '9007199254740993' would be stored as ...992
+      if (!Number.isSafeInteger(coerced)) {
+        throw new Error(`Value "${value}" is too large for an int (the largest is ${Number.MAX_SAFE_INTEGER})`)
+      }
       return coerced
     }
     case 'boolean':

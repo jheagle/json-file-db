@@ -150,4 +150,56 @@ describe('where', () => {
     const result = where(dataSet, { property: 'exercise_id', comparator: '>', value: 1, type: 'string' })
     expect(result.map(row => row._id)).toEqual([2, 3])
   })
+
+  describe('null and missing', () => {
+    const rows = [
+      { _id: 1, n: 5 },
+      { _id: 2, n: 0 },
+      { _id: 3, n: null },
+      { _id: 4 }
+    ]
+    const ids = (comparator, value = null) => where(rows, { property: 'n', comparator, value, type: 'int' }).map(row => row._id)
+
+    test.each([
+      ['<', 6, [1, 2]],
+      ['<=', 0, [2]],
+      ['>', -1, [1, 2]],
+      ['>=', 0, [1, 2]],
+      ['=', 0, [2]],
+      ['!=', 5, [2]],
+      ['<>', 5, [2]],
+      ['in', [0, 5], [1, 2]],
+      ['between', [-1, 5], [1, 2]]
+    ])('%s %j never matches a null or missing field (null used to act as 0)', (comparator, value, expected) => {
+      expect(ids(comparator, value)).toEqual(expected)
+    })
+
+    test('a null never equals anything, not even a null', () => {
+      expect(ids('=', null)).toEqual([])
+      expect(ids('!=', null)).toEqual([])
+      expect(ids('in', [null])).toEqual([])
+    })
+
+    test('is null: the field is there and holds null', () => {
+      expect(ids('is null')).toEqual([3])
+    })
+
+    test('is not null: the field is there and holds a value', () => {
+      expect(ids('is not null')).toEqual([1, 2])
+    })
+
+    test('exists / does not exist: the field is there (null counts) / is missing', () => {
+      expect(ids('exists')).toEqual([1, 2, 3])
+      expect(ids('does not exist')).toEqual([4])
+    })
+
+    test('between with a null bound matches nothing (null used to act as a 0 bound)', () => {
+      expect(ids('between', [null, 5])).toEqual([])
+      expect(ids('between', [-1, null])).toEqual([])
+    })
+
+    test('like never matches null', () => {
+      expect(where([{ s: null }, { s: 'null' }], { property: 's', comparator: 'like', value: '%' })).toEqual([{ s: 'null' }])
+    })
+  })
 })
