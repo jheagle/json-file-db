@@ -356,4 +356,129 @@ describe('updateEntity', () => {
       expect(result.exercises[0]._id).toBe('new-id')
     })
   })
+
+  describe('null values', () => {
+    const nullableDefinition = [
+      { name: '_id', type: 'string', optional: false, autoGenerate: true },
+      { name: 'note', type: 'string', optional: true, nullable: true },
+      { name: 'bar', type: 'string', optional: true }
+    ]
+
+    const parentDefinition = [{ name: '_id', type: 'string', optional: false, autoGenerate: true }]
+    const childDefinition = [
+      { name: '_id', type: 'string', optional: false, autoGenerate: true },
+      { name: 'parent_id', type: 'string', optional: true, nullable: true },
+      { name: 'code', type: 'string', optional: true, nullable: true }
+    ]
+    const childKeys = [
+      { type: 'primary', fields: ['_id'], lookup: 'pk__id.json' },
+      { type: 'unique', fields: ['code'], lookup: 'unique_code.json' },
+      { type: 'foreign', fields: ['parent_id'], lookup: 'fk_parent_id.json', references: [{ fields: ['parents._id'], lookup: 'parents.json' }] }
+    ]
+
+    test('setting a foreign key to null is not checked against the referenced record', async () => {
+      await create('parents', parentDefinition, keys)
+      const parents = await insertEntity('parents', [{}], {})
+      await create('children', childDefinition, childKeys)
+      const inserted = await insertEntity('children', [{ parent_id: parents.parents[0]._id }], {})
+      const result = await updateEntity('children', { parent_id: null }, { children: [inserted.children[0]] })
+      expect(result.children[0].parent_id).toBeNull()
+    })
+
+    test('setting a nullable unique field to null does not collide with another null', async () => {
+      await create('parents', parentDefinition, keys)
+      await create('children', childDefinition, childKeys)
+      const inserted = await insertEntity('children', [{ code: null }, { code: 'a' }], {})
+      const result = await updateEntity('children', { code: null }, { children: [inserted.children[1]] })
+      expect(result.children[0].code).toBeNull()
+    })
+
+    test('sets a nullable field to a real null', async () => {
+      await create('foo', nullableDefinition, keys)
+      const inserted = await insertEntity('foo', [{ note: 'x' }], {})
+      const id = inserted.foo[0]._id
+      const result = await updateEntity('foo', { note: null }, { foo: [inserted.foo[0]] })
+      expect(result.foo[0].note).toBeNull()
+      const entryFile = JSON.parse(await readFile(`${databasePath}foo/${id}.json`, 'utf8'))
+      expect(entryFile).toHaveProperty('note', null)
+    })
+
+    test('rejects null for a field that is not nullable', async () => {
+      await create('foo', nullableDefinition, keys)
+      const inserted = await insertEntity('foo', [{ bar: 'x' }], {})
+      await expect(updateEntity('foo', { bar: null }, { foo: [inserted.foo[0]] }))
+        .rejects.toThrow('Value "null" is not allowed: the field is not nullable')
+    })
+  })
+
+  describe('all or nothing: every row is checked before any is written', () => {
+    const uniqueDefinition = [
+      { name: '_id', type: 'string', optional: false, autoGenerate: true },
+      { name: 'code', type: 'string', optional: true, nullable: true },
+      { name: 'parent_id', type: 'string', optional: true }
+    ]
+    const uniqueKeys = [
+      { type: 'primary', fields: ['_id'], lookup: 'pk__id.json' },
+      { type: 'unique', fields: ['code'], lookup: 'unique_code.json' },
+      { type: 'foreign', fields: ['parent_id'], lookup: 'fk_parent_id.json', references: [{ fields: ['parents._id'], lookup: 'parents.json' }] }
+    ]
+    const setUpRows = async () => {
+      await create('parents', [{ name: '_id', type: 'string', optional: false, autoGenerate: true }], keys)
+      await create('foo', uniqueDefinition, uniqueKeys)
+      return (await insertEntity('foo', [{ code: 'a' }, { code: 'b' }, { code: 'c' }], {})).foo
+    }
+    const stored = async rows => Promise.all(rows.map(row => readFile(`${databasePath}foo/${row._id}.json`, 'utf8').then(JSON.parse)))
+    const index = async () => JSON.parse(await readFile(`${databasePath}__indexes/foo/unique_code.json`, 'utf8'))
+
+    test('two rows given the same unique value: rejected, and neither row changes', async () => {
+      const rows = await setUpRows()
+      const indexBefore = await index()
+      await expect(updateEntity('foo', { code: 'x' }, { foo: rows.slice(0, 2) }))
+        .rejects.toThrow('Duplicate value for unique key "code" on foo')
+      expect((await stored(rows)).map(row => row.code)).toEqual(['a', 'b', 'c'])
+      expect(await index()).toEqual(indexBefore)
+    })
+
+    test('a row that fails a check after an earlier row passed: the earlier row is not written', async () => {
+      await create('nodes', [{ name: '_id', type: 'string' }, { name: 'name', type: 'string', optional: true }], keys)
+      await create('refs', [{ name: '_id', type: 'string', autoGenerate: true }, { name: 'node_id', type: 'string' }], [
+        ...keys,
+        { type: 'foreign', fields: ['node_id'], lookup: 'fk_node_id.json', references: [{ fields: ['nodes._id'], lookup: 'nodes.json' }] }
+      ])
+      const nodes = (await insertEntity('nodes', [{ _id: 'n1', name: 'one' }, { _id: 'n2', name: 'two' }], {})).nodes
+      await insertEntity('refs', [{ node_id: 'n2' }], {})
+      // n1 is free to change its key; n2 is still referenced, so the update is refused at the second row
+      await expect(updateEntity('nodes', { _id: 'n9' }, { nodes }))
+        .rejects.toThrow('Cannot update "nodes" where "_id" = n2 - other records still reference it')
+      expect(JSON.parse(await readFile(`${databasePath}nodes/n1.json`, 'utf8'))).toEqual({ _id: 'n1', name: 'one' })
+      const pkIndex = JSON.parse(await readFile(`${databasePath}__indexes/nodes/pk__id.json`, 'utf8'))
+      expect(pkIndex.map(entry => entry.value)).toEqual(['n1', 'n2'])
+    })
+
+    test('a foreign key that does not exist: no row changes, and a real one then applies to every row', async () => {
+      const rows = await setUpRows()
+      const parents = await insertEntity('parents', [{}], {})
+      const parentId = parents.parents[0]._id
+      await expect(updateEntity('foo', { parent_id: 'nope' }, { foo: rows }))
+        .rejects.toThrow('references a nonexistent parents._id = nope')
+      expect((await stored(rows)).map(row => row.parent_id)).toEqual([undefined, undefined, undefined])
+      const result = await updateEntity('foo', { parent_id: parentId }, { foo: rows })
+      expect(result.foo.map(row => row.parent_id)).toEqual([parentId, parentId, parentId])
+    })
+
+    test('a passing update of several rows still writes them all and moves their index entries', async () => {
+      const rows = await setUpRows()
+      const result = await updateEntity('foo', { code: null }, { foo: rows.slice(0, 2) })
+      expect(result.foo).toHaveLength(2)
+      expect((await stored(rows)).map(row => row.code)).toEqual([null, null, 'c'])
+      expect((await index()).map(entry => entry.value).sort()).toEqual(['c', null].sort())
+    })
+
+    test('the same row given twice is updated once, not reported as a duplicate of itself', async () => {
+      const rows = await setUpRows()
+      const result = await updateEntity('foo', { code: 'x' }, { foo: [rows[0], rows[0]] })
+      expect(result.foo).toHaveLength(1)
+      expect((await stored(rows)).map(row => row.code)).toEqual(['x', 'b', 'c'])
+    })
+  })
 })

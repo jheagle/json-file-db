@@ -23,7 +23,8 @@
     "test:quick": "gulp testQuick",
     "watch": "gulp watchFull",
     "watch:test": "gulp watchTest",
-    "lint": "gulp lint"
+    "lint": "gulp lint",
+    "prepublishOnly": "npm run build"
   },
   "repository": {
     "type": "git",

@@ -1,8 +1,10 @@
 import { findInsertValues } from './findInsertValues'
+import { maskArrays, maskStrings, unmaskStrings } from './maskStrings'
 
 const parse = (query) => {
   const parsed = {}
-  const remaining = findInsertValues(parsed, query)
+  // parseQuery masks the strings and arrays before any find* step runs
+  const remaining = unmaskStrings(findInsertValues(parsed, maskArrays(maskStrings(query))), '\'')
   return { parsed, remaining }
 }
 

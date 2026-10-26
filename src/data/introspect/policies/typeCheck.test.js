@@ -58,8 +58,8 @@ describe('typeCheck', () => {
       expect(typeCheck('object', value)).toBe(value)
     })
 
-    test('rejects null', () => {
-      expect(() => typeCheck('object', null)).toThrow('Value "null" is not a valid object')
+    test('rejects null, as a field that is not nullable', () => {
+      expect(() => typeCheck('object', null)).toThrow('Value "null" is not allowed: the field is not nullable')
     })
 
     test('rejects an array', () => {
@@ -79,6 +79,20 @@ describe('typeCheck', () => {
 
     test('rejects a non-array', () => {
       expect(() => typeCheck('array', { a: 1 })).toThrow('is not a valid array')
+    })
+  })
+  describe('null', () => {
+    test.each(['string', 'int', 'boolean', 'object', 'array', 'whatever'])('keeps a real null for a nullable %s field', type => {
+      expect(typeCheck(type, null, true)).toBeNull()
+    })
+
+    test.each(['string', 'int', 'boolean', 'object', 'array', 'whatever'])('rejects null for a %s field that is not nullable', type => {
+      expect(() => typeCheck(type, null)).toThrow('Value "null" is not allowed: the field is not nullable')
+    })
+
+    test('a nullable field still checks its other values', () => {
+      expect(typeCheck('int', '42', true)).toBe(42)
+      expect(() => typeCheck('int', 'x', true)).toThrow('Value "x" is not a valid int')
     })
   })
 })

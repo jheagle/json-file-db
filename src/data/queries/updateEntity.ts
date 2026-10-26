@@ -48,7 +48,8 @@ const keyFieldsChanged = (record: recordDefinition, key: keyDefinition, oldData:
 /**
  * Only check uniqueness for a primary/unique key (single-field, or composite) whose value is
  * actually changing - checking an unchanged value would find the record's own existing entry and
- * wrongly report it as a duplicate of itself.
+ * wrongly report it as a duplicate of itself. A value with a null in it is never a duplicate (as in
+ * SQL).
  * @param entity
  * @param record
  * @param oldData
@@ -61,6 +62,9 @@ const assertUniqueForUpdate = async (entity: string, record: recordDefinition, o
       continue
     }
     const checkKeys = key.fields.map(field => newData[field])
+    if (checkKeys.some(value => value === null)) {
+      continue
+    }
     const isUnique = await keyUnique(entity, key.fields, checkKeys)
     if (!isUnique) {
       throw new Error(`Duplicate value for ${key.type} key "${key.fields.join(', ')}" on ${entity}`)
@@ -71,7 +75,8 @@ const assertUniqueForUpdate = async (entity: string, record: recordDefinition, o
 /**
  * Same "only if it actually changed" scoping as assertUniqueForUpdate: re-checking an unchanged
  * foreign key value would re-validate a reference this update never touches, which could fail an
- * unrelated field's update if that parent record happened to be deleted since.
+ * unrelated field's update if that parent record happened to be deleted since. A null references
+ * nothing, so it isn't checked.
  * @param entity
  * @param record
  * @param oldData
@@ -83,7 +88,7 @@ const assertForeignKeysForUpdate = async (entity: string, record: recordDefiniti
       continue
     }
     const field = key.fields[0]
-    if (!Object.prototype.hasOwnProperty.call(newValues, field) || sameValue(fieldType(record, field), newValues[field], oldData[field])) {
+    if (!Object.prototype.hasOwnProperty.call(newValues, field) || newValues[field] === null || sameValue(fieldType(record, field), newValues[field], oldData[field])) {
       continue
     }
     const { entity: refEntity, property: refProperty } = splitEntityProperty(key.references[0].fields[0])
@@ -134,6 +139,34 @@ const reconcileIndexes = async (record: recordDefinition, oldData: Object, newDa
   }
 }
 
+/**
+ * The rows of one update are checked before any is written, so a check can't see the batch's own new values on disk.
+ * Reject the update if two of its rows would end with the same value for a primary or unique key that it changes (a
+ * value with a null in it is never a duplicate, as in assertUniqueForUpdate).
+ * @param entity
+ * @param record
+ * @param planned
+ * @param newValues
+ */
+const assertUniqueWithinUpdate = (entity: string, record: recordDefinition, planned: Array<{ oldData: Object, newData: Object }>, newValues: Object): void => {
+  for (const key of record.keys) {
+    if (key.type !== 'primary' && key.type !== 'unique') {
+      continue
+    }
+    const claimed = []
+    for (const { oldData, newData } of planned) {
+      if (!keyFieldsChanged(record, key, oldData, newValues) || key.fields.some(field => newData[field] === null)) {
+        continue
+      }
+      const value = computeKeyValue(key.fields, newData)
+      if (claimed.some(other => sameValue(keyValueType(record, key), other, value))) {
+        throw new Error(`Duplicate value for ${key.type} key "${key.fields.join(', ')}" on ${entity}`)
+      }
+      claimed.push(value)
+    }
+  }
+}
+
 const assertRequiredFields = (entity: string, record: recordDefinition, newData: Object): void => {
   for (const field of record.definition) {
     if (!field.optional && typeof newData[field.name] === 'undefined') {
@@ -154,7 +187,7 @@ const applyFieldTypes = (record: recordDefinition, values: Object): Object => {
   const typedValues = Object.assign({}, values)
   for (const field of record.definition) {
     if (Object.prototype.hasOwnProperty.call(typedValues, field.name)) {
-      typedValues[field.name] = typeCheck(field.type, typedValues[field.name])
+      typedValues[field.name] = typeCheck(field.type, typedValues[field.name], field.nullable)
     }
   }
   return typedValues
@@ -169,26 +202,32 @@ export const updateEntity = async (entity: string = '', values: Object = {}, dat
   }
   const typedValues = applyFieldTypes(record, values)
 
-  const toUpdate = dataSet[entity] || []
-  const updatedRows = []
-  for (const row of toUpdate) {
+  // Check every row first and write only once all of them pass, so a row that fails leaves the others unchanged too
+  const planned = []
+  for (const row of dataSet[entity] || []) {
     const fileName = await findEntryFile(record, primaryKey, computeKeyValue(primaryKey.fields, row))
     if (!fileName) {
       throw new Error(`Could not find entry for ${entity} where "${primaryKey.fields.join(', ')}" = ${computeKeyValue(primaryKey.fields, row)}`)
+    }
+    if (planned.some(other => other.fileName === fileName)) {
+      // The same entry given twice is one row: updating it once is enough, and it can't collide with itself
+      continue
     }
     const oldData = await retrieveFile(`${record.path}/${fileName}`)
     const newData = Object.assign({}, oldData, typedValues)
     await assertUniqueForUpdate(entity, record, oldData, newData, typedValues)
     await assertForeignKeysForUpdate(entity, record, oldData, typedValues)
     await assertNoDependentsForUpdate(entity, record, primaryKey, oldData, typedValues)
-
     assertRequiredFields(entity, record, newData)
+    planned.push({ fileName, oldData, newData })
+  }
+  assertUniqueWithinUpdate(entity, record, planned, typedValues)
 
+  for (const { fileName, oldData, newData } of planned) {
     await reconcileIndexes(record, oldData, newData, typedValues, fileName)
     await writeFile(`${databasePath}${record.path}/${fileName}`, JSON.stringify(newData, null, 2))
-    updatedRows.push(newData)
   }
 
-  dataSet[entity] = updatedRows
+  dataSet[entity] = planned.map(({ newData }) => newData)
   return dataSet
 }
