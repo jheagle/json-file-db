@@ -373,4 +373,25 @@ describe('query', () => {
     await expect(query('insert notes values count = null'))
       .rejects.toThrow('Value "null" is not allowed: the field is not nullable')
   })
+
+  test('reads negative, decimal and exponent numbers end to end', async () => {
+    const above = await query('read workouts where reps > -1')
+    expect(above[0]).toHaveLength(6)
+
+    // main read 1.5 as the field 5 of a record 1, and failed with "Could not read 5.json"
+    await expect(query("insert workouts values _id = 98, reps = 1.5, order = 0, date = '2024-06-10', exercise_id = 1"))
+      .rejects.toThrow('Value "1.5" is not a valid int')
+
+    const [[inserted]] = await query("insert workouts values _id = 99, weight_effort = 2.5e1, reps = -3, order = 0, date = '2024-06-10', exercise_id = 1")
+    expect(inserted).toMatchObject({ weight_effort: '25', reps: -3 })
+    const [found] = await query('read workouts where reps < 0')
+    expect(found.map(row => String(row._id))).toEqual(['99'])
+  })
+
+  test('refuses a whole number too large to store exactly, instead of storing it rounded', async () => {
+    await expect(query("insert workouts values _id = 98, reps = 9007199254740993, order = 0, date = '2024-06-10', exercise_id = 1"))
+      .rejects.toThrow('9007199254740993 is too large to store exactly')
+    const [rows] = await query("read workouts where date = '2024-06-10'")
+    expect(rows).toEqual([])
+  })
 })

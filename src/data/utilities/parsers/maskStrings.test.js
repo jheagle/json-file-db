@@ -74,6 +74,20 @@ describe('maskArrays', () => {
     expect(() => mask('a in [-1e999]')).toThrow('-Infinity is too large')
   })
 
+  test('refuses a whole number too large to store exactly, rather than rounding it', () => {
+    // The message shows the value JSON read, already rounded
+    expect(() => mask('a in [1, 9007199254740993]')).toThrow('Invalid array [1, 9007199254740993]: 9007199254740992 is too large to store exactly')
+    expect(() => mask('a in [[-9007199254740993]]')).toThrow('-9007199254740992 is too large to store exactly')
+    expect(() => mask('a in [9007199254740993.0, 1]')).toThrow('is too large to store exactly')
+    expect(() => mask('a in [9007199254740993e0]')).toThrow('is too large to store exactly')
+    expect(() => mask('a in [1e20]')).toThrow('is too large to store exactly')
+    expect(arrays(mask('a in [9007199254740991, -9007199254740991, 1.5e3]'))).toEqual([[9007199254740991, -9007199254740991, 1500]])
+  })
+
+  test('leaves digits inside strings alone: they are text, not numbers', () => {
+    expect(arrays(mask('a in [\'9007199254740993\', "12345678901234567890"]'))).toEqual([['9007199254740993', '12345678901234567890']])
+  })
+
   test('puts arrays back as JSON when unmasking', () => {
     expect(unmaskStrings(mask('a in [\'x\', 1]'), '\'')).toBe('a in ["x",1]')
   })
