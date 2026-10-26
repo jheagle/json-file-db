@@ -14,8 +14,11 @@ import { getMatchingIndexes } from './getMatchingIndexes'
  * @param parsed
  * @param recordData
  * @param dataSet
+ * @param resolved - Filled with each entity whose rows were loaded here: its rows in dataSet are final (possibly none)
+ * and must not be reloaded, even when other conditions are left for where() (an empty list otherwise reads as "not
+ * loaded yet", see readEntity).
  */
-export const getConditionIndexedList = async (parsed: ParsedQuery, recordData, dataSet) => {
+export const getConditionIndexedList = async (parsed: ParsedQuery, recordData, dataSet, resolved: Set<string> = new Set()) => {
   const reducedConditions = []
   const matchedFiles: { [entity: string]: string[] } = {}
   const indexed = {}
@@ -31,15 +34,15 @@ export const getConditionIndexedList = async (parsed: ParsedQuery, recordData, d
       recordData[entity] = await retrieveRecord(entity)
     }
     const narrowMatchedFiles = async (entity, property, recordData, condition, dataSet, indexed) => {
-      const files = where(indexed[entity][property], {
+      const files = new Set<string>(where(indexed[entity][property], {
         property: 'value',
         comparator: condition.comparator,
         value: condition.value,
         type: condition.type
-      }).flatMap(matchedRecord => matchedRecord.record)
+      }).flatMap(matchedRecord => matchedRecord.record))
       matchedFiles[entity] = Object.prototype.hasOwnProperty.call(matchedFiles, entity)
-        ? matchedFiles[entity].filter(file => files.includes(file))
-        : [...new Set(files)]
+        ? matchedFiles[entity].filter(file => files.has(file))
+        : [...files]
     }
     const isIndexed = await getMatchingIndexes(entity, property, recordData, condition, dataSet, indexed, narrowMatchedFiles)
     if (!isIndexed) {
@@ -47,6 +50,7 @@ export const getConditionIndexedList = async (parsed: ParsedQuery, recordData, d
     }
   }
   for (const entity of Object.keys(matchedFiles)) {
+    resolved.add(entity)
     dataSet[entity] = []
     for (const file of matchedFiles[entity]) {
       dataSet[entity].push(await retrieveFile(`${entity}/${file}`))

@@ -63,14 +63,15 @@ export const runQuery = async (parsed) => {
 
   let dataSet: any = { [parsed.entity]: [] }
 
-  // A condition that's indexed but genuinely matches nothing leaves dataSet[entity] at [] - the
-  // same state it starts in before anything has looked at it at all. readEntity() (below) can't
-  // tell those two states apart on its own (it reloads whenever the array is empty, regardless of
-  // why), so capture here, before that ambiguity can happen, whether every condition actually got
-  // resolved this way - if so, dataSet[entity] is already correct and must not be reloaded.
-  const hadConditions = parsed.conditions.length > 0
-  parsed = await getConditionIndexedList(parsed, recordData, dataSet)
-  const conditionsFullyIndexed = hadConditions && parsed.conditions.length === 0
+  // An indexed condition that matches nothing leaves dataSet[entity] at [] - the same state it starts in before
+  // anything has looked at it at all. readEntity() (below) can't tell those two states apart on its own (it reloads
+  // whenever the array is empty), so getConditionIndexedList reports which entities it resolved: once any indexed
+  // condition has narrowed entity's rows, they are final (the conditions left over are applied to them below) and
+  // must not be reloaded. This used to ask whether EVERY condition was indexed, so `where date = 'none' and where
+  // reps = 10` reloaded every row and returned, updated or deleted all rows with reps 10.
+  const resolved = new Set<string>()
+  parsed = await getConditionIndexedList(parsed, recordData, dataSet, resolved)
+  const entityResolved = resolved.has(parsed.entity)
   parsed = await getJoinIndexedList(parsed, recordData, dataSet)
 
   // delete/update act on whatever is already in dataSet[entity] - unlike read, which loads
@@ -78,7 +79,7 @@ export const runQuery = async (parsed) => {
   // pass. So the matching rows have to be fully resolved (indexed conditions already are, via
   // getConditionIndexedList above; anything left in parsed.conditions is not) before either runs.
   if (parsed.command === 'delete' || parsed.command === 'update') {
-    if (!conditionsFullyIndexed) {
+    if (!entityResolved) {
       dataSet = await readEntity(parsed.entity, dataSet)
     }
     dataSet[parsed.entity] = parsed.conditions.reduce(
@@ -95,7 +96,7 @@ export const runQuery = async (parsed) => {
       dataSet = await insertEntity(parsed.entity, parsed.insertValues, dataSet)
       break
     case 'read':
-      if (!conditionsFullyIndexed) {
+      if (!entityResolved) {
         dataSet = await readEntity(parsed.entity, dataSet)
       }
       break
@@ -105,7 +106,7 @@ export const runQuery = async (parsed) => {
     default:
       throw new Error(`Unknown command: ${parsed.command}`)
   }
-  dataSet = await joinEntity(parsed.entity, parsed.joinEntity, dataSet, parsed.joinClauses, conditionsFullyIndexed)
+  dataSet = await joinEntity(parsed.entity, parsed.joinEntity, dataSet, parsed.joinClauses, entityResolved)
   dataSet = await mergeJoins(dataSet, parsed.mergeJoins)
 
   // delete/update already had parsed.conditions applied above, before they ran. Re-applying the
