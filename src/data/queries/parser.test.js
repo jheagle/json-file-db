@@ -501,6 +501,18 @@ describe('parser', () => {
       expect(read.conditions).toHaveLength(1)
     })
 
+    test('a condition between a join and a sort: all three parse', () => {
+      const read = only('read t.u on t.x = u.y where a = 1 and where b = 2 sort a')
+      expect(read.joinClauses).toEqual([{ propertyA: 't.x', comparator: '=', propertyB: 'u.y' }])
+      expect(read.conditions.map(({ property }) => property)).toEqual(['a', 'b'])
+      expect(read.sortClauses).toEqual([{ property: 'a', direction: 'asc' }])
+    })
+
+    test('connectors after a newline or a tab', () => {
+      expect(only('read t where a = 1\nand\twhere b = 2').conditions).toHaveLength(2)
+      expect(() => parser('read t where a = 1\nor\twhere b = 2')).toThrow('`or where` is not supported yet')
+    })
+
     test('or inside a string is just text', () => {
       expect(only("read t where a = 'x or where b = 2'").conditions[0].value).toBe('x or where b = 2')
     })
