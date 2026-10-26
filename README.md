@@ -148,6 +148,24 @@ read workouts where reps > 8 and where date = '2024-06-02'
 `or where` is not supported yet, and is an error (in 1.x it was silently read as `and where`). And/or with grouping
 and precedence is planned.
 
+### Null and missing fields
+
+A field can be missing (left out) or hold `null`, and both are their own cases, as in SQL: they match no
+comparison (`=`, `!=`, `<`, `between`, `in`, `like`...), and a `null` never equals anything, not even another
+`null`. These test for them instead:
+
+| Condition | Matches when the field |
+|---|---|
+| `where note is null` | is there and holds `null` |
+| `where note is not null` | is there and holds a value |
+| `where note exists` | is there (`null` counts) |
+| `where note does not exist` | is missing |
+
+`where note = null` is an error that points to `is null`, since it could never match. Sorting puts missing first,
+then `null`, then the values (`asc`; `desc` is the reverse).
+
+In 2.0 and earlier, a `null` acted as `0` in comparisons and sorting (`where n < 5` matched it), and `= null` matched it.
+
 ### Creating a record: `create`
 
 The query form of `create()`. Inside the brackets: the fields, then the keys, separated by commas. Everything is
