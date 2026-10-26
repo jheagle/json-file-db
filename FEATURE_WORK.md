@@ -78,12 +78,12 @@ Keep the existing `find*` steps of `parseQuery`, and make sure none of their reg
   `null` does is breaking, which the 2.0.0 release already is.
 - [x] **Schema statements: `create`** (#56): the query form of `create(recordName, definition, keys)`, as decided in the
   proposal below, including `create if not exists`.
-- [ ] **Schema statements: `drop`**: the query form of `drop()`, including `drop if exists`.
-- [ ] **Schema statements: `describe`**: the query form of `describe()`; the CLI shows it as a table. Note: `describe()`
+- [x] **Schema statements: `drop`** (#58): the query form of `drop()`, including `drop if exists`.
+- [x] **Schema statements: `describe`** (#58): the query form of `describe()`; the CLI shows it as a table. Note: `describe()`
   returns only the fields today, not the keys (found building `create`); the statement should show both.
-- [ ] **Schema statements: `show records`**: list the records in the database (from the `__RECORDS` registry).
+- [x] **Schema statements: `show records`** (#58): list the records in the database (from the `__RECORDS` registry).
 
-- [ ] **Rebuild `dist/` and `browser/`** (last, before merging to `main`): from the CLI hook task on, task PRs run
+- [x] **Rebuild `dist/` and `browser/`** (this PR: build output is no longer tracked, so there is nothing to commit; `prepublishOnly` builds it for npm) (last, before merging to `main`): from the CLI hook task on, task PRs run
   the build as a check but don't commit its output (decided 2026-10-25). This task rebuilds and commits it once, unless
   json-fs-query has stopped tracking build output by then (it's published to npm, so its build output isn't needed in
   git; see TASKS.md).
