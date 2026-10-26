@@ -111,8 +111,8 @@ read workouts where reps > -1
 update workouts set weight = 102.5 where _id = 4
 ```
 
-A whole number past 9007199254740991 (`Number.MAX_SAFE_INTEGER`) is an error rather than being stored rounded: quote
-it to keep it as text. A fraction is stored as the nearest double, as in JSON.
+A whole number past 9007199254740991 (`Number.MAX_SAFE_INTEGER`), however it is written (`1e20`,
+`9007199254740993.0`), is an error rather than being stored rounded: quote it to keep it as text. A fraction is stored as the nearest double, as in JSON.
 
 ### Arrays
 

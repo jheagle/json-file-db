@@ -75,8 +75,12 @@ describe('maskArrays', () => {
   })
 
   test('refuses a whole number too large to store exactly, rather than rounding it', () => {
-    expect(() => mask('a in [1, 9007199254740993]')).toThrow('Invalid array [1, 9007199254740993]: 9007199254740993 is too large to store exactly')
-    expect(() => mask('a in [[-9007199254740993]]')).toThrow('-9007199254740993 is too large to store exactly')
+    // The message shows the value JSON read, already rounded
+    expect(() => mask('a in [1, 9007199254740993]')).toThrow('Invalid array [1, 9007199254740993]: 9007199254740992 is too large to store exactly')
+    expect(() => mask('a in [[-9007199254740993]]')).toThrow('-9007199254740992 is too large to store exactly')
+    expect(() => mask('a in [9007199254740993.0, 1]')).toThrow('is too large to store exactly')
+    expect(() => mask('a in [9007199254740993e0]')).toThrow('is too large to store exactly')
+    expect(() => mask('a in [1e20]')).toThrow('is too large to store exactly')
     expect(arrays(mask('a in [9007199254740991, -9007199254740991, 1.5e3]'))).toEqual([[9007199254740991, -9007199254740991, 1500]])
   })
 

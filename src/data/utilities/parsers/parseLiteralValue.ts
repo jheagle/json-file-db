@@ -10,10 +10,11 @@ export type LiteralValue = string | number | boolean | null | any[]
 export const numberSource = '-?[0-9]+(?:\\.[0-9]+)?(?:e[+-]?[0-9]+)?'
 
 /**
- * Read one number literal's text (see numberSource) as a number, refusing any it can't hold exactly as written: an
- * integer past Number.MAX_SAFE_INTEGER would be stored rounded (9007199254740993 as 9007199254740992), and a number
- * too big for a double reads as Infinity, which JSON writes back as null. Fractions are kept as the nearest double,
- * as JSON does (an exact decimal type is planned).
+ * Read one number literal's text (see numberSource) as a number, refusing any it can't hold exactly as written: a
+ * whole number past Number.MAX_SAFE_INTEGER, however it is written (`9007199254740993`, `9007199254740993.0`, `1e20`),
+ * may be stored rounded (9007199254740993 as 9007199254740992), and a number too big for a double reads as Infinity,
+ * which JSON writes back as null. Fractions are kept as the nearest double, as JSON does (an exact decimal type is
+ * planned).
  * @param text
  * @throws {Error} For an integer past Number.MAX_SAFE_INTEGER, or a number too big for a double.
  */
@@ -22,7 +23,7 @@ export const parseNumber = (text: string): number => {
   if (!Number.isFinite(value)) {
     throw new Error(`${text} is too large`)
   }
-  if (/^-?[0-9]+$/.test(text) && !Number.isSafeInteger(value)) {
+  if (Number.isInteger(value) && !Number.isSafeInteger(value)) {
     throw new Error(`${text} is too large to store exactly (the largest whole number is ${Number.MAX_SAFE_INTEGER}): quote it to keep it as text`)
   }
   return value

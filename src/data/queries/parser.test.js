@@ -578,6 +578,12 @@ describe('parser', () => {
       expect(only('insert t values n = 1.5').insertValues).toEqual([{ n: 1.5 }])
     })
 
+    test('still reads a join entity, with or without a space before its dot, next to a decimal', () => {
+      expect(only('read workouts.muscles where n = 1.5')).toMatchObject({ joinEntity: 'muscles', conditions: [{ property: 'n', comparator: '=', value: 1.5 }] })
+      expect(only('read workouts .muscles').joinEntity).toBe('muscles')
+      expect(only('read workouts where n = 1.5').joinEntity).toBeUndefined()
+    })
+
     test('still reads name.field (a join\'s field) as a name', () => {
       expect(only('read t where u.n = 1').conditions).toEqual([{ property: 'u.n', comparator: '=', value: 1 }])
     })
@@ -591,7 +597,12 @@ describe('parser', () => {
         'insert t values n = 9007199254740993',
         'update t set n = -9007199254740993',
         'read t where n = 12345678901234567890',
-        'read t where n in [1, 9007199254740993]'
+        'read t where n in [1, 9007199254740993]',
+        'read t where n = 9007199254740993.0',
+        'read t where n = 9007199254740993e0',
+        'read t where n = 90071992547409930e-1',
+        'insert t values s = 1e20',
+        'create t (a string default 9007199254740993.0)'
       ]) {
         expect(() => parser(query)).toThrow('too large to store exactly')
       }
