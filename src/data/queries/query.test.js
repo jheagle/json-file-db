@@ -394,4 +394,44 @@ describe('query', () => {
     const [rows] = await query("read workouts where date = '2024-06-10'")
     expect(rows).toEqual([])
   })
+
+  describe('null and missing, through an index and without one', () => {
+    beforeEach(async () => {
+      await query('create scores (_id string auto, name string, n int optional null, m int optional null, primary key (_id), index (n))')
+      for (const row of ["name = 'five', n = 5, m = 5", "name = 'zero', n = 0, m = 0", "name = 'null', n = null, m = null", "name = 'missing'"]) {
+        await query(`insert scores values ${row}`)
+      }
+    })
+    const names = async (text) => (await query(text))[0].map(row => row.name).sort()
+
+    // n has an index (the condition is answered from the index file first), m doesn't
+    test.each(['n', 'm'])('%s: ordering never matches null or missing', async (field) => {
+      expect(await names(`read scores where ${field} < 6`)).toEqual(['five', 'zero'])
+      expect(await names(`read scores where ${field} between [-1, 5]`)).toEqual(['five', 'zero'])
+      expect(await names(`read scores where ${field} != 5`)).toEqual(['zero'])
+    })
+
+    test.each(['n', 'm'])('%s: is null, is not null, exists, does not exist', async (field) => {
+      expect(await names(`read scores where ${field} is null`)).toEqual(['null'])
+      expect(await names(`read scores where ${field} is not null`)).toEqual(['five', 'zero'])
+      expect(await names(`read scores where ${field} exists`)).toEqual(['five', 'null', 'zero'])
+      expect(await names(`read scores where ${field} does not exist`)).toEqual(['missing'])
+    })
+
+    test('= null is an error that points to is null', async () => {
+      await expect(query('read scores where n = null')).rejects.toThrow('use `n is null` or `n is not null`')
+    })
+
+    test('sorts missing, then null, then the values', async () => {
+      const [rows] = await query('read scores sort n asc')
+      expect(rows.map(row => row.name)).toEqual(['missing', 'null', 'zero', 'five'])
+    })
+
+    test('update and delete use the same rules', async () => {
+      await query("update scores set name = 'was null' where m is null")
+      expect(await names('read scores where m is null')).toEqual(['was null'])
+      await query('delete scores where n does not exist')
+      expect(await names('read scores')).toEqual(['five', 'was null', 'zero'])
+    })
+  })
 })
