@@ -276,6 +276,6 @@ under `src/data/` is an internal module, reachable but not part of the supported
 npm install
 npm test          # the tests
 npm run typecheck # the types
-npm run build     # dist/ and browser/
+npm run build     # dist/ and browser/ (not committed; npm publish builds them)
 npm run docs      # the documentation (docs.to)
 ```
