@@ -217,6 +217,8 @@ queryStatus('read notes;')                   // { complete: true, waitingFor: ''
 - `null` is only accepted by fields with `nullable: true`, and is stored as a real `null`. Before, a `string` field
   stored the text `"null"` and an `int` field stored `0`.
 - `create()` throws for a default that doesn't fit its field's type, and for a nullable primary key field.
+- A select alias needs `as`: `select name as n`. Before, the first field took the next word as its alias, so
+  `select name where a = 1` failed and `select name limit 1` lost its limit; `select name n` is now an error.
 - Sort fields need a comma between them: `sort a, b desc`. Before, the list ran on into the next clause, so
   `sort a limit 1` sorted by `a`, `limit` and `1` and lost the limit; `sort a b` is now an error.
 

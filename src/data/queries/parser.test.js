@@ -475,4 +475,38 @@ describe('parser', () => {
       expect(() => parser('read t sort a b')).toThrow('Unrecognized query value')
     })
   })
+
+  describe('select', () => {
+    const only = (queries) => parser(queries)[0]
+
+    test.each([
+      ['where a = 1', 'conditions'],
+      ['sort a', 'sortClauses'],
+      ['limit 1', 'limit'],
+      ['group by a', 'groupBy']
+    ])('one field before %s: the next clause is not read as its alias', (clause, part) => {
+      const read = only(`read t select name ${clause}`)
+      expect(read.selectClauses).toEqual([{ property: 'name', alias: undefined }])
+      expect(read[part]).toBeTruthy()
+    })
+
+    test('aliases with as, on any field, in any case', () => {
+      expect(only('read t select a AS x, b, c as y where a = 1').selectClauses).toEqual([
+        { property: 'a', alias: 'x' },
+        { property: 'b', alias: undefined },
+        { property: 'c', alias: 'y' }
+      ])
+    })
+
+    test('as only as a whole word: a field may start with it', () => {
+      expect(only('read t select a, ascent').selectClauses).toEqual([
+        { property: 'a', alias: undefined },
+        { property: 'ascent', alias: undefined }
+      ])
+    })
+
+    test('an alias without as is an error, not a silent guess', () => {
+      expect(() => parser('read t select name n')).toThrow('Unrecognized query value: n')
+    })
+  })
 })
