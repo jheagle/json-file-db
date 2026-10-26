@@ -76,7 +76,7 @@ Keep the existing `find*` steps of `parseQuery`, and make sure none of their reg
   and the other types throw. `create()` also checks each default against the field's type (and allows `default null`
   only on a nullable field), so a bad default fails once, at create time, instead of on every insert. Changing what
   `null` does is breaking, which the 2.0.0 release already is.
-- [ ] **Schema statements: `create`**: the query form of `create(recordName, definition, keys)`, as decided in the
+- [x] **Schema statements: `create`** (#56): the query form of `create(recordName, definition, keys)`, as decided in the
   proposal below, including `create if not exists`.
 - [ ] **Schema statements: `drop`**: the query form of `drop()`, including `drop if exists`.
 - [ ] **Schema statements: `describe`**: the query form of `describe()`; the CLI shows it as a table. Note: `describe()`

@@ -2,6 +2,7 @@ import { fieldProperties } from '../../introspect/definitions/field'
 import { keyProperties } from '../../introspect/definitions/key'
 import { fieldTypes } from '../../introspect/policies/typeCheck'
 import { arraySource, fromPlaceholder, placeholderSource, unmaskStrings } from './maskStrings'
+import { startsQueryMatch } from './startsQuery'
 
 export type ParsedCreate = {
   ifNotExists: boolean
@@ -257,7 +258,7 @@ export const parseCreate = (query: string): ParsedCreateQuery => {
   }
   const after = query.slice(close + 1).trim()
   if (after) {
-    if (/^(create|delete|insert|read|update)\s/i.test(after)) {
+    if (startsQueryMatch.test(after)) {
       throw new Error(`Missing ; before: ${shown(after)}`)
     }
     throw new Error(`Unrecognized query value: ${shown(after)}`)

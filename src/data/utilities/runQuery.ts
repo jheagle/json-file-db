@@ -3,6 +3,9 @@ import { insertEntity } from '../queries/insertEntity'
 import { readEntity } from '../queries/readEntity'
 import { updateEntity } from '../queries/updateEntity'
 import { createRecord } from '../queries/createRecord'
+import { dropRecord } from '../queries/dropRecord'
+import { describeRecord } from '../queries/describeRecord'
+import { showRecords } from '../queries/showRecords'
 import { joinEntity } from '../queries/joinEntity'
 import { mergeJoins } from '../queries/mergeJoins'
 import { where } from '../queries/where'
@@ -38,9 +41,16 @@ const typeConditions = async (parsed, recordData) => {
 }
 
 export const runQuery = async (parsed) => {
-  // A create statement acts on the database, not on entries: there is no record to read yet
-  if (parsed.command === 'create') {
-    return { [parsed.entity]: await createRecord(parsed.entity, parsed.create) }
+  // Schema statements act on the database, not on entries (for create there is no record to read yet)
+  switch (parsed.command) {
+    case 'create':
+      return { [parsed.entity]: await createRecord(parsed.entity, parsed.create) }
+    case 'drop':
+      return { [parsed.entity]: await dropRecord(parsed.entity, parsed.ifExists) }
+    case 'describe':
+      return { [parsed.entity]: await describeRecord(parsed.entity) }
+    case 'show':
+      return { [parsed.entity]: await showRecords() }
   }
   const recordData = {
     [parsed.entity]: await retrieveRecord(parsed.entity)

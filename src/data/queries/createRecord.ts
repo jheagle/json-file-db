@@ -3,7 +3,7 @@ import { recordDefinition } from '../introspect/definitions/record'
 import { ParsedCreate } from '../utilities/parsers/parseCreate'
 import { retrieveRecord } from '../utilities/retrieveRecord'
 import { splitEntityProperty } from '../utilities/parsers/splitEntityProperty'
-import { getSetting } from '../utilities/config'
+import { recordExists } from '../utilities/recordExists'
 
 /**
  * Reject a foreign key whose referenced record, or field on it, doesn't exist. A key referencing the record being
@@ -12,8 +12,6 @@ import { getSetting } from '../utilities/config'
  * @param parsed
  */
 const assertReferencesExist = async (entity: string, parsed: ParsedCreate): Promise<void> => {
-  const { existsSync } = require('fs')
-  const databasePath = getSetting('databasePath', 'database/')
   for (const key of parsed.keys) {
     if (key.type !== 'foreign') {
       continue
@@ -21,7 +19,7 @@ const assertReferencesExist = async (entity: string, parsed: ParsedCreate): Prom
     const { entity: refEntity, property: refProperty } = splitEntityProperty(key.references[0].fields[0])
     let fields = parsed.definition.map(field => field.name)
     if (refEntity !== entity) {
-      if (!existsSync(`${databasePath}${refEntity}.json`)) {
+      if (!recordExists(refEntity)) {
         throw new Error(`Foreign key "${key.fields[0]}" references "${refEntity}", which doesn't exist`)
       }
       fields = (await retrieveRecord(refEntity)).definition.map(field => field.name)
@@ -40,8 +38,7 @@ const assertReferencesExist = async (entity: string, parsed: ParsedCreate): Prom
  * @param parsed
  */
 export const createRecord = async (entity: string, parsed: ParsedCreate): Promise<recordDefinition | null> => {
-  const { existsSync } = require('fs')
-  if (existsSync(`${getSetting('databasePath', 'database/')}${entity}.json`)) {
+  if (recordExists(entity)) {
     if (parsed.ifNotExists) {
       return null
     }
