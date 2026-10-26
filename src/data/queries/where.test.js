@@ -193,6 +193,11 @@ describe('where', () => {
       expect(ids('does not exist')).toEqual([4])
     })
 
+    test('between with a null bound matches nothing (null used to act as a 0 bound)', () => {
+      expect(ids('between', [null, 5])).toEqual([])
+      expect(ids('between', [-1, null])).toEqual([])
+    })
+
     test('like never matches null', () => {
       expect(where([{ s: null }, { s: 'null' }], { property: 's', comparator: 'like', value: '%' })).toEqual([{ s: 'null' }])
     })

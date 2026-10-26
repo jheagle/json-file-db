@@ -43,6 +43,9 @@ export const findConditions = (parsed: ParsedQuery, query: string): string => {
       if (value === null) {
         throw new Error(`\`${condition[4]} ${condition[6]} null\` never matches (null equals nothing, as in SQL): use \`${condition[4]} is null\` or \`${condition[4]} is not null\``)
       }
+      if (condition[6].toLowerCase() === 'between' && Array.isArray(value) && value.includes(null)) {
+        throw new Error(`\`${condition[4]} between\` can't have a null bound: it would never match`)
+      }
       parsed['conditions'].push({
         property: condition[4],
         comparator: condition[6],

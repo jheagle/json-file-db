@@ -29,6 +29,15 @@ describe('findConditions', () => {
     expect(() => parse(`where note ${comparator} null`)).toThrow(`\`note ${comparator} null\` never matches (null equals nothing, as in SQL): use \`note is null\` or \`note is not null\``)
   })
 
+  test('refuses a null bound in between, which could never match (it used to act as 0)', () => {
+    expect(() => parse('where n between [null, 5]')).toThrow('`n between` can\'t have a null bound: it would never match')
+    expect(() => parse('where n BETWEEN [1, null]')).toThrow('can\'t have a null bound')
+  })
+
+  test('still accepts null in an in list (it just never matches)', () => {
+    expect(parse('where n in [null, 1]').parsed.conditions).toEqual([{ property: 'n', comparator: 'in', value: [null, 1] }])
+  })
+
   test.each([
     ['is null', 'is null'],
     ['IS  NOT\tNULL', 'is not null'],

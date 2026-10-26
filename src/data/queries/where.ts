@@ -59,7 +59,8 @@ const makeCondition = (data, property, comparator, value, type = undefined) => {
     case 'in':
       return Array.isArray(value) && (type ? value.some(item => sameValue(type, dataValue, item)) : value.includes(dataValue))
     case 'between':
-      return Array.isArray(value) && value.length === 2 && dataValue >= value[0] && dataValue <= value[1]
+      // A null bound would act as 0 in >= / <=: it bounds nothing, so nothing matches (the parser refuses it)
+      return Array.isArray(value) && value.length === 2 && !value.includes(null) && dataValue >= value[0] && dataValue <= value[1]
     case 'like':
       return likeMatch(dataValue, value)
   }
