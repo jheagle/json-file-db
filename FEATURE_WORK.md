@@ -179,7 +179,7 @@ only link them (`exercise_muscle` in `workouts.muscles`) are an error.
 - [x] **Indexes for the tree** (#78): candidate rows per node (intersection for `and`, union for `or` when every branch is
   indexed, all rows otherwise and for `not`). Tests: every Grammar example gives the same rows with and without
   indexes.
-- [ ] **Joined entities**: conditions on the joined entity's fields, evaluated per pair (inner join): the joined
+- [x] **Joined entities** (#80): conditions on the joined entity's fields, evaluated per pair (inner join): the joined
   list keeps the matching rows, a row with none left is dropped. Fields of entities that only link (`exercise_muscle`
   in `workouts.muscles`) are an error. Also: an indexed no-match on a joined field must not reload every joined row
   (left over from #69).
