@@ -202,4 +202,36 @@ describe('where', () => {
       expect(where([{ s: null }, { s: 'null' }], { property: 's', comparator: 'like', value: '%' })).toEqual([{ s: 'null' }])
     })
   })
+
+  describe('ordering by the declared type', () => {
+    const strings = [{ s: '9' }, { s: '10' }, { s: 2 }]
+    const ints = [{ n: '9' }, { n: 10 }, { n: 2 }]
+    const values = (dataSet, property, type, comparator, value) =>
+      where(dataSet, { property, comparator, value, type }).map(row => row[property])
+
+    test.each([2, '2'])('a string field compares as text, whether the literal is %j', (literal) => {
+      expect(values(strings, 's', 'string', '>', literal)).toEqual(['9'])
+      expect(values(strings, 's', 'string', '>=', literal)).toEqual(['9', 2])
+      expect(values(strings, 's', 'string', '<', literal)).toEqual(['10'])
+      expect(values(strings, 's', 'string', '<=', literal)).toEqual(['10', 2])
+      expect(values(strings, 's', 'string', 'between', [1, literal])).toEqual(['10', 2])
+    })
+
+    test.each([5, '5'])('an int field compares as numbers, even a value stored as a numeric string (literal %j)', (literal) => {
+      expect(values(ints, 'n', 'int', '>', literal)).toEqual(['9', 10])
+      expect(values(ints, 'n', 'int', '<=', literal)).toEqual([2])
+      expect(values(ints, 'n', 'int', 'between', [literal, '9'])).toEqual(['9'])
+    })
+
+    test('a field with no declared type, or one compareAs leaves alone, compares the raw values', () => {
+      expect(values(strings, 's', undefined, '>', '2')).toEqual(['9'])
+      expect(values(strings, 's', 'object', '>', '2')).toEqual(['9'])
+    })
+
+    test('null and missing still match no ordering, and a null bound still matches nothing', () => {
+      const withNulls = [{ s: '9' }, { s: null }, {}]
+      expect(values(withNulls, 's', 'string', '>', 1)).toEqual(['9'])
+      expect(values(withNulls, 's', 'string', 'between', [null, 'z'])).toEqual([])
+    })
+  })
 })

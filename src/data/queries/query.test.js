@@ -490,4 +490,37 @@ describe('query', () => {
       expect(await names(`read ${record} where x = 1 and where y = 2`)).toEqual(['two'])
     })
   })
+
+  describe('ordering by the declared type, through an index and without one', () => {
+    beforeEach(async () => {
+      await query('create typed (_id string auto, s string, i int, si string, ii int, primary key (_id), index (si), index (ii))')
+      for (const [s, i] of [['9', 9], ['10', 10], ['2', 2]]) {
+        await query(`insert typed values s = '${s}', i = ${i}, si = '${s}', ii = ${i}`)
+      }
+    })
+    const values = async (text, field) => (await query(text))[0].map(row => row[field])
+    const sorted = async (text, field) => (await values(text, field)).sort()
+
+    // si and ii have an index (the condition is answered from the index file first), s and i don't
+    test.each(['s', 'si'])('%s: a string field compares as text, whether the literal is 2 or \'2\'', async (field) => {
+      for (const literal of ['2', "'2'"]) {
+        expect(await sorted(`read typed where ${field} > ${literal}`, field)).toEqual(['9'])
+        expect(await sorted(`read typed where ${field} < ${literal}`, field)).toEqual(['10'])
+        expect(await sorted(`read typed where ${field} between [1, ${literal}]`, field)).toEqual(['10', '2'])
+      }
+    })
+
+    test.each(['s', 'si'])('%s: a string field sorts as text', async (field) => {
+      expect(await values(`read typed sort ${field}`, field)).toEqual(['10', '2', '9'])
+      expect(await values(`read typed sort ${field} desc`, field)).toEqual(['9', '2', '10'])
+    })
+
+    test.each(['i', 'ii'])('%s: an int field compares and sorts as numbers, whether the literal is 2 or \'2\'', async (field) => {
+      for (const literal of ['2', "'2'"]) {
+        expect((await values(`read typed where ${field} > ${literal} sort ${field}`, field))).toEqual([9, 10])
+        expect(await values(`read typed where ${field} between [${literal}, 9]`, field)).toHaveLength(2)
+      }
+      expect(await values(`read typed sort ${field}`, field)).toEqual([2, 9, 10])
+    })
+  })
 })
