@@ -1,6 +1,7 @@
 import { removeFromQuery } from './removeFromQuery'
 import { numberSource, parseLiteralValue, LiteralValue } from './parseLiteralValue'
 import { ParsedQuery } from './parseQuery'
+import { allOf } from '../conditionTree'
 import { arraySource, placeholderSource } from './maskStrings'
 
 // `and`/`or`/`where` count only as whole words: in `on t.x = u.color where ...` the `or` is part of the name `color`
@@ -26,6 +27,7 @@ export type ParsedCondition = {
  * @throws {Error} For `or where`, and for a comparison with null.
  */
 export const findConditions = (parsed: ParsedQuery, query: string): string => {
+  const conditions: ParsedCondition[] = []
   const conditionsFound: IterableIterator<RegExpMatchArray> = query.matchAll(conditionMatch)
   // @ts-ignore
   for (const condition of conditionsFound) {
@@ -33,7 +35,7 @@ export const findConditions = (parsed: ParsedQuery, query: string): string => {
       throw new Error('`or where` is not supported yet: use `and where`, or run one query per alternative')
     }
     if (typeof condition[5] !== 'undefined') {
-      parsed['conditions'].push({
+      conditions.push({
         property: condition[4],
         comparator: condition[5].toLowerCase().replace(/\s+/g, ' '),
         value: null
@@ -46,7 +48,7 @@ export const findConditions = (parsed: ParsedQuery, query: string): string => {
       if (condition[6].toLowerCase() === 'between' && Array.isArray(value) && value.includes(null)) {
         throw new Error(`\`${condition[4]} between\` can't have a null bound: it would never match`)
       }
-      parsed['conditions'].push({
+      conditions.push({
         property: condition[4],
         comparator: condition[6],
         value
@@ -55,5 +57,7 @@ export const findConditions = (parsed: ParsedQuery, query: string): string => {
     // Leave out the character before the condition (group 1): it isn't part of it, and an earlier removal may have trimmed it
     query = removeFromQuery(condition[0].slice(condition[1].length), query)
   }
+  // Each `where` / `and where` joins its condition with `and` (or and grouping: the where-clauses epic's parser task)
+  parsed['where'] = allOf(conditions)
   return query
 }

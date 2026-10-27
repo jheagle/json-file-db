@@ -5,14 +5,15 @@ import { where } from '../queries/where'
 import { retrieveFile } from './retrieveFile'
 import { ParsedQuery } from './parsers/parseQuery'
 import { getMatchingIndexes } from './getMatchingIndexes'
+import { requiredConditions, withoutConditions } from './conditionTree'
 
 /**
  * Load only the candidate rows the indexed conditions match: an index only narrows which rows are read. Every
- * condition, indexed or not, stays in parsed.conditions and is still applied to the candidates afterwards (runQuery),
+ * condition, indexed or not, stays in parsed.where and is still applied to the candidates afterwards (runQuery),
  * so an index can make a query faster but never changes its result (where-clauses decision 3; it used to remove the
  * conditions it answered, and the 3 bugs fixed in #69 came from that split).
- * Conditions are joined by `and`, so a row is a candidate only when every indexed condition on its entity matched it:
- * each one narrows the files the ones before it matched.
+ * Only the conditions every row must meet (the top-level `and`'s, see requiredConditions) narrow the rows, and a row
+ * is a candidate only when each indexed one on its entity matched it: each narrows the files the ones before matched.
  *
  * For now, an indexed condition on a joined entity's field (`exercises._id = 1`) is still removed once its index has
  * loaded that entity's rows: where() can't check `entity.field` on the main rows yet, and this keeps what such a
@@ -28,7 +29,7 @@ export const getConditionIndexedList = async (parsed: ParsedQuery, recordData, d
   const matchedFiles: { [entity: string]: string[] } = {}
   const indexed = {}
   const answeredJoinConditions = []
-  for (const condition of parsed.conditions) {
+  for (const condition of requiredConditions(parsed.where)) {
     let entity = parsed.entity
     let property = condition.property
     if (isEntityProperty(property)) {
@@ -62,6 +63,6 @@ export const getConditionIndexedList = async (parsed: ParsedQuery, recordData, d
       dataSet[entity].push(await retrieveFile(`${entity}/${file}`))
     }
   }
-  parsed.conditions = parsed.conditions.filter(condition => !answeredJoinConditions.includes(condition))
+  parsed.where = withoutConditions(parsed.where, answeredJoinConditions)
   return parsed
 }

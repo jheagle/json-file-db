@@ -1,4 +1,4 @@
-import { where } from './where'
+import { where, whereTree } from './where'
 
 const dataSet = [
   {
@@ -232,6 +232,35 @@ describe('where', () => {
       const withNulls = [{ s: '9' }, { s: null }, {}]
       expect(values(withNulls, 's', 'string', '>', 1)).toEqual(['9'])
       expect(values(withNulls, 's', 'string', 'between', [null, 'z'])).toEqual([])
+    })
+  })
+
+  describe('whereTree', () => {
+    const rows = [{ id: 1, n: 1, s: 'x' }, { id: 2, n: 2, s: 'x' }, { id: 3, n: 2, s: 'y' }]
+    const n2 = { property: 'n', comparator: '=', value: 2 }
+    const sx = { property: 's', comparator: '=', value: 'x' }
+
+    test('no where clause keeps every row', () => {
+      expect(whereTree(rows, undefined)).toEqual(rows)
+    })
+
+    test('one condition, and an and of several', () => {
+      expect(whereTree(rows, n2).map(row => row.id)).toEqual([2, 3])
+      expect(whereTree(rows, { and: [n2, sx] }).map(row => row.id)).toEqual([2])
+    })
+
+    test('a typed condition and a joinEntity condition work as they do in where()', () => {
+      const typed = [{ id: 1, n: '10' }, { id: 2, n: '9' }]
+      expect(whereTree(typed, { property: 'n', comparator: '>', value: 2, type: 'string' }).map(row => row.id)).toEqual([2])
+      expect(whereTree(typed, { property: 'n', comparator: '>', value: 2, type: 'int' }).map(row => row.id)).toEqual([1, 2])
+      const joined = [{ id: 1, 'e.name': 'x' }, { id: 2, 'e.name': 'y' }]
+      expect(whereTree(joined, { property: 'name', joinEntity: 'e', comparator: '=', value: 'x' }).map(row => row.id)).toEqual([1])
+      expect(whereTree(joined, { and: [{ property: 'name', joinEntity: 'e', comparator: '!=', value: 'x' }, { property: 'id', comparator: '>', value: 1 }] }).map(row => row.id)).toEqual([2])
+    })
+
+    test('or and not are refused until the where-clauses epic builds them', () => {
+      expect(() => whereTree(rows, { or: [n2, sx] })).toThrow('`or` conditions are not supported yet')
+      expect(() => whereTree(rows, { not: n2 })).toThrow('`not` conditions are not supported yet')
     })
   })
 })

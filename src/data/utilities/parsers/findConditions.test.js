@@ -1,28 +1,41 @@
+import { conditionsOf } from '../conditionTree'
 import { findConditions } from './findConditions'
 import { maskArrays, maskStrings, unmaskStrings } from './maskStrings'
 
 const parse = (query) => {
-  const parsed = { conditions: [] }
+  const parsed = { where: undefined }
   // parseQuery masks the strings and arrays before any find* step runs
   const remaining = unmaskStrings(findConditions(parsed, maskArrays(maskStrings(query))), '\'')
   return { parsed, remaining }
 }
 
 describe('findConditions', () => {
+  test('the where clause is a tree: one condition is itself, several are one and node', () => {
+    expect(parse('where a = 1').parsed.where).toEqual({ property: 'a', comparator: '=', value: 1 })
+    expect(parse("where a = 1 and where b = 'x' and where c is null").parsed.where).toEqual({
+      and: [
+        { property: 'a', comparator: '=', value: 1 },
+        { property: 'b', comparator: '=', value: 'x' },
+        { property: 'c', comparator: 'is null', value: null }
+      ]
+    })
+    expect(parse('sort a').parsed.where).toBeUndefined()
+  })
+
   test('extracts a quoted string value', () => {
     const { parsed, remaining } = parse("where date = '2024-06-02'")
-    expect(parsed.conditions).toEqual([{ property: 'date', comparator: '=', value: '2024-06-02' }])
+    expect(conditionsOf(parsed.where)).toEqual([{ property: 'date', comparator: '=', value: '2024-06-02' }])
     expect(remaining).toBe('')
   })
 
   test('extracts an unquoted number as a real number', () => {
     const { parsed } = parse('where reps > 10')
-    expect(parsed.conditions).toEqual([{ property: 'reps', comparator: '>', value: 10 }])
+    expect(conditionsOf(parsed.where)).toEqual([{ property: 'reps', comparator: '>', value: 10 }])
   })
 
   test('extracts an array literal as a real array', () => {
     const { parsed } = parse('where exercise_id in [1,2,3]')
-    expect(parsed.conditions).toEqual([{ property: 'exercise_id', comparator: 'in', value: [1, 2, 3] }])
+    expect(conditionsOf(parsed.where)).toEqual([{ property: 'exercise_id', comparator: 'in', value: [1, 2, 3] }])
   })
 
   test.each(['=', '!=', '>', '<=', 'like'])('refuses a comparison with null (%s), which could never match', (comparator) => {
@@ -35,7 +48,7 @@ describe('findConditions', () => {
   })
 
   test('still accepts null in an in list (it just never matches)', () => {
-    expect(parse('where n in [null, 1]').parsed.conditions).toEqual([{ property: 'n', comparator: 'in', value: [null, 1] }])
+    expect(conditionsOf(parse('where n in [null, 1]').parsed.where)).toEqual([{ property: 'n', comparator: 'in', value: [null, 1] }])
   })
 
   test.each([
@@ -45,7 +58,7 @@ describe('findConditions', () => {
     ['does not exist', 'does not exist']
   ])('extracts %s, which takes no value', (written, comparator) => {
     const { parsed, remaining } = parse(`where note ${written} and where reps > 1`)
-    expect(parsed.conditions).toEqual([
+    expect(conditionsOf(parsed.where)).toEqual([
       { property: 'note', comparator, value: null },
       { property: 'reps', comparator: '>', value: 1 }
     ])
@@ -54,13 +67,13 @@ describe('findConditions', () => {
 
   test('reads is null, exists and the rest only as whole words', () => {
     const { parsed, remaining } = parse('where note existsx = 1')
-    expect(parsed.conditions).toEqual([])
+    expect(conditionsOf(parsed.where)).toEqual([])
     expect(remaining).toBe('where note existsx = 1')
   })
 
   test('still reads a field named like the keywords', () => {
     const { parsed } = parse('where exists = 1 and where is_null exists')
-    expect(parsed.conditions).toEqual([
+    expect(conditionsOf(parsed.where)).toEqual([
       { property: 'exists', comparator: '=', value: 1 },
       { property: 'is_null', comparator: 'exists', value: null }
     ])
@@ -68,7 +81,7 @@ describe('findConditions', () => {
 
   test('extracts true and false as real booleans', () => {
     const { parsed } = parse('where active = true where archived = false')
-    expect(parsed.conditions).toEqual([
+    expect(conditionsOf(parsed.where)).toEqual([
       { property: 'active', comparator: '=', value: true },
       { property: 'archived', comparator: '=', value: false }
     ])
