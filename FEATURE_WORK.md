@@ -169,7 +169,7 @@ only link them (`exercise_muscle` in `workouts.muscles`) are an error.
   indexed condition still applies when the index pre-filter is skipped.
 - [x] **Parsed shape** (#74): `parsed.where` becomes the `ConditionNode` tree (types in `parseQuery.ts`), built from
   today's list as one `and` node, so nothing changes yet; `where` / `runQuery` / `typeClauses` walk the tree.
-- [ ] **Parser**: read the expression into the tree with the precedence above, walking the masked text; the
+- [x] **Parser** (#76): read the expression into the tree with the precedence above, walking the masked text; the
   expression ends at the next clause keyword outside brackets (`and on` included); `and where` / `or where`
   accepted. Every example and error listed in the Grammar section becomes a test, plus a regression test that `or`
   no longer errors. Flatten nested groups of the same kind (`a and (b and c)` -> one `and` of three): only the

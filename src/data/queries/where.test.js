@@ -1,4 +1,4 @@
-import { where, whereTree } from './where'
+import { treeTruth, where, whereTree } from './where'
 
 const dataSet = [
   {
@@ -258,12 +258,72 @@ describe('where', () => {
       expect(whereTree(joined, { and: [{ property: 'name', joinEntity: 'e', comparator: '!=', value: 'x' }, { property: 'id', comparator: '>', value: 1 }] }).map(row => row.id)).toEqual([2])
     })
 
-    test('or and not are refused until the where-clauses epic builds them', () => {
-      expect(() => whereTree(rows, { or: [n2, sx] })).toThrow('`or` and `not` conditions are not supported yet')
-      expect(() => whereTree(rows, { not: n2 })).toThrow('`or` and `not` conditions are not supported yet')
-      // also with no rows to check, and nested under an and
-      expect(() => whereTree([], { or: [n2, sx] })).toThrow('`or` and `not` conditions are not supported yet')
-      expect(() => whereTree(rows, { and: [n2, { not: sx }] })).toThrow('`or` and `not` conditions are not supported yet')
+    test('or keeps a row when any branch is true, not when its branch is false', () => {
+      expect(whereTree(rows, { or: [{ property: 'n', comparator: '=', value: 1 }, { property: 's', comparator: '=', value: 'y' }] }).map(row => row.id)).toEqual([1, 3])
+      expect(whereTree(rows, { not: n2 }).map(row => row.id)).toEqual([1])
+      expect(whereTree(rows, { and: [n2, { not: sx }] }).map(row => row.id)).toEqual([3])
+      expect(whereTree([], { or: [n2, sx] })).toEqual([])
+    })
+
+    describe('three-valued logic: a comparison on a null or missing field is unknown', () => {
+      const row = { t: 1, f: 2, u: null }
+      const T = { property: 't', comparator: '=', value: 1 }
+      const F = { property: 'f', comparator: '=', value: 1 }
+      const U = { property: 'u', comparator: '=', value: 1 }
+      const missing = { property: 'gone', comparator: '!=', value: 1 }
+
+      test('a condition: true, false, or unknown (null) for a null or missing field', () => {
+        expect(treeTruth(row, T)).toBe(true)
+        expect(treeTruth(row, F)).toBe(false)
+        expect(treeTruth(row, U)).toBeNull()
+        expect(treeTruth(row, missing)).toBeNull()
+        // is null / exists are never unknown
+        expect(treeTruth(row, { property: 'u', comparator: 'is null' })).toBe(true)
+        expect(treeTruth(row, { property: 'gone', comparator: 'exists' })).toBe(false)
+      })
+
+      test.each([
+        ['not true', { not: T }, false],
+        ['not false', { not: F }, true],
+        ['not unknown', { not: U }, null],
+        ['true and true', { and: [T, T] }, true],
+        ['true and false', { and: [T, F] }, false],
+        ['false and unknown', { and: [F, U] }, false],
+        ['unknown and false', { and: [U, F] }, false],
+        ['true and unknown', { and: [T, U] }, null],
+        ['unknown and unknown', { and: [U, missing] }, null],
+        ['true or unknown', { or: [T, U] }, true],
+        ['unknown or true', { or: [U, T] }, true],
+        ['false or unknown', { or: [F, U] }, null],
+        ['false or false', { or: [F, F] }, false],
+        ['not (false or unknown)', { not: { or: [F, U] } }, null],
+        ['not (false and unknown)', { not: { and: [F, U] } }, true]
+      ])('%s', (name, node, expected) => {
+        expect(treeTruth(row, node)).toBe(expected)
+      })
+
+      test('only rows where the whole tree is true are kept', () => {
+        const withNulls = [{ id: 1, n: 5 }, { id: 2, n: 3 }, { id: 3, n: null }, { id: 4 }]
+        const n5 = { property: 'n', comparator: '=', value: 5 }
+        const ids = node => whereTree(withNulls, node).map(item => item.id)
+        // not (n = 5) gives the same rows as n != 5: neither returns null or missing
+        expect(ids({ not: n5 })).toEqual([2])
+        expect(ids({ property: 'n', comparator: '!=', value: 5 })).toEqual([2])
+        expect(ids({ not: { not: n5 } })).toEqual([1])
+        expect(ids({ or: [n5, { property: 'n', comparator: 'is null' }] })).toEqual([1, 3])
+        // in with a null in the list: a match is true, no match is unknown (x in [1, null] is x = 1 or x = null)
+        const in5 = { property: 'n', comparator: 'in', value: [5, null] }
+        expect(treeTruth({ n: 5 }, in5)).toBe(true)
+        expect(treeTruth({ n: 3 }, in5)).toBeNull()
+        expect(treeTruth({ n: 3 }, { property: 'n', comparator: 'in', value: [5] })).toBe(false)
+        expect(ids(in5)).toEqual([1])
+        expect(ids({ not: in5 })).toEqual([])
+        expect(ids({ not: { property: 'n', comparator: 'in', value: [5] } })).toEqual([2])
+        // a null between bound bounds nothing: unknown, so not (...) keeps nothing either
+        expect(ids({ not: { property: 'n', comparator: 'between', value: [null, 5] } })).toEqual([])
+        // unknown and false is false, so not (...) keeps rows 3 and 4
+        expect(ids({ not: { and: [n5, { property: 'id', comparator: '=', value: 1 }] } })).toEqual([2, 3, 4])
+      })
     })
   })
 })

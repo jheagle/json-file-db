@@ -13,12 +13,18 @@ const likeMatch = (dataValue, pattern) => {
 }
 
 /**
+ * SQL's three-valued logic: a condition is true, false, or unknown (null here), see makeCondition.
+ */
+export type Truth = boolean | null
+
+/**
  * Equality (=, !=, <>, in) compares by the field's declared type when given one (see sameValue), so
  * '3' and 3 match in a string or int field. Ordering (>, >=, <, <=, between) compares by it too (see compareAs): a
  * string field orders as text ('10' < '9'), an int field as numbers. like compares the raw values.
  *
- * Null and missing are their own cases, as in SQL: a field that is null or missing matches no comparison (not even
- * `!=`), and a null never equals anything, not even another null. Only these test for them:
+ * Null and missing are their own cases, as in SQL: a comparison on a field that is null or missing is unknown (null),
+ * neither true nor false, so it matches nothing (not even `!=`) and `not` doesn't turn it into a match. A null never
+ * equals anything, not even another null. Only these test for them, and they are never unknown:
  * - `is null`: the field is there and holds null
  * - `is not null`: the field is there and holds a value (so a missing field doesn't match either)
  * - `exists` / `does not exist`: the field is there (null counts) / is missing
@@ -28,7 +34,7 @@ const likeMatch = (dataValue, pattern) => {
  * @param value
  * @param type
  */
-const makeCondition = (data, property, comparator, value, type = undefined) => {
+const makeCondition = (data, property, comparator, value, type = undefined): Truth => {
   const exists = Object.prototype.hasOwnProperty.call(data, property)
   switch (comparator) {
     case 'exists':
@@ -41,7 +47,7 @@ const makeCondition = (data, property, comparator, value, type = undefined) => {
       return exists && data[property] !== null
   }
   if (!exists || data[property] === null || value === null) {
-    return false
+    return null
   }
   const dataValue = data[property]
   const typedValue = compareAs(type, dataValue)
@@ -59,11 +65,25 @@ const makeCondition = (data, property, comparator, value, type = undefined) => {
       return typedValue < compareAs(type, value)
     case '<=':
       return typedValue <= compareAs(type, value)
-    case 'in':
-      return Array.isArray(value) && (type ? value.some(item => sameValue(type, dataValue, item)) : value.includes(dataValue))
+    case 'in': {
+      if (!Array.isArray(value)) {
+        return false
+      }
+      if (type ? value.some(item => item !== null && sameValue(type, dataValue, item)) : value.includes(dataValue)) {
+        return true
+      }
+      // SQL: `x in [1, null]` is x = 1 or x = null, so with no match it's unknown (not false), and not (...) keeps nothing
+      return value.includes(null) ? null : false
+    }
     case 'between':
-      // A null bound would act as 0 in >= / <=: it bounds nothing, so nothing matches (the parser refuses it)
-      return Array.isArray(value) && value.length === 2 && !value.includes(null) && typedValue >= compareAs(type, value[0]) && typedValue <= compareAs(type, value[1])
+      if (!Array.isArray(value) || value.length !== 2) {
+        return false
+      }
+      // A null bound would act as 0 in >= / <=: it bounds nothing, so the result is unknown (the parser refuses it)
+      if (value.includes(null)) {
+        return null
+      }
+      return typedValue >= compareAs(type, value[0]) && typedValue <= compareAs(type, value[1])
     case 'like':
       return likeMatch(dataValue, value)
   }
@@ -71,11 +91,11 @@ const makeCondition = (data, property, comparator, value, type = undefined) => {
 }
 
 /**
- * Whether one row matches one condition (shared by where and whereTree).
+ * One condition on one row: true, false or unknown (shared by where and whereTree).
  * @param data
  * @param condition
  */
-const matchesCondition = (
+const conditionTruth = (
   data,
   {
     property = '',
@@ -84,36 +104,56 @@ const matchesCondition = (
     value = null,
     type = undefined
   }: { property?: string, joinEntity?: string, comparator?: string, value?: any, type?: string } = {}
-): boolean => makeCondition(data, joinEntity ? `${joinEntity}.${property}` : property, comparator, value, type)
-
-export const where = (dataSet = [], condition = {}) => dataSet.filter(data => matchesCondition(data, condition))
+): Truth => makeCondition(data, joinEntity ? `${joinEntity}.${property}` : property, comparator, value, type)
 
 /**
- * Whether a tree has only conditions and `and` nodes (all that can be evaluated until three-valued logic lands).
- * @param node
+ * The rows for which one condition is true (unknown, from a null or missing field, isn't).
+ * @param dataSet
+ * @param condition
  */
-const isSupported = (node: ConditionNode): boolean =>
-  isCondition(node) || ('and' in node && node.and.every(isSupported))
+export const where = (dataSet = [], condition = {}) => dataSet.filter(data => conditionTruth(data, condition) === true)
 
 /**
- * Whether one row matches a where-clause tree.
+ * A where-clause tree on one row, with SQL's three-valued logic: unknown (null) stays unknown through `not`, and
+ * `and` / `or` decide on it only when another child settles the result.
+ *
+ * | | result |
+ * |---|---|
+ * | `not unknown` | unknown |
+ * | `false and unknown` | false |
+ * | `true and unknown` | unknown |
+ * | `true or unknown` | true |
+ * | `false or unknown` | unknown |
  * @param data
  * @param node
- * @throws {Error} For `or` and `not`, which nothing produces yet (the where-clauses epic adds them with SQL's
- * three-valued logic).
  */
-const matchesTree = (data, node: ConditionNode): boolean => {
+export const treeTruth = (data, node: ConditionNode): Truth => {
   if (isCondition(node)) {
-    return matchesCondition(data, node)
+    return conditionTruth(data, node)
   }
-  if ('and' in node) {
-    return node.and.every(child => matchesTree(data, child))
+  if ('not' in node) {
+    const truth = treeTruth(data, node.not)
+    return truth === null ? null : !truth
   }
-  throw new Error(`\`${'or' in node ? 'or' : 'not'}\` conditions are not supported yet`)
+  // and: false wins, then unknown; or: true wins, then unknown
+  const settles = !('and' in node)
+  let result: Truth = !settles
+  for (const child of 'and' in node ? node.and : node.or) {
+    const truth = treeTruth(data, child)
+    if (truth === settles) {
+      return settles
+    }
+    if (truth === null) {
+      result = null
+    }
+  }
+  return result
 }
 
 /**
- * The rows that match a where-clause tree (see ConditionNode); every row when there is no where clause.
+ * The rows that match a where-clause tree (see ConditionNode): only those for which the whole tree is true, so
+ * `not (n = 5)` returns the same rows as `n != 5` (neither returns a row where n is null or missing). Every row when
+ * there is no where clause.
  * @param dataSet
  * @param node
  */
@@ -121,9 +161,5 @@ export const whereTree = (dataSet = [], node: ConditionNode | undefined = undefi
   if (typeof node === 'undefined') {
     return dataSet
   }
-  // Checked once, before any row: the error mustn't depend on whether there are rows to check
-  if (!isSupported(node)) {
-    throw new Error('`or` and `not` conditions are not supported yet')
-  }
-  return dataSet.filter(data => matchesTree(data, node))
+  return dataSet.filter(data => treeTruth(data, node) === true)
 }
