@@ -311,6 +311,16 @@ describe('where', () => {
         expect(ids({ property: 'n', comparator: '!=', value: 5 })).toEqual([2])
         expect(ids({ not: { not: n5 } })).toEqual([1])
         expect(ids({ or: [n5, { property: 'n', comparator: 'is null' }] })).toEqual([1, 3])
+        // in with a null in the list: a match is true, no match is unknown (x in [1, null] is x = 1 or x = null)
+        const in5 = { property: 'n', comparator: 'in', value: [5, null] }
+        expect(treeTruth({ n: 5 }, in5)).toBe(true)
+        expect(treeTruth({ n: 3 }, in5)).toBeNull()
+        expect(treeTruth({ n: 3 }, { property: 'n', comparator: 'in', value: [5] })).toBe(false)
+        expect(ids(in5)).toEqual([1])
+        expect(ids({ not: in5 })).toEqual([])
+        expect(ids({ not: { property: 'n', comparator: 'in', value: [5] } })).toEqual([2])
+        // a null between bound bounds nothing: unknown, so not (...) keeps nothing either
+        expect(ids({ not: { property: 'n', comparator: 'between', value: [null, 5] } })).toEqual([])
         // unknown and false is false, so not (...) keeps rows 3 and 4
         expect(ids({ not: { and: [n5, { property: 'id', comparator: '=', value: 1 }] } })).toEqual([2, 3, 4])
       })

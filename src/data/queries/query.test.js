@@ -446,6 +446,10 @@ describe('query', () => {
       // false and unknown = false, so not (...) keeps missing; true and unknown = unknown, so null is dropped
       expect(await names(`read scores where not (${field} > 0 and name = 'null')`)).toEqual(['five', 'missing', 'zero'])
       expect(await names(`read scores where not (${field} = 5 or name = 'missing')`)).toEqual(['zero'])
+      // a null in an in list: no match is unknown, so not (...) keeps nothing that isn't matched
+      expect(await names(`read scores where ${field} in [5, null]`)).toEqual(['five'])
+      expect(await names(`read scores where not (${field} in [5, null])`)).toEqual([])
+      expect(await names(`read scores where not (${field} in [5])`)).toEqual(['zero'])
       // an indexed condition (n) narrows the rows, the not still applies
       expect(await names(`read scores where ${field} >= 0 and not (${field} = 5)`)).toEqual(['zero'])
     })

@@ -65,11 +65,25 @@ const makeCondition = (data, property, comparator, value, type = undefined): Tru
       return typedValue < compareAs(type, value)
     case '<=':
       return typedValue <= compareAs(type, value)
-    case 'in':
-      return Array.isArray(value) && (type ? value.some(item => sameValue(type, dataValue, item)) : value.includes(dataValue))
+    case 'in': {
+      if (!Array.isArray(value)) {
+        return false
+      }
+      if (type ? value.some(item => item !== null && sameValue(type, dataValue, item)) : value.includes(dataValue)) {
+        return true
+      }
+      // SQL: `x in [1, null]` is x = 1 or x = null, so with no match it's unknown (not false), and not (...) keeps nothing
+      return value.includes(null) ? null : false
+    }
     case 'between':
-      // A null bound would act as 0 in >= / <=: it bounds nothing, so nothing matches (the parser refuses it)
-      return Array.isArray(value) && value.length === 2 && !value.includes(null) && typedValue >= compareAs(type, value[0]) && typedValue <= compareAs(type, value[1])
+      if (!Array.isArray(value) || value.length !== 2) {
+        return false
+      }
+      // A null bound would act as 0 in >= / <=: it bounds nothing, so the result is unknown (the parser refuses it)
+      if (value.includes(null)) {
+        return null
+      }
+      return typedValue >= compareAs(type, value[0]) && typedValue <= compareAs(type, value[1])
     case 'like':
       return likeMatch(dataValue, value)
   }
