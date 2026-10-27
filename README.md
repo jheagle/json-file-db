@@ -64,6 +64,10 @@ const [workouts, exercises] = await query("read workouts where date = '2024-06-0
 
 The `;` after the last (or only) query is optional. A `;` inside a string, a comment or brackets doesn't end a query.
 
+Write the commands `read`, `insert`, `update` and `delete`, and the sort directions `asc` and `desc`, in lowercase:
+`READ t` is an error, and `sort a ASC` sorts descending. Other keywords (`where`, `and`, `sort`, `limit`, `create`,
+`show records`...) and comparators can be written in any case.
+
 ### Strings
 
 Strings use single or double quotes. A string closes only with the quote it opened with, so the other quote is just
@@ -160,7 +164,7 @@ for anything else:
 The comparators are `=`, `!=` (or `<>`), `>`, `>=`, `<`, `<=`, `in [...]`, `between [low, high]` and `like` (`%`
 matches any text, `_` one character, ignoring case). `is null`, `is not null`, `exists` and `does not exist` test
 for null and missing fields (see below). In a where clause, the keywords (`where`, `and`, `or`, `not`, `is null`...) and comparators (`IN`, `LIKE`) can be
-written in any case.
+written in any case (see the casing note under Writing queries).
 
 The older form, a `where` per condition (`where a = 1 and where b = 2`, `or where`), still works and means the same.
 
