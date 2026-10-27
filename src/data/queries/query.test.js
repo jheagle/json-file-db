@@ -515,6 +515,13 @@ describe('query', () => {
       expect(await values(`read typed sort ${field} desc`, field)).toEqual(['9', '2', '10'])
     })
 
+    test('a string field sorts as text even when its values are stored as numbers (the sort clause gets the field\'s type)', async () => {
+      // test-data's _id is declared string: rows 1-6 are stored as numbers, an inserted one as text ('10')
+      await query("insert workouts values _id = 10, exercise_id = 1, order = 0, date = '2024-06-10'")
+      const [rows] = await query('read workouts sort _id')
+      expect(rows.map(row => String(row._id))).toEqual(['1', '10', '2', '3', '4', '5', '6'])
+    })
+
     test.each(['i', 'ii'])('%s: an int field compares and sorts as numbers, whether the literal is 2 or \'2\'', async (field) => {
       for (const literal of ['2', "'2'"]) {
         expect((await values(`read typed where ${field} > ${literal} sort ${field}`, field))).toEqual([9, 10])
