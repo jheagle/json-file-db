@@ -172,7 +172,8 @@ only link them (`exercise_muscle` in `workouts.muscles`) are an error.
 - [ ] **Parser**: read the expression into the tree with the precedence above, walking the masked text; the
   expression ends at the next clause keyword outside brackets (`and on` included); `and where` / `or where`
   accepted. Every example and error listed in the Grammar section becomes a test, plus a regression test that `or`
-  no longer errors.
+  no longer errors. Flatten nested groups of the same kind (`a and (b and c)` -> one `and` of three): only the
+  top-level `and`'s direct conditions narrow rows through an index (`requiredConditions`).
 - [ ] **Evaluation**: three-valued logic (true / false / unknown) for `and`, `or`, `not`; a row is kept only when
   the whole expression is true. Tests: `not (n = 5)` gives the same rows as `n != 5`; the truth tables.
 - [ ] **Indexes for the tree**: candidate rows per node (intersection for `and`, union for `or` when every branch is

@@ -70,21 +70,23 @@ const makeCondition = (data, property, comparator, value, type = undefined) => {
   return false
 }
 
-export const where = (
-  dataSet = [],
+/**
+ * Whether one row matches one condition (shared by where and whereTree).
+ * @param data
+ * @param condition
+ */
+const matchesCondition = (
+  data,
   {
     property = '',
     joinEntity = undefined,
     comparator = '=',
     value = null,
     type = undefined
-  } = {}
-) => {
-  return dataSet.filter((data) => {
-    const testProperty = joinEntity ? `${joinEntity}.${property}` : property
-    return makeCondition(data, testProperty, comparator, value, type)
-  })
-}
+  }: { property?: string, joinEntity?: string, comparator?: string, value?: any, type?: string } = {}
+): boolean => makeCondition(data, joinEntity ? `${joinEntity}.${property}` : property, comparator, value, type)
+
+export const where = (dataSet = [], condition = {}) => dataSet.filter(data => matchesCondition(data, condition))
 
 /**
  * Whether one row matches a where-clause tree.
@@ -95,8 +97,7 @@ export const where = (
  */
 const matchesTree = (data, node: ConditionNode): boolean => {
   if (isCondition(node)) {
-    const { property = '', joinEntity = undefined, comparator = '=', value = null, type = undefined } = node as any
-    return makeCondition(data, joinEntity ? `${joinEntity}.${property}` : property, comparator, value, type)
+    return matchesCondition(data, node)
   }
   if ('and' in node) {
     return node.and.every(child => matchesTree(data, child))
