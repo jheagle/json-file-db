@@ -435,6 +435,30 @@ describe('query', () => {
     })
   })
 
+  describe('update and delete with a condition on another entity\'s field', () => {
+    const join = 'workouts.exercises on workouts.exercise_id = exercises._id'
+    const count = async () => (await query('read workouts'))[0].length
+
+    // exercises._id is indexed: it used to be dropped once its index had narrowed the exercises, and the delete then
+    // hit every workout
+    test.each([
+      [`delete ${join} where exercises._id = 1`, 'delete can only use conditions on workouts\'s own fields, not exercises._id'],
+      [`delete ${join} where exercises.name = 'Bench Press'`, 'not exercises.name'],
+      [`delete ${join} where date = '2024-06-02' and where exercises._id = 1`, 'not exercises._id'],
+      [`update ${join} set reps = 1 where exercises._id = 1`, 'update can only use conditions on workouts\'s own fields, not exercises._id']
+    ])('%s is refused and changes nothing', async (text, message) => {
+      await expect(query(text)).rejects.toThrow(message)
+      expect(await count()).toBe(6)
+      const [rows] = await query('read workouts where reps = 1')
+      expect(rows).toEqual([])
+    })
+
+    test('the entity\'s own fields, written with its name, are still allowed', async () => {
+      await query("delete workouts where workouts.date = 'none'")
+      expect(await count()).toBe(6)
+    })
+  })
+
   describe('several indexed conditions (date has an index, exercise_id a foreign key index)', () => {
     const ids = async (text) => (await query(text))[0].map(row => String(row._id)).sort()
 
