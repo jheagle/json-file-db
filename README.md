@@ -148,6 +148,14 @@ read workouts where reps > 8 and where date = '2024-06-02'
 `or where` is not supported yet, and is an error (in 1.x it was silently read as `and where`). And/or with grouping
 and precedence is planned.
 
+### Comparing by the field's type
+
+Conditions compare by the field's declared type, whatever type the stored value or the literal has: in a `string`
+or `int` field, `'3'` and `3` are equal. Ordering (`>`, `>=`, `<`, `<=`, `between`) and `sort` follow it too: a
+`string` field orders as text, so `'10'` comes before `'9'` (even ids stored as numbers), and an `int` field as
+numbers. A field with no declared type, or an `object` or `array` one, compares the stored values as they are.
+`like` only matches values stored as text.
+
 ### Null and missing fields
 
 A field can be missing (left out) or hold `null`, and both are their own cases, as in SQL: they match no
