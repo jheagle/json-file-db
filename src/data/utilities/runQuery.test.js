@@ -1,3 +1,4 @@
+import { allOf } from './conditionTree'
 import { create } from '../introspect/create'
 import { insertEntity } from '../queries/insertEntity'
 import { runQuery } from './runQuery'
@@ -24,7 +25,7 @@ const keys = [
 const baseParsed = (overrides) => Object.assign({
   entity: 'foo',
   joinEntity: undefined,
-  conditions: [],
+  where: allOf([]),
   joinClauses: [],
   mergeJoins: [],
   sortClauses: [],
@@ -39,7 +40,7 @@ describe('runQuery', () => {
 
       const result = await runQuery(baseParsed({
         command: 'delete',
-        conditions: [{ property: 'bar', comparator: '=', value: 'remove' }]
+        where: allOf([{ property: 'bar', comparator: '=', value: 'remove' }])
       }))
 
       expect(result.foo.map(row => row.bar)).toEqual(['remove'])
@@ -65,7 +66,7 @@ describe('runQuery', () => {
 
       const result = await runQuery(baseParsed({
         command: 'update',
-        conditions: [{ property: 'bar', comparator: '=', value: 'change-me' }],
+        where: allOf([{ property: 'bar', comparator: '=', value: 'change-me' }]),
         updateValues: { bar: 'changed' }
       }))
 
