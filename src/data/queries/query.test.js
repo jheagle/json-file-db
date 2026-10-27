@@ -1,5 +1,5 @@
 import { query } from './query'
-import { readFile } from 'fs/promises'
+import { readFile, writeFile } from 'fs/promises'
 import { create } from '../introspect/create'
 import { setUp } from 'test-filesystem'
 import { configure } from '../utilities/config'
@@ -433,6 +433,33 @@ describe('query', () => {
       await query('delete scores where n does not exist')
       expect(await names('read scores')).toEqual(['five', 'was null', 'zero'])
     })
+
+    // three-valued logic: a comparison on null or missing is unknown, and only a true where clause keeps a row
+    test.each(['n', 'm'])('%s: not / and / or keep a row only when the whole clause is true', async (field) => {
+      expect(await names(`read scores where not ${field} = 5`)).toEqual(['zero'])
+      expect(await names(`read scores where not (${field} = 5)`)).toEqual(await names(`read scores where ${field} != 5`))
+      expect(await names(`read scores where not (${field} < 6)`)).toEqual([])
+      expect(await names(`read scores where ${field} = 5 or ${field} = 0`)).toEqual(['five', 'zero'])
+      expect(await names(`read scores where ${field} = 5 or ${field} is null`)).toEqual(['five', 'null'])
+      // true or unknown = true (null), false or unknown = unknown (missing)
+      expect(await names(`read scores where ${field} > 0 or name = 'null'`)).toEqual(['five', 'null'])
+      // false and unknown = false, so not (...) keeps missing; true and unknown = unknown, so null is dropped
+      expect(await names(`read scores where not (${field} > 0 and name = 'null')`)).toEqual(['five', 'missing', 'zero'])
+      expect(await names(`read scores where not (${field} = 5 or name = 'missing')`)).toEqual(['zero'])
+      // a null in an in list: no match is unknown, so not (...) keeps nothing that isn't matched
+      expect(await names(`read scores where ${field} in [5, null]`)).toEqual(['five'])
+      expect(await names(`read scores where not (${field} in [5, null])`)).toEqual([])
+      expect(await names(`read scores where not (${field} in [5])`)).toEqual(['zero'])
+      // an indexed condition (n) narrows the rows, the not still applies
+      expect(await names(`read scores where ${field} >= 0 and not (${field} = 5)`)).toEqual(['zero'])
+    })
+
+    test('update and delete with or / not', async () => {
+      await query("update scores set name = 'changed' where n = 5 or m is null")
+      expect(await names('read scores')).toEqual(['changed', 'changed', 'missing', 'zero'])
+      await query('delete scores where not (n exists) or n = 0')
+      expect(await names('read scores')).toEqual(['changed', 'changed'])
+    })
   })
 
   describe('update and delete with a condition on another entity\'s field', () => {
@@ -512,6 +539,53 @@ describe('query', () => {
       expect(await names(`read ${record} where x = 1`)).toEqual(['one', 'two'])
       expect(await names(`read ${record} where y = 1`)).toEqual(['one', 'three'])
       expect(await names(`read ${record} where x = 1 and where y = 2`)).toEqual(['two'])
+    })
+  })
+
+  describe('an index only narrows the rows: every condition still applies', () => {
+    // A stale index entry (a crash between writing a row and its index can leave one) lists row 4, dated 2024-06-05,
+    // under 2024-06-02. The index picks it as a candidate, but the condition itself is still checked on it.
+    beforeEach(async () => {
+      const file = `${databasePath}__indexes/workouts/index_date.json`
+      const index = JSON.parse(await readFile(file, 'utf8'))
+      index.find(entry => entry.value === '2024-06-02').record.push('2024-06-05-001.json')
+      await writeFile(file, JSON.stringify(index))
+    })
+    const ids = async (text) => (await query(text))[0].map(row => String(row._id)).sort()
+
+    test('read', async () => {
+      expect(await ids("read workouts where date = '2024-06-02'")).toEqual(['1', '2', '3'])
+    })
+
+    test('two indexed conditions: the stale row survives the intersection, then the condition drops it', async () => {
+      // row 4 has exercise_id 1, so it is in both indexes' answers
+      expect(await ids("read workouts where date = '2024-06-02' and where exercise_id = 1")).toEqual(['1'])
+    })
+
+    test('an indexed and an unindexed condition', async () => {
+      expect(await ids("read workouts where date = '2024-06-02' and where reps = 10")).toEqual(['1', '2', '3'])
+    })
+
+    test('update and delete touch only rows the condition really matches', async () => {
+      await query("update workouts set note = 'x' where date = '2024-06-02'")
+      expect(await ids("read workouts where note = 'x'")).toEqual(['1', '2', '3'])
+      await query("delete workouts where date = '2024-06-02'")
+      expect(await ids('read workouts')).toEqual(['4', '5', '6'])
+    })
+  })
+
+  describe('conditions on a joined entity (an inner join, see joinedConditions.test.js)', () => {
+    const joined = async (text) => (await query(text))[0].map(row => [String(row._id), row.exercises.map(exercise => String(exercise._id))])
+
+    // Until the where-clauses epic, this returned every main row, the others with no joined rows
+    test('an indexed condition on a joined field keeps only the rows with a matching joined row', async () => {
+      expect(await joined('read workouts.exercises on workouts.exercise_id = exercises._id where exercises._id = 1')).toEqual([
+        ['1', ['1']], ['4', ['1']]
+      ])
+    })
+
+    test('an indexed condition matching nothing, with a join, returns nothing', async () => {
+      expect(await joined("read workouts.exercises on workouts.exercise_id = exercises._id where date = '2024-06-09'")).toEqual([])
     })
   })
 

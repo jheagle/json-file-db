@@ -1,4 +1,5 @@
 import { compareAs, sameValue } from '../utilities/compareAs'
+import { ConditionNode, isCondition } from '../utilities/conditionTree'
 
 const likeMatch = (dataValue, pattern) => {
   if (typeof dataValue !== 'string' || typeof pattern !== 'string') {
@@ -12,12 +13,18 @@ const likeMatch = (dataValue, pattern) => {
 }
 
 /**
+ * SQL's three-valued logic: a condition is true, false, or unknown (null here), see makeCondition.
+ */
+export type Truth = boolean | null
+
+/**
  * Equality (=, !=, <>, in) compares by the field's declared type when given one (see sameValue), so
  * '3' and 3 match in a string or int field. Ordering (>, >=, <, <=, between) compares by it too (see compareAs): a
  * string field orders as text ('10' < '9'), an int field as numbers. like compares the raw values.
  *
- * Null and missing are their own cases, as in SQL: a field that is null or missing matches no comparison (not even
- * `!=`), and a null never equals anything, not even another null. Only these test for them:
+ * Null and missing are their own cases, as in SQL: a comparison on a field that is null or missing is unknown (null),
+ * neither true nor false, so it matches nothing (not even `!=`) and `not` doesn't turn it into a match. A null never
+ * equals anything, not even another null. Only these test for them, and they are never unknown:
  * - `is null`: the field is there and holds null
  * - `is not null`: the field is there and holds a value (so a missing field doesn't match either)
  * - `exists` / `does not exist`: the field is there (null counts) / is missing
@@ -27,7 +34,7 @@ const likeMatch = (dataValue, pattern) => {
  * @param value
  * @param type
  */
-const makeCondition = (data, property, comparator, value, type = undefined) => {
+const makeCondition = (data, property, comparator, value, type = undefined): Truth => {
   const exists = Object.prototype.hasOwnProperty.call(data, property)
   switch (comparator) {
     case 'exists':
@@ -40,7 +47,7 @@ const makeCondition = (data, property, comparator, value, type = undefined) => {
       return exists && data[property] !== null
   }
   if (!exists || data[property] === null || value === null) {
-    return false
+    return null
   }
   const dataValue = data[property]
   const typedValue = compareAs(type, dataValue)
@@ -58,29 +65,131 @@ const makeCondition = (data, property, comparator, value, type = undefined) => {
       return typedValue < compareAs(type, value)
     case '<=':
       return typedValue <= compareAs(type, value)
-    case 'in':
-      return Array.isArray(value) && (type ? value.some(item => sameValue(type, dataValue, item)) : value.includes(dataValue))
+    case 'in': {
+      if (!Array.isArray(value)) {
+        return false
+      }
+      if (type ? value.some(item => item !== null && sameValue(type, dataValue, item)) : value.includes(dataValue)) {
+        return true
+      }
+      // SQL: `x in [1, null]` is x = 1 or x = null, so with no match it's unknown (not false), and not (...) keeps nothing
+      return value.includes(null) ? null : false
+    }
     case 'between':
-      // A null bound would act as 0 in >= / <=: it bounds nothing, so nothing matches (the parser refuses it)
-      return Array.isArray(value) && value.length === 2 && !value.includes(null) && typedValue >= compareAs(type, value[0]) && typedValue <= compareAs(type, value[1])
+      if (!Array.isArray(value) || value.length !== 2) {
+        return false
+      }
+      // A null bound would act as 0 in >= / <=: it bounds nothing, so the result is unknown (the parser refuses it)
+      if (value.includes(null)) {
+        return null
+      }
+      return typedValue >= compareAs(type, value[0]) && typedValue <= compareAs(type, value[1])
     case 'like':
       return likeMatch(dataValue, value)
   }
   return false
 }
 
-export const where = (
-  dataSet = [],
+/**
+ * One condition on one row: true, false or unknown (shared by where and whereTree).
+ * @param data
+ * @param condition
+ */
+const conditionTruth = (
+  data,
   {
     property = '',
     joinEntity = undefined,
     comparator = '=',
     value = null,
     type = undefined
-  } = {}
-) => {
-  return dataSet.filter((data) => {
-    const testProperty = joinEntity ? `${joinEntity}.${property}` : property
-    return makeCondition(data, testProperty, comparator, value, type)
+  }: { property?: string, joinEntity?: string, comparator?: string, value?: any, type?: string } = {}
+): Truth => makeCondition(data, joinEntity ? `${joinEntity}.${property}` : property, comparator, value, type)
+
+/**
+ * The rows for which one condition is true (unknown, from a null or missing field, isn't).
+ * @param dataSet
+ * @param condition
+ */
+export const where = (dataSet = [], condition = {}) => dataSet.filter(data => conditionTruth(data, condition) === true)
+
+/**
+ * A where-clause tree on one row, with SQL's three-valued logic: unknown (null) stays unknown through `not`, and
+ * `and` / `or` decide on it only when another child settles the result.
+ *
+ * | | result |
+ * |---|---|
+ * | `not unknown` | unknown |
+ * | `false and unknown` | false |
+ * | `true and unknown` | unknown |
+ * | `true or unknown` | true |
+ * | `false or unknown` | unknown |
+ * @param data
+ * @param node
+ */
+export const treeTruth = (data, node: ConditionNode): Truth => {
+  if (isCondition(node)) {
+    return conditionTruth(data, node)
+  }
+  if ('not' in node) {
+    const truth = treeTruth(data, node.not)
+    return truth === null ? null : !truth
+  }
+  // and: false wins, then unknown; or: true wins, then unknown
+  const settles = !('and' in node)
+  let result: Truth = !settles
+  for (const child of 'and' in node ? node.and : node.or) {
+    const truth = treeTruth(data, child)
+    if (truth === settles) {
+      return settles
+    }
+    if (truth === null) {
+      result = null
+    }
+  }
+  return result
+}
+
+/**
+ * One row seen together with one of its joined rows, for evaluating a where clause on the pair: the row's own fields,
+ * plus the joined row's as `joinEntity.field` (a field already on the row, such as a merged one, is kept).
+ * @param row
+ * @param joinEntity
+ * @param joinedRow
+ */
+const pairView = (row, joinEntity: string, joinedRow) => {
+  const view = Object.assign({}, row)
+  for (const field of Object.keys(joinedRow)) {
+    // A merged field on the joined row is already named `entity.field`
+    const name = field.includes('.') ? field : `${joinEntity}.${field}`
+    if (!Object.prototype.hasOwnProperty.call(view, name)) {
+      view[name] = joinedRow[field]
+    }
+  }
+  return view
+}
+
+/**
+ * The rows that match a where-clause tree (see ConditionNode): only those for which the whole tree is true, so
+ * `not (n = 5)` returns the same rows as `n != 5` (neither returns a row where n is null or missing). Every row when
+ * there is no where clause.
+ *
+ * With a joinEntity (the tree uses its fields, see conditionEntities), it's SQL's inner join, evaluated per pair: each
+ * row keeps the joined rows for which the tree is true with that pair, and a row left with none is dropped.
+ * @param dataSet
+ * @param node
+ * @param joinEntity
+ */
+export const whereTree = (dataSet = [], node: ConditionNode | undefined = undefined, joinEntity: string | undefined = undefined) => {
+  if (typeof node === 'undefined') {
+    return dataSet
+  }
+  if (typeof joinEntity === 'undefined') {
+    return dataSet.filter(data => treeTruth(data, node) === true)
+  }
+  return dataSet.flatMap(data => {
+    const joined = Array.isArray(data[joinEntity]) ? data[joinEntity] : []
+    const kept = joined.filter(joinedRow => treeTruth(pairView(data, joinEntity, joinedRow), node) === true)
+    return kept.length ? [Object.assign({}, data, { [joinEntity]: kept })] : []
   })
 }
