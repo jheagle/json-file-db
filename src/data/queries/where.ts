@@ -89,6 +89,13 @@ const matchesCondition = (
 export const where = (dataSet = [], condition = {}) => dataSet.filter(data => matchesCondition(data, condition))
 
 /**
+ * Whether a tree has only conditions and `and` nodes (all that can be evaluated until three-valued logic lands).
+ * @param node
+ */
+const isSupported = (node: ConditionNode): boolean =>
+  isCondition(node) || ('and' in node && node.and.every(isSupported))
+
+/**
  * Whether one row matches a where-clause tree.
  * @param data
  * @param node
@@ -110,5 +117,13 @@ const matchesTree = (data, node: ConditionNode): boolean => {
  * @param dataSet
  * @param node
  */
-export const whereTree = (dataSet = [], node: ConditionNode | undefined = undefined) =>
-  typeof node === 'undefined' ? dataSet : dataSet.filter(data => matchesTree(data, node))
+export const whereTree = (dataSet = [], node: ConditionNode | undefined = undefined) => {
+  if (typeof node === 'undefined') {
+    return dataSet
+  }
+  // Checked once, before any row: the error mustn't depend on whether there are rows to check
+  if (!isSupported(node)) {
+    throw new Error('`or` and `not` conditions are not supported yet')
+  }
+  return dataSet.filter(data => matchesTree(data, node))
+}

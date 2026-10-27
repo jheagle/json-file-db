@@ -65,10 +65,8 @@ describe('findConditions', () => {
     expect(remaining).toBe('')
   })
 
-  test('reads is null, exists and the rest only as whole words', () => {
-    const { parsed, remaining } = parse('where note existsx = 1')
-    expect(conditionsOf(parsed.where)).toEqual([])
-    expect(remaining).toBe('where note existsx = 1')
+  test('reads is null, exists and the rest only as whole words (it used to leave the clause unread)', () => {
+    expect(() => parse('where note existsx = 1')).toThrow('Missing a condition after where: note existsx = 1')
   })
 
   test('still reads a field named like the keywords', () => {

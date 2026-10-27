@@ -158,16 +158,16 @@ only link them (`exercise_muscle` in `workouts.muscles`) are an error.
    adds no complexity now and doesn't stop a strict order later. **A fixed SQL order comes as its own round soon
    after** (the maintainer expects it to make the code simpler and avoid future issues; it's breaking, so it's
    planned on its own).
-6. **Minor release (2.2.0)**, as everything here is additive.
+6. **Minor release**, as everything here is additive: 2.3.0 (2.2.0 went to typed ordering, #72).
 
 ## Work Split
 
 - [x] **Design**: grammar, tree, evaluation, indexes and joins above; decisions recorded.
-- [ ] **Indexes narrow only** (on today's flat list, first): `getConditionIndexedList` only loads candidate rows; no
+- [x] **Indexes narrow only** (#73) (on today's flat list, first): `getConditionIndexedList` only loads candidate rows; no
   condition is removed from the list, and `runQuery` applies every condition to the candidates (for update/delete
   before the write, for read after the join, as today). Tests: every existing indexed query gives the same rows; an
   indexed condition still applies when the index pre-filter is skipped.
-- [ ] **Parsed shape**: `parsed.where` becomes the `ConditionNode` tree (types in `parseQuery.ts`), built from
+- [x] **Parsed shape** (#74): `parsed.where` becomes the `ConditionNode` tree (types in `parseQuery.ts`), built from
   today's list as one `and` node, so nothing changes yet; `where` / `runQuery` / `typeClauses` walk the tree.
 - [ ] **Parser**: read the expression into the tree with the precedence above, walking the masked text; the
   expression ends at the next clause keyword outside brackets (`and on` included); `and where` / `or where`
@@ -193,4 +193,4 @@ only link them (`exercise_muscle` in `workouts.muscles`) are an error.
 
 ## Release
 
-Not part of any task PR: once `feature/where-clauses` merges to `main`, a separate release PR: 2.2.0 (decision 6).
+Not part of any task PR: once `feature/where-clauses` merges to `main`, a separate release PR: 2.3.0 (decision 6).

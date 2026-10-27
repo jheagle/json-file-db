@@ -259,8 +259,11 @@ describe('where', () => {
     })
 
     test('or and not are refused until the where-clauses epic builds them', () => {
-      expect(() => whereTree(rows, { or: [n2, sx] })).toThrow('`or` conditions are not supported yet')
-      expect(() => whereTree(rows, { not: n2 })).toThrow('`not` conditions are not supported yet')
+      expect(() => whereTree(rows, { or: [n2, sx] })).toThrow('`or` and `not` conditions are not supported yet')
+      expect(() => whereTree(rows, { not: n2 })).toThrow('`or` and `not` conditions are not supported yet')
+      // also with no rows to check, and nested under an and
+      expect(() => whereTree([], { or: [n2, sx] })).toThrow('`or` and `not` conditions are not supported yet')
+      expect(() => whereTree(rows, { and: [n2, { not: sx }] })).toThrow('`or` and `not` conditions are not supported yet')
     })
   })
 })

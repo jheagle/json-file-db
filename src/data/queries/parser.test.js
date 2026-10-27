@@ -480,10 +480,11 @@ describe('parser', () => {
   describe('conditions', () => {
     const only = (queries) => parser(queries)[0]
 
-    test('or where is refused, instead of being read as and where', () => {
-      expect(() => parser('read t where a = 1 or where b = 2'))
-        .toThrow('`or where` is not supported yet: use `and where`, or run one query per alternative')
-      expect(() => parser('read t where a = 1 OR WHERE b = 2')).toThrow('`or where` is not supported yet')
+    test('or where is the older spelling of or (it was refused, and in 1.x read as and)', () => {
+      const a = { property: 'a', comparator: '=', value: 1 }
+      const b = { property: 'b', comparator: '=', value: 2 }
+      expect(only('read t where a = 1 or where b = 2').where).toEqual({ or: [a, b] })
+      expect(only('read t where a = 1 OR WHERE b = 2').where).toEqual({ or: [a, b] })
     })
 
     test('and where still joins conditions, in any case', () => {
@@ -511,7 +512,7 @@ describe('parser', () => {
 
     test('connectors after a newline or a tab', () => {
       expect(conditionsOf(only('read t where a = 1\nand\twhere b = 2').where)).toHaveLength(2)
-      expect(() => parser('read t where a = 1\nor\twhere b = 2')).toThrow('`or where` is not supported yet')
+      expect(only('read t where a = 1\nor\twhere b = 2').where).toEqual({ or: [{ property: 'a', comparator: '=', value: 1 }, { property: 'b', comparator: '=', value: 2 }] })
     })
 
     test('or inside a string is just text', () => {
