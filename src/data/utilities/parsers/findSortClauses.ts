@@ -10,6 +10,8 @@ const sortRuleMatch: RegExp = /(sort)?\s*,?\s*([a-z0-9._-]+)(?:\s+(asc|desc)(?![
 export type ParsedSortClause = {
   property: string
   direction: string | 'asc' | 'desc'
+  // The field's declared type, resolved from its record when the query runs (see sortBy)
+  type?: string
 }
 
 /**

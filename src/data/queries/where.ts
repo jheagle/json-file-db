@@ -1,4 +1,4 @@
-import { sameValue } from '../utilities/compareAs'
+import { compareAs, sameValue } from '../utilities/compareAs'
 
 const likeMatch = (dataValue, pattern) => {
   if (typeof dataValue !== 'string' || typeof pattern !== 'string') {
@@ -13,7 +13,8 @@ const likeMatch = (dataValue, pattern) => {
 
 /**
  * Equality (=, !=, <>, in) compares by the field's declared type when given one (see sameValue), so
- * '3' and 3 match in a string or int field. Ordering (>, <, between, like) compares the raw values.
+ * '3' and 3 match in a string or int field. Ordering (>, >=, <, <=, between) compares by it too (see compareAs): a
+ * string field orders as text ('10' < '9'), an int field as numbers. like compares the raw values.
  *
  * Null and missing are their own cases, as in SQL: a field that is null or missing matches no comparison (not even
  * `!=`), and a null never equals anything, not even another null. Only these test for them:
@@ -42,6 +43,7 @@ const makeCondition = (data, property, comparator, value, type = undefined) => {
     return false
   }
   const dataValue = data[property]
+  const typedValue = compareAs(type, dataValue)
   switch (comparator) {
     case '=':
       return sameValue(type, dataValue, value)
@@ -49,18 +51,18 @@ const makeCondition = (data, property, comparator, value, type = undefined) => {
     case '<>':
       return !sameValue(type, dataValue, value)
     case '>':
-      return dataValue > value
+      return typedValue > compareAs(type, value)
     case '>=':
-      return dataValue >= value
+      return typedValue >= compareAs(type, value)
     case '<':
-      return dataValue < value
+      return typedValue < compareAs(type, value)
     case '<=':
-      return dataValue <= value
+      return typedValue <= compareAs(type, value)
     case 'in':
       return Array.isArray(value) && (type ? value.some(item => sameValue(type, dataValue, item)) : value.includes(dataValue))
     case 'between':
       // A null bound would act as 0 in >= / <=: it bounds nothing, so nothing matches (the parser refuses it)
-      return Array.isArray(value) && value.length === 2 && !value.includes(null) && dataValue >= value[0] && dataValue <= value[1]
+      return Array.isArray(value) && value.length === 2 && !value.includes(null) && typedValue >= compareAs(type, value[0]) && typedValue <= compareAs(type, value[1])
     case 'like':
       return likeMatch(dataValue, value)
   }
