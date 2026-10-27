@@ -433,6 +433,29 @@ describe('query', () => {
       await query('delete scores where n does not exist')
       expect(await names('read scores')).toEqual(['five', 'was null', 'zero'])
     })
+
+    // three-valued logic: a comparison on null or missing is unknown, and only a true where clause keeps a row
+    test.each(['n', 'm'])('%s: not / and / or keep a row only when the whole clause is true', async (field) => {
+      expect(await names(`read scores where not ${field} = 5`)).toEqual(['zero'])
+      expect(await names(`read scores where not (${field} = 5)`)).toEqual(await names(`read scores where ${field} != 5`))
+      expect(await names(`read scores where not (${field} < 6)`)).toEqual([])
+      expect(await names(`read scores where ${field} = 5 or ${field} = 0`)).toEqual(['five', 'zero'])
+      expect(await names(`read scores where ${field} = 5 or ${field} is null`)).toEqual(['five', 'null'])
+      // true or unknown = true (null), false or unknown = unknown (missing)
+      expect(await names(`read scores where ${field} > 0 or name = 'null'`)).toEqual(['five', 'null'])
+      // false and unknown = false, so not (...) keeps missing; true and unknown = unknown, so null is dropped
+      expect(await names(`read scores where not (${field} > 0 and name = 'null')`)).toEqual(['five', 'missing', 'zero'])
+      expect(await names(`read scores where not (${field} = 5 or name = 'missing')`)).toEqual(['zero'])
+      // an indexed condition (n) narrows the rows, the not still applies
+      expect(await names(`read scores where ${field} >= 0 and not (${field} = 5)`)).toEqual(['zero'])
+    })
+
+    test('update and delete with or / not', async () => {
+      await query("update scores set name = 'changed' where n = 5 or m is null")
+      expect(await names('read scores')).toEqual(['changed', 'changed', 'missing', 'zero'])
+      await query('delete scores where not (n exists) or n = 0')
+      expect(await names('read scores')).toEqual(['changed', 'changed'])
+    })
   })
 
   describe('several indexed conditions (date has an index, exercise_id a foreign key index)', () => {
