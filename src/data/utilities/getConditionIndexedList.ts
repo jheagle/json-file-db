@@ -13,6 +13,11 @@ import { getMatchingIndexes } from './getMatchingIndexes'
  * conditions it answered, and the 3 bugs fixed in #69 came from that split).
  * Conditions are joined by `and`, so a row is a candidate only when every indexed condition on its entity matched it:
  * each one narrows the files the ones before it matched.
+ *
+ * For now, an indexed condition on a joined entity's field (`exercises._id = 1`) is still removed once its index has
+ * loaded that entity's rows: where() can't check `entity.field` on the main rows yet, and this keeps what such a
+ * condition does today (the join then only attaches the matching rows). The where-clauses epic's joined-entities
+ * task replaces this with per-pair evaluation.
  * @param parsed
  * @param recordData
  * @param dataSet
@@ -22,6 +27,7 @@ import { getMatchingIndexes } from './getMatchingIndexes'
 export const getConditionIndexedList = async (parsed: ParsedQuery, recordData, dataSet, resolved: Set<string> = new Set()) => {
   const matchedFiles: { [entity: string]: string[] } = {}
   const indexed = {}
+  const answeredJoinConditions = []
   for (const condition of parsed.conditions) {
     let entity = parsed.entity
     let property = condition.property
@@ -44,7 +50,10 @@ export const getConditionIndexedList = async (parsed: ParsedQuery, recordData, d
         ? matchedFiles[entity].filter(file => files.has(file))
         : [...files]
     }
-    await getMatchingIndexes(entity, property, recordData, condition, dataSet, indexed, narrowMatchedFiles)
+    const isIndexed = await getMatchingIndexes(entity, property, recordData, condition, dataSet, indexed, narrowMatchedFiles)
+    if (isIndexed && entity !== parsed.entity) {
+      answeredJoinConditions.push(condition)
+    }
   }
   for (const entity of Object.keys(matchedFiles)) {
     resolved.add(entity)
@@ -53,5 +62,6 @@ export const getConditionIndexedList = async (parsed: ParsedQuery, recordData, d
       dataSet[entity].push(await retrieveFile(`${entity}/${file}`))
     }
   }
+  parsed.conditions = parsed.conditions.filter(condition => !answeredJoinConditions.includes(condition))
   return parsed
 }

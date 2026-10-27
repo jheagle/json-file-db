@@ -506,11 +506,36 @@ describe('query', () => {
       expect(await ids("read workouts where date = '2024-06-02'")).toEqual(['1', '2', '3'])
     })
 
+    test('two indexed conditions: the stale row survives the intersection, then the condition drops it', async () => {
+      // row 4 has exercise_id 1, so it is in both indexes' answers
+      expect(await ids("read workouts where date = '2024-06-02' and where exercise_id = 1")).toEqual(['1'])
+    })
+
+    test('an indexed and an unindexed condition', async () => {
+      expect(await ids("read workouts where date = '2024-06-02' and where reps = 10")).toEqual(['1', '2', '3'])
+    })
+
     test('update and delete touch only rows the condition really matches', async () => {
       await query("update workouts set note = 'x' where date = '2024-06-02'")
       expect(await ids("read workouts where note = 'x'")).toEqual(['1', '2', '3'])
       await query("delete workouts where date = '2024-06-02'")
       expect(await ids('read workouts')).toEqual(['4', '5', '6'])
+    })
+  })
+
+  describe('conditions on a joined entity (until the where-clauses joined-entities task)', () => {
+    const joined = async (text) => (await query(text))[0].map(row => [String(row._id), row.exercises.map(exercise => String(exercise._id))])
+
+    // Pins what an indexed condition on a joined field does today: every main row, each with only the matching joined
+    // rows. The joined-entities task changes this to an inner join (rows 1 and 4 only).
+    test('an indexed condition on a joined field filters the joined rows', async () => {
+      expect(await joined('read workouts.exercises on workouts.exercise_id = exercises._id where exercises._id = 1')).toEqual([
+        ['1', ['1']], ['2', []], ['3', []], ['4', ['1']], ['5', []], ['6', []]
+      ])
+    })
+
+    test('an indexed condition matching nothing, with a join, returns nothing', async () => {
+      expect(await joined("read workouts.exercises on workouts.exercise_id = exercises._id where date = '2024-06-09'")).toEqual([])
     })
   })
 })
