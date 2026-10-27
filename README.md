@@ -137,16 +137,39 @@ string are just text.
 read workouts where date = '2024-06-02' /* the Sunday */;
 ```
 
-### Several conditions
+### Where clauses: `and`, `or`, `not` and brackets
 
-Each condition starts with `where`; join them with `and where`:
+A `where` clause is one condition, or several joined with `and` / `or`, each of which can be negated with `not`.
+Brackets group them, nested to any depth:
 
 ```sql
-read workouts where reps > 8 and where date = '2024-06-02'
+read workouts where date = '2024-06-02' and (exercise_id = 1 or exercise_id = 3)
+read exercises where not (name like 'bench%' or name like 'squat%')
 ```
 
-`or where` is not supported yet, and is an error (in 1.x it was silently read as `and where`). And/or with grouping
-and precedence is planned.
+`not` binds tightest, then `and`, then `or`, as in SQL. So `a or b and c` means `a or (b and c)`. Use brackets
+for anything else:
+
+| Where clause | Means |
+|---|---|
+| `where a = 1 or b = 2 and c = 3` | `a = 1 or (b = 2 and c = 3)` |
+| `where (a = 1 or b = 2) and c = 3` | as written |
+| `where not a = 1 and b = 2` | `(not a = 1) and b = 2` |
+| `where not (a = 1 or b = 2)` | neither |
+
+The comparators are `=`, `!=` (or `<>`), `>`, `>=`, `<`, `<=`, `in [...]`, `between [low, high]` and `like` (`%`
+matches any text, `_` one character, ignoring case). `is null`, `is not null`, `exists` and `does not exist` test
+for null and missing fields (see below). In a where clause, the keywords (`where`, `and`, `or`, `not`, `is null`...) and comparators (`IN`, `LIKE`) can be
+written in any case.
+
+The older form, a `where` per condition (`where a = 1 and where b = 2`, `or where`), still works and means the same.
+
+Mistakes are errors that point at the place: an unclosed or unexpected bracket, an operator with nothing after it
+(`where a = 1 and`), empty brackets, or two conditions with nothing between them (`where a = 1 b = 2`).
+
+Indexes make a where clause faster but never change its result. An indexed condition only narrows which rows are
+read, and the whole clause is then checked on each of them. That works through `and` and through an `or` whose
+every branch is indexed. A `not` reads every row.
 
 ### Comparing by the field's type
 
@@ -173,6 +196,75 @@ comparison (`=`, `!=`, `<`, `between`, `in`, `like`...), and a `null` never equa
 then `null`, then the values (`asc`; `desc` is the reverse).
 
 In 2.0 and earlier, a `null` acted as `0` in comparisons and sorting (`where n < 5` matched it), and `= null` matched it.
+
+Inside `and` / `or` / `not`, a comparison on a null or missing field is **unknown**: neither true nor false, as in
+SQL. A row is returned only when the whole clause is true:
+
+| | result |
+|---|---|
+| `not unknown` | unknown |
+| `false and unknown` | false |
+| `true and unknown` | unknown |
+| `true or unknown` | true |
+| `false or unknown` | unknown |
+
+So `where not (n = 5)` returns the same rows as `where n != 5`: neither returns a row where `n` is null or missing.
+To include them, ask for them: `where n != 5 or n is null`. The same goes for `in` with a `null` in the list:
+`n in [5, null]` is `n = 5 or n = null`, so a row it doesn't match is unknown and `not (n in [5, null])` returns
+nothing.
+
+### Joins: `on` and `merge`
+
+`read workouts.exercises` reads workouts and attaches the matching exercises to each one as a list, using `on` (add
+more with `and on` to go through linking records):
+
+```sql
+read workouts.exercises on workouts.exercise_id = exercises._id
+read workouts.muscles on workouts.exercise_id = exercises._id
+  and on exercises._id = exercise_muscle.exercise_id
+  and on exercise_muscle.muscle_id = muscles._id
+```
+
+`merge` copies one matching record's fields onto each row instead, named `entity.field`:
+
+```sql
+read workouts merge workouts.exercise_id with exercises._id
+```
+
+A condition can use the fields of the record being read, the joined record and merged records, written
+`entity.field`:
+
+```sql
+read workouts.exercises on workouts.exercise_id = exercises._id
+  where date = '2024-06-05' and exercises.name like 'b%'
+read workouts merge workouts.exercise_id with exercises._id where exercises.name = 'Squat'
+```
+
+A condition on the joined record's fields works like SQL's inner join. The clause is checked for each pair of a row
+and one of its joined rows. Each row keeps only the joined rows the clause is true for, and a row left with none
+isn't returned. That includes a row with no joined rows at all, even when an `or` matches its own fields.
+`read exercises.workouts on exercises._id = workouts.exercise_id where workouts.date = '2024-06-02'` returns each
+exercise with only that day's workouts.
+
+These are errors:
+- a condition on a record that only links the join (`exercise_muscle` above)
+- a condition on a record that isn't in the query
+- in `update` and `delete`, any condition on another record's fields. They only change the record they name, and
+  check its own fields before any join runs.
+
+### Clause order
+
+Clauses can come in any order after the record name, but the SQL order reads best and is recommended (a fixed order
+may become required in a later version):
+
+```sql
+read workouts.exercises select date, reps
+  on workouts.exercise_id = exercises._id
+  where reps > 8 and (exercises.name = 'Squat' or exercises.name = 'Deadlift')
+  group by date
+  sort date desc
+  limit 10 offset 0
+```
 
 ### Creating a record: `create`
 
@@ -256,11 +348,23 @@ queryStatus('read notes;')                   // { complete: true, waitingFor: ''
 - `null` is only accepted by fields with `nullable: true`, and is stored as a real `null`. Before, a `string` field
   stored the text `"null"` and an `int` field stored `0`.
 - `create()` throws for a default that doesn't fit its field's type, and for a nullable primary key field.
-- `or where` is an error until or is supported. Before, it was read as `and where`, returning the wrong rows.
+- `or where` means `or` (2.3). In 1.x it was read as `and where`, returning the wrong rows, and in 2.0 to 2.2 it was an
+  error.
 - A select alias needs `as`: `select name as n`. Before, the first field took the next word as its alias, so
   `select name where a = 1` failed and `select name limit 1` lost its limit; `select name n` is now an error.
 - Sort fields need a comma between them: `sort a, b desc`. Before, the list ran on into the next clause, so
   `sort a limit 1` sorted by `a`, `limit` and `1` and lost the limit; `sort a b` is now an error.
+
+### Upgrading to 2.3
+
+- `and`, `or`, `not` and brackets in a where clause (above). `or where` works again, now as `or`.
+- A condition on a joined record's field works, as an inner join. Before, an unindexed one matched nothing, and an
+  indexed one (`exercises._id = 1`) returned every row, most of them with an empty list of joined rows. Only rows
+  with a matching joined row are returned now.
+- A condition on the read record's own field written with its name (`workouts.date`) works. It matched nothing before.
+- A condition on a record that isn't in the query, or only links a join, is an error. Before, it matched nothing or
+  failed to read the record.
+- Comparators are case-insensitive (`IN`, `LIKE`). Before, only lowercase ones matched anything.
 
 ## Configuration
 
