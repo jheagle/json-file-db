@@ -1,0 +1,84 @@
+{
+  "path": "workouts",
+  "definition": [
+    {
+      "name": "_id",
+      "type": "string",
+      "optional": false
+    },
+    {
+      "name": "exercise_id",
+      "type": "string",
+      "optional": false
+    },
+    {
+      "name": "weight_effort",
+      "type": "string",
+      "optional": true
+    },
+    {
+      "name": "reps",
+      "type": "int",
+      "optional": true
+    },
+    {
+      "name": "sets",
+      "type": "int",
+      "optional": true
+    },
+    {
+      "name": "note",
+      "type": "string",
+      "optional": true
+    },
+    {
+      "name": "order",
+      "type": "int",
+      "optional": false
+    },
+    {
+      "name": "date",
+      "type": "string",
+      "optional": false
+    }
+  ],
+  "keys": [
+    {
+      "type": "primary",
+      "fields": [
+        "_id"
+      ],
+      "lookup": "pk__id.json"
+    },
+    {
+      "type": "index",
+      "fields": [
+        "date"
+      ],
+      "lookup": "index_date.json"
+    },
+    {
+      "type": "foreign",
+      "fields": [
+        "exercise_id"
+      ],
+      "lookup": "fk_exercise_id.json",
+      "references": [
+        {
+          "fields": [
+            "exercises._id"
+          ],
+          "lookup": "exercises.json"
+        }
+      ]
+    }
+  ],
+  "entries": [
+    "2024-06-02-001.json",
+    "2024-06-02-002.json",
+    "2024-06-02-003.json",
+    "2024-06-05-001.json",
+    "2024-06-05-002.json",
+    "2024-06-05-003.json"
+  ]
+}

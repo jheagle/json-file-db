@@ -1,0 +1,58 @@
+[
+  {
+    "value": 1,
+    "record": ["abdominal.json"]
+  },
+  {
+    "value": 2,
+    "record": ["biceps.json"]
+  },
+  {
+    "value": 3,
+    "record": ["calves.json"]
+  },
+  {
+    "value": 4,
+    "record": ["deltoids.json"]
+  },
+  {
+    "value": 5,
+    "record": ["erector_spinae.json"]
+  },
+  {
+    "value": 6,
+    "record": ["forearms.json"]
+  },
+  {
+    "value": 7,
+    "record": ["gluteas_maximus.json"]
+  },
+  {
+    "value": 8,
+    "record": ["hamstrings.json"]
+  },
+  {
+    "value": 9,
+    "record": ["latissimus_dorsi.json"]
+  },
+  {
+    "value": 10,
+    "record": ["obliques.json"]
+  },
+  {
+    "value": 11,
+    "record": ["pectorals.json"]
+  },
+  {
+    "value": 12,
+    "record": ["quadriceps.json"]
+  },
+  {
+    "value": 13,
+    "record": ["trapezius.json"]
+  },
+  {
+    "value": 14,
+    "record": ["triceps.json"]
+  }
+]

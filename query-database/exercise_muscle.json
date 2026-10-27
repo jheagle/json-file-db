@@ -1,0 +1,69 @@
+{
+  "path": "exercise_muscle",
+  "definition": [
+    {
+      "name": "_id",
+      "type": "string",
+      "optional": false
+    },
+    {
+      "name": "exercise_id",
+      "type": "string",
+      "optional": false
+    },
+    {
+      "name": "muscle_id",
+      "type": "string",
+      "optional": false
+    },
+    {
+      "name": "muscle_rank",
+      "type": "int",
+      "optional": false
+    }
+  ],
+  "keys": [
+    {
+      "type": "primary",
+      "fields": [
+        "_id"
+      ],
+      "lookup": "pk__id.json"
+    },
+    {
+      "type": "foreign",
+      "fields": [
+        "exercise_id"
+      ],
+      "lookup": "fk_exercise_id.json",
+      "references": [
+        {
+          "fields": [
+            "exercises._id"
+          ],
+          "lookup": "exercises.json"
+        }
+      ]
+    },
+    {
+      "type": "foreign",
+      "fields": [
+        "muscle_id"
+      ],
+      "lookup": "fk_muscle_id.json",
+      "references": [
+        {
+          "fields": [
+            "muscles._id"
+          ],
+          "lookup": "muscles.json"
+        }
+      ]
+    }
+  ],
+  "entries": [
+    "bench_press_pectorals.json",
+    "deadlift_hamstrings.json",
+    "squat_quadriceps.json"
+  ]
+}

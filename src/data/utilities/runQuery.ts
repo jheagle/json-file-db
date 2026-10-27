@@ -21,22 +21,22 @@ import { splitEntityProperty } from './parsers/splitEntityProperty'
 import { fieldType } from './fieldType'
 
 /**
- * Give each condition its field's declared type, so where compares by it (a joined entity's field
- * is looked up on that entity's record).
+ * Give each condition and sort clause its field's declared type, so where and sortBy compare by it
+ * (a joined entity's field is looked up on that entity's record).
  * @param parsed
  * @param recordData
  */
-const typeConditions = async (parsed, recordData) => {
-  for (const condition of parsed.conditions) {
+const typeClauses = async (parsed, recordData) => {
+  for (const clause of [...parsed.conditions, ...parsed.sortClauses]) {
     let entity = parsed.entity
-    let property = condition.property
+    let property = clause.property
     if (isEntityProperty(property)) {
       ({ entity, property } = splitEntityProperty(property))
     }
     if (!Object.prototype.hasOwnProperty.call(recordData, entity)) {
       recordData[entity] = await retrieveRecord(entity)
     }
-    condition.type = fieldType(recordData[entity], property)
+    clause.type = fieldType(recordData[entity], property)
   }
 }
 
@@ -59,7 +59,7 @@ export const runQuery = async (parsed) => {
     recordData[parsed.joinEntity] = await retrieveRecord(parsed.joinEntity)
   }
 
-  await typeConditions(parsed, recordData)
+  await typeClauses(parsed, recordData)
 
   let dataSet: any = { [parsed.entity]: [] }
 

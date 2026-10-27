@@ -538,4 +538,44 @@ describe('query', () => {
       expect(await joined("read workouts.exercises on workouts.exercise_id = exercises._id where date = '2024-06-09'")).toEqual([])
     })
   })
+
+  describe('ordering by the declared type, through an index and without one', () => {
+    beforeEach(async () => {
+      await query('create typed (_id string auto, s string, i int, si string, ii int, primary key (_id), index (si), index (ii))')
+      for (const [s, i] of [['9', 9], ['10', 10], ['2', 2]]) {
+        await query(`insert typed values s = '${s}', i = ${i}, si = '${s}', ii = ${i}`)
+      }
+    })
+    const values = async (text, field) => (await query(text))[0].map(row => row[field])
+    const sorted = async (text, field) => (await values(text, field)).sort()
+
+    // si and ii have an index (the condition is answered from the index file first), s and i don't
+    test.each(['s', 'si'])('%s: a string field compares as text, whether the literal is 2 or \'2\'', async (field) => {
+      for (const literal of ['2', "'2'"]) {
+        expect(await sorted(`read typed where ${field} > ${literal}`, field)).toEqual(['9'])
+        expect(await sorted(`read typed where ${field} < ${literal}`, field)).toEqual(['10'])
+        expect(await sorted(`read typed where ${field} between [1, ${literal}]`, field)).toEqual(['10', '2'])
+      }
+    })
+
+    test.each(['s', 'si'])('%s: a string field sorts as text', async (field) => {
+      expect(await values(`read typed sort ${field}`, field)).toEqual(['10', '2', '9'])
+      expect(await values(`read typed sort ${field} desc`, field)).toEqual(['9', '2', '10'])
+    })
+
+    test('a string field sorts as text even when its values are stored as numbers (the sort clause gets the field\'s type)', async () => {
+      // test-data's _id is declared string: rows 1-6 are stored as numbers, an inserted one as text ('10')
+      await query("insert workouts values _id = 10, exercise_id = 1, order = 0, date = '2024-06-10'")
+      const [rows] = await query('read workouts sort _id')
+      expect(rows.map(row => String(row._id))).toEqual(['1', '10', '2', '3', '4', '5', '6'])
+    })
+
+    test.each(['i', 'ii'])('%s: an int field compares and sorts as numbers, whether the literal is 2 or \'2\'', async (field) => {
+      for (const literal of ['2', "'2'"]) {
+        expect((await values(`read typed where ${field} > ${literal} sort ${field}`, field))).toEqual([9, 10])
+        expect(await values(`read typed where ${field} between [${literal}, 9]`, field)).toHaveLength(2)
+      }
+      expect(await values(`read typed sort ${field}`, field)).toEqual([2, 9, 10])
+    })
+  })
 })
