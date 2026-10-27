@@ -1,4 +1,4 @@
-import { allOf, conditionsOf, isCondition, requiredConditions, withoutConditions } from './conditionTree'
+import { allOf, conditionsOf, isCondition, requiredConditions } from './conditionTree'
 
 const a = { property: 'a', comparator: '=', value: 1 }
 const b = { property: 'b', comparator: '>', value: 2 }
@@ -30,15 +30,5 @@ describe('conditionTree', () => {
     expect(requiredConditions({ and: [a, { or: [b, c] }, c] })).toEqual([a, c])
     expect(requiredConditions({ or: [a, b] })).toEqual([])
     expect(requiredConditions({ not: a })).toEqual([])
-  })
-
-  test('withoutConditions removes conditions under the top-level and, collapsing what is left', () => {
-    expect(withoutConditions({ and: [a, b, c] }, [b])).toEqual({ and: [a, c] })
-    expect(withoutConditions({ and: [a, b] }, [b])).toBe(a)
-    expect(withoutConditions({ and: [a, b] }, [a, b])).toBeUndefined()
-    expect(withoutConditions(a, [a])).toBeUndefined()
-    expect(withoutConditions(a, [])).toBe(a)
-    expect(withoutConditions({ or: [a, b] }, [a])).toEqual({ or: [a, b] })
-    expect(withoutConditions(undefined, [a])).toBeUndefined()
   })
 })

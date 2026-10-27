@@ -57,22 +57,3 @@ export const requiredConditions = (node: ConditionNode | undefined): ParsedCondi
   }
   return 'and' in node ? node.and.filter(isCondition) : []
 }
-
-/**
- * The tree without the given conditions (an `and` that is left with one child becomes that child, with none: undefined).
- * Only conditions directly under the top-level `and` (see requiredConditions) can be removed.
- * @param node
- * @param remove
- */
-export const withoutConditions = (node: ConditionNode | undefined, remove: ParsedCondition[]): ConditionNode | undefined => {
-  if (typeof node === 'undefined' || !remove.length) {
-    return node
-  }
-  if (isCondition(node)) {
-    return remove.includes(node) ? undefined : node
-  }
-  if ('and' in node) {
-    return allOf(node.and.filter(child => !(isCondition(child) && remove.includes(child))))
-  }
-  return node
-}

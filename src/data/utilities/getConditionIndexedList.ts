@@ -6,7 +6,7 @@ import { retrieveFile } from './retrieveFile'
 import { ParsedQuery } from './parsers/parseQuery'
 import { retrieveIndexes } from './retrieveIndexes'
 import { isSingleFieldKey } from './isSingleFieldKey'
-import { ConditionNode, isCondition, requiredConditions, withoutConditions } from './conditionTree'
+import { ConditionNode, isCondition, requiredConditions } from './conditionTree'
 import type { ParsedCondition } from './parsers/findConditions'
 
 /**
@@ -95,11 +95,9 @@ const candidatesOf = async (node: ConditionNode, mainEntity: string, recordData,
  * afterwards (runQuery), so an index can make a query faster but never changes its result (where-clauses decision 3;
  * it used to remove the conditions it answered, and the 3 bugs fixed in #69 came from that split).
  *
- * For now, an indexed condition on a joined entity's field (`exercises._id = 1`) narrows that entity's rows only when
- * every row must meet it (directly under the top-level `and`, see requiredConditions), and is then removed: where()
- * can't check `entity.field` on the main rows yet, and this keeps what such a condition does today (the join then
- * only attaches the matching rows). The where-clauses epic's joined-entities task replaces this with per-pair
- * evaluation.
+ * An indexed condition on a joined entity's field (`exercises._id = 1`) narrows that entity's rows only when every
+ * row must meet it (directly under the top-level `and`, see requiredConditions). It stays in the tree too: the where
+ * clause is then evaluated per pair of a row and a joined row (see whereTree).
  * @param parsed
  * @param recordData
  * @param dataSet
@@ -115,7 +113,6 @@ export const getConditionIndexedList = async (parsed: ParsedQuery, recordData, d
       matchedFiles[parsed.entity] = candidates
     }
   }
-  const answeredJoinConditions = []
   for (const condition of requiredConditions(parsed.where)) {
     const { entity, property } = conditionField(condition, parsed.entity)
     if (entity === parsed.entity) {
@@ -128,7 +125,6 @@ export const getConditionIndexedList = async (parsed: ParsedQuery, recordData, d
     matchedFiles[entity] = Object.prototype.hasOwnProperty.call(matchedFiles, entity)
       ? new Set([...matchedFiles[entity]].filter(file => files.has(file)))
       : files
-    answeredJoinConditions.push(condition)
   }
   for (const entity of Object.keys(matchedFiles)) {
     resolved.add(entity)
@@ -137,6 +133,5 @@ export const getConditionIndexedList = async (parsed: ParsedQuery, recordData, d
       dataSet[entity].push(await retrieveFile(`${entity}/${file}`))
     }
   }
-  parsed.where = withoutConditions(parsed.where, answeredJoinConditions)
   return parsed
 }

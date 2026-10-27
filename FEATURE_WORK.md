@@ -176,7 +176,7 @@ only link them (`exercise_muscle` in `workouts.muscles`) are an error.
   top-level `and`'s direct conditions narrow rows through an index (`requiredConditions`).
 - [x] **Evaluation** (#77): three-valued logic (true / false / unknown) for `and`, `or`, `not`; a row is kept only when
   the whole expression is true. Tests: `not (n = 5)` gives the same rows as `n != 5`; the truth tables.
-- [ ] **Indexes for the tree**: candidate rows per node (intersection for `and`, union for `or` when every branch is
+- [x] **Indexes for the tree** (#78): candidate rows per node (intersection for `and`, union for `or` when every branch is
   indexed, all rows otherwise and for `not`). Tests: every Grammar example gives the same rows with and without
   indexes.
 - [ ] **Joined entities**: conditions on the joined entity's fields, evaluated per pair (inner join): the joined
@@ -189,6 +189,9 @@ only link them (`exercise_muscle` in `workouts.muscles`) are an error.
 ## Out of scope
 
 - Subqueries, `exists (subquery)` (the field-level `exists` is already there), functions in conditions.
+- `update` / `delete` through a joined entity's fields (`delete workouts.exercises on ... where exercises.name = 'x'`):
+  refused (#79 on main), as they apply their conditions before any join runs. A later round could run the join first
+  and act on the main rows with a matching pair.
 - The CLI: its completion check already tracks open brackets through the scanner, so `(` waits for `)`.
 
 ## Release

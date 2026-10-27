@@ -265,6 +265,25 @@ describe('where', () => {
       expect(whereTree([], { or: [n2, sx] })).toEqual([])
     })
 
+    test('with a joinEntity: per pair, keeping the joined rows the tree is true for', () => {
+      const joinedRows = [
+        { id: 1, s: 'x', e: [{ name: 'a' }, { name: 'b' }] },
+        { id: 2, s: 'y', e: [{ name: 'b', 'm.tag': 't' }] },
+        { id: 3, s: 'x', e: [] },
+        { id: 4, s: 'x', 'e.name': 'own', e: [{ name: 'a' }] }
+      ]
+      const name = value => ({ property: 'e.name', comparator: '=', value })
+      const result = node => whereTree(joinedRows, node, 'e').map(row => [row.id, row.e.map(item => item.name)])
+      expect(result(name('b'))).toEqual([[1, ['b']], [2, ['b']]])
+      // a row with no joined rows has no pair, so it is dropped even when its own fields match
+      expect(result({ or: [name('a'), { property: 's', comparator: '=', value: 'x' }] })).toEqual([[1, ['a', 'b']], [4, ['a']]])
+      // a field already on the row (merged) is kept; a merged field on the joined row keeps its name
+      expect(result(name('own'))).toEqual([[4, ['a']]])
+      expect(result({ property: 'm.tag', comparator: '=', value: 't' })).toEqual([[2, ['b']]])
+      // the rows themselves aren't changed
+      expect(joinedRows[0].e).toHaveLength(2)
+    })
+
     describe('three-valued logic: a comparison on a null or missing field is unknown', () => {
       const row = { t: 1, f: 2, u: null }
       const T = { property: 't', comparator: '=', value: 1 }
