@@ -147,4 +147,26 @@ describe('sortBy', () => {
         .toEqual(['c', 'd', 'a', 'b'])
     })
   })
+
+  describe('by the declared type', () => {
+    const order = (rows, type, direction = 'asc') => sortBy(rows, [{ property: 'v', direction, type }]).map(row => row.v)
+
+    test('a string field sorts as text, even values stored as numbers', () => {
+      expect(order([{ v: '9' }, { v: 10 }, { v: '2' }], 'string')).toEqual([10, '2', '9'])
+      expect(order([{ v: '9' }, { v: '10' }, { v: '2' }], 'string', 'desc')).toEqual(['9', '2', '10'])
+    })
+
+    test('an int field sorts as numbers, even a value stored as a numeric string', () => {
+      expect(order([{ v: '9' }, { v: 10 }, { v: 2 }], 'int')).toEqual([2, '9', 10])
+    })
+
+    test('no declared type sorts the raw values', () => {
+      expect(order([{ v: '9' }, { v: '10' }, { v: 2 }], undefined)).toEqual([2, '10', '9'])
+      expect(order([{ v: 9 }, { v: 10 }, { v: 2 }], 'object')).toEqual([2, 9, 10])
+    })
+
+    test('missing, then null, then the values, still', () => {
+      expect(order([{ v: '9' }, { v: null }, {}, { v: 10 }], 'string')).toEqual([undefined, null, 10, '9'])
+    })
+  })
 })
