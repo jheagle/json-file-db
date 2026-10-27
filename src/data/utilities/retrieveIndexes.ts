@@ -1,5 +1,6 @@
 import { retrieveFile } from './retrieveFile'
 import { retrieveRecord } from './retrieveRecord'
+import { isSingleFieldKey } from './isSingleFieldKey'
 
 export const retrieveIndexes = async (entity = '', properties = [], recordData = {}) => {
   if (!Object.prototype.hasOwnProperty.call(recordData, entity)) {
@@ -8,7 +9,7 @@ export const retrieveIndexes = async (entity = '', properties = [], recordData =
   const indexSet = {}
   for (const property of properties) {
     for (const key of recordData[entity].keys) {
-      if (key.fields.includes(property)) {
+      if (isSingleFieldKey(key, property)) {
         indexSet[property] = await retrieveFile(`__indexes/${entity}/${key.lookup}`)
       }
     }
