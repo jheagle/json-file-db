@@ -32,7 +32,7 @@ read exercises where not (name like 'bench%' or name like 'squat%')
 - Precedence: `not` before `and` before `or` (SQL's), so `a or b and c` is `a or (b and c)`. Brackets override it.
 - The same results with or without indexes.
 
-## Design proposal (task 1, 2026-10-26) - waiting on the questions at the end
+## Design (task 1, proposed and decided 2026-10-26)
 
 ### Today (2.1.0), checked against the code
 
@@ -141,40 +141,49 @@ whose exercise starts with B, each with only that exercise.
 For now, only the main entity and the one entity after the `.` (`workouts.exercises`); fields of the entities that
 only link them (`exercise_muscle` in `workouts.muscles`) are an error.
 
-### Questions for you (my recommendation in bold)
+### Decisions (the maintainer's answers, 2026-10-26)
 
-1. **`and where` / `or where`**: **accept them as old spellings of `and` / `or`** (no query breaks; the README shows
-   the single-`where` form), or make them errors with a hint?
-2. **Three-valued logic** (`not (n = 5)` leaves out null/missing, like `n != 5`), **yes**, or plain true/false?
-3. **Indexes only narrow, and the full expression always runs** (simpler and safer than removing answered
-   conditions), **yes**?
-4. **Joined-entity conditions per pair** (inner join), with the joined list filtered to matching rows, **yes**? Or
-   keep the row with all its joined rows when any one matches (EXISTS style)?
-5. Clause order: **keep it free** (the expression ends at the next clause keyword, incl. `and on`), or require
-   `where` after `on` / `merge` as in SQL?
-6. **Release: a minor (2.2.0)** if `and where` stays accepted (purely additive), since 2.0.0 is out.
+1. **`and where` / `or where` stay accepted** as spellings of `and` / `or`, alongside the single-`where` form (the
+   README shows the single-`where` form).
+2. **Three-valued logic: yes.** Why null and missing are different (the maintainer's reasoning): **null** means the
+   field is there but its value is intentionally not set: a row that's ready and waiting for something to act on it,
+   or an undecided flag (a true/false that means something either way once set, where null means apply neither, or
+   work out the default). Queries on it rely on the field existing. **Missing** means the field is optional to the
+   row and rarely queried; when it's there, it adds context that isn't critical. This may support future designs such
+   as mutable data entry.
+3. **Indexes only narrow; every condition is still applied.** Index optimisation later can make queries faster.
+4. **Joined-entity conditions: inner join, per pair** (only matching joined rows are kept). Outer / left / right joins
+   are another epic.
+5. **Clause order stays free in this epic** (the expression ends at the next clause keyword, `and on` included): it
+   adds no complexity now and doesn't stop a strict order later. **A fixed SQL order comes as its own round soon
+   after** (the maintainer expects it to make the code simpler and avoid future issues; it's breaking, so it's
+   planned on its own).
+6. **Minor release (2.2.0)**, as everything here is additive.
 
 ## Work Split
 
-- [ ] **Design**: settle the decisions above and write the grammar here (expression, term, factor, condition), with
-  examples of each precedence case and each error. *Proposal above; waiting on the 6 questions.*
-- [ ] **Parsed shape**: conditions become a tree: a condition (`property`, `comparator`, `value`), or a group
-  `{ and: [...] }`, `{ or: [...] }`, `{ not: ... }`. Types in `parseQuery.ts`. Decide whether a plain list still
-  means `and` (keeps other callers working while the rest moves over).
-- [ ] **Indexes narrow only**: (if question 3 is yes) the index path picks candidate rows and nothing else, and the
-  full condition list always runs after it. Done first, on today's flat list, so it lands before the tree changes
-  how conditions are stored.
-- [ ] **Parser**: `findConditions` reads the expression into the tree with the precedence above, walking the
-  masked text (strings are placeholders by then, so a bracket or `or` inside a value can't count). Clear errors
-  for an unbalanced bracket, a dangling `and` / `or`, and an empty group. Regression test: `or where` no longer
-  means `and`.
-- [ ] **Evaluation**: `where` evaluates the tree for each row; `typeConditions` gives every condition in the tree
-  its field type.
-- [ ] **Indexes**: `getConditionIndexedList` may only use an index where it's safe: a condition directly under the
-  top-level `and` narrows the candidate rows as today; an `or` whose branches are all indexed can union them;
-  anything else falls back to a full scan. Tests that every query gives the same rows with and without indexes.
-- [ ] **Joined entities**: conditions on a joined entity's fields (`exercises.name`) inside groups.
-- [ ] **Docs**: a README section on where clauses: operators, `and` / `or` / `not`, brackets, precedence, examples.
+- [x] **Design**: grammar, tree, evaluation, indexes and joins above; decisions recorded.
+- [ ] **Indexes narrow only** (on today's flat list, first): `getConditionIndexedList` only loads candidate rows; no
+  condition is removed from the list, and `runQuery` applies every condition to the candidates (for update/delete
+  before the write, for read after the join, as today). Tests: every existing indexed query gives the same rows; an
+  indexed condition still applies when the index pre-filter is skipped.
+- [ ] **Parsed shape**: `parsed.where` becomes the `ConditionNode` tree (types in `parseQuery.ts`), built from
+  today's list as one `and` node, so nothing changes yet; `where` / `runQuery` / `typeClauses` walk the tree.
+- [ ] **Parser**: read the expression into the tree with the precedence above, walking the masked text; the
+  expression ends at the next clause keyword outside brackets (`and on` included); `and where` / `or where`
+  accepted. Every example and error listed in the Grammar section becomes a test, plus a regression test that `or`
+  no longer errors.
+- [ ] **Evaluation**: three-valued logic (true / false / unknown) for `and`, `or`, `not`; a row is kept only when
+  the whole expression is true. Tests: `not (n = 5)` gives the same rows as `n != 5`; the truth tables.
+- [ ] **Indexes for the tree**: candidate rows per node (intersection for `and`, union for `or` when every branch is
+  indexed, all rows otherwise and for `not`). Tests: every Grammar example gives the same rows with and without
+  indexes.
+- [ ] **Joined entities**: conditions on the joined entity's fields, evaluated per pair (inner join): the joined
+  list keeps the matching rows, a row with none left is dropped. Fields of entities that only link (`exercise_muscle`
+  in `workouts.muscles`) are an error. Also: an indexed no-match on a joined field must not reload every joined row
+  (left over from #69).
+- [ ] **Docs**: a README section on where clauses: operators, `and` / `or` / `not`, brackets, precedence, null and
+  missing in expressions, joined fields, the recommended (SQL) clause order, examples.
 
 ## Out of scope
 
@@ -183,4 +192,4 @@ only link them (`exercise_muscle` in `workouts.muscles`) are an error.
 
 ## Release
 
-Not part of any task PR: once `feature/where-clauses` merges to `main`, a separate release PR (see question 6).
+Not part of any task PR: once `feature/where-clauses` merges to `main`, a separate release PR: 2.2.0 (decision 6).
