@@ -1,11 +1,7 @@
-import { removeFromQuery } from './removeFromQuery'
 import { numberSource, parseLiteralValue, LiteralValue } from './parseLiteralValue'
 import { ParsedQuery } from './parseQuery'
-import { allOf } from '../conditionTree'
-import { arraySource, placeholderSource } from './maskStrings'
-
-// `and`/`or`/`where` count only as whole words: in `on t.x = u.color where ...` the `or` is part of the name `color`
-const conditionMatch: RegExp = new RegExp(`(^|[^a-z0-9._-])(?:(and|or)\\s+)?(where)\\s+([a-z0-9_-]+\\.?[a-z0-9_-]*)\\s+(?:(is\\s+not\\s+null|is\\s+null|exists|does\\s+not\\s+exist)(?![a-z0-9_.-])|(=|!=|>|<|>=|<=|in|between|like)\\s+(${placeholderSource}|(${numberSource})|${arraySource}|(null)|(true)|(false)))`, 'ig')
+import { allOf, ConditionNode, isCondition } from '../conditionTree'
+import { arraySource, placeholderSource, unmaskStrings } from './maskStrings'
 
 export type ConditionValue = LiteralValue
 
@@ -17,47 +13,162 @@ export type ParsedCondition = {
   type?: string
 }
 
+// Keywords count only as whole words: in `on t.x = u.color where ...` the `or` is part of the name `color`
+const wordEnd = '(?![a-z0-9_.-])'
+const keyword = (words: string): RegExp => new RegExp(`^(?:${words})${wordEnd}`, 'i')
+
+// One condition, at the start of the text: a field, then `is [not] null` / `exists` / `does not exist`, or a comparator
+// and a value (strings and arrays are placeholders by then, see maskStrings)
+const conditionMatch: RegExp = new RegExp(`^([a-z0-9_-]+\\.?[a-z0-9_-]*)\\s+(?:(is\\s+not\\s+null|is\\s+null|exists|does\\s+not\\s+exist)${wordEnd}|(<>|!=|>=|<=|=|>|<|in|between|like)\\s+(${placeholderSource}|(${numberSource})|${arraySource}|(null)|(true)|(false)))`, 'i')
+
+// The clause keywords that end a where expression (outside brackets), and `and on` (a join clause's own `and`)
+const expressionEnd: RegExp = keyword('sort|group|limit|offset|select|merge|on|where|and\\s+on')
+const whereMatch: RegExp = new RegExp(`(^|[^a-z0-9._-])((?:(and|or)\\s+)?where)${wordEnd}`, 'i')
+
 /**
- * Extract condition clauses from the query: `where <field> <comparator> <value>`, or `where <field> is null`,
- * `is not null`, `exists` or `does not exist` (no value), each further one joined with `and where`. A comparison
- * with the literal null (`= null`) is refused: it would never match, as null equals nothing (see where). `or where` is refused until or is built (TASKS: the where-clauses epic): it used to be read the same as
- * `and where`, which silently returned the wrong rows.
+ * Read one condition from a match of conditionMatch.
+ * @param match
+ * @throws {Error} For a comparison with null, and a null between bound: they could never match (null equals nothing).
+ */
+const readCondition = (match: RegExpMatchArray): ParsedCondition => {
+  const property = match[1]
+  if (typeof match[2] !== 'undefined') {
+    return { property, comparator: match[2].toLowerCase().replace(/\s+/g, ' '), value: null }
+  }
+  const comparator = match[3].toLowerCase()
+  const value = parseLiteralValue(match, 5)
+  if (value === null) {
+    throw new Error(`\`${property} ${comparator} null\` never matches (null equals nothing, as in SQL): use \`${property} is null\` or \`${property} is not null\``)
+  }
+  if (comparator === 'between' && Array.isArray(value) && value.includes(null)) {
+    throw new Error(`\`${property} between\` can't have a null bound: it would never match`)
+  }
+  return { property, comparator, value }
+}
+
+/**
+ * Join nodes with `and` or `or`, flattening a child of the same kind into its parent (`a and (b and c)` is one `and` of
+ * three), so the conditions every row must meet are all directly under the top-level `and` (see requiredConditions).
+ * @param kind
+ * @param nodes
+ */
+const join = (kind: 'and' | 'or', nodes: ConditionNode[]): ConditionNode => {
+  const children = nodes.flatMap(node => !isCondition(node) && kind in node ? node[kind] : [node])
+  return children.length === 1 ? children[0] : (kind === 'and' ? { and: children } : { or: children })
+}
+
+/**
+ * Read one where expression from the masked query, starting at `start` (just after its `where`). Precedence, loosest
+ * first: `or`, `and`, `not`; brackets group. `and where` / `or where` are the older spellings of `and` / `or`.
+ * @param text
+ * @param start
+ * @returns The expression's tree and where it ends (the next clause keyword outside brackets, or the end).
+ * @throws {Error} For an unbalanced bracket, empty brackets, or an operator with no condition after it.
+ */
+const readExpression = (text: string, start: number): { node: ConditionNode, end: number } => {
+  let at = start
+  const rest = (): string => text.slice(at)
+  const skipSpace = (): void => {
+    at += rest().length - rest().trimStart().length
+  }
+  const take = (pattern: RegExp): string | undefined => {
+    skipSpace()
+    const found = rest().match(pattern)
+    if (!found) {
+      return undefined
+    }
+    at += found[0].length
+    return found[0]
+  }
+  const shown = (): string => unmaskStrings(rest().trim(), '\'')
+
+  const factor = (after: string): ConditionNode => {
+    skipSpace()
+    // A condition first, so a field named like a keyword (`not = 1`, `exists exists`) still reads as a field
+    const condition = rest().match(conditionMatch)
+    if (condition) {
+      at += condition[0].length
+      return readCondition(condition)
+    }
+    if (take(keyword('not'))) {
+      return { not: factor('not') }
+    }
+    if (take(/^\(/)) {
+      skipSpace()
+      if (rest().startsWith(')')) {
+        throw new Error('Empty brackets in a where clause')
+      }
+      const node = expression('(')
+      // The query scanner already refuses unbalanced brackets (scanQuery); this guards a direct call
+      if (!take(/^\)/)) {
+        throw new Error(`Missing ) ${rest().trim() ? `before: ${shown()}` : 'at the end of the where clause'}`)
+      }
+      return node
+    }
+    throw new Error(`Missing a condition after ${after}${rest().trim() ? `: ${shown()}` : ''}`)
+  }
+
+  const term = (after: string): ConditionNode => {
+    const nodes = [factor(after)]
+    for (;;) {
+      skipSpace()
+      if (keyword('and\\s+on').test(rest())) {
+        break
+      }
+      const connector = take(keyword('and(?:\\s+where)?'))
+      if (!connector) {
+        break
+      }
+      nodes.push(factor(connector.toLowerCase().replace(/\s+/g, ' ')))
+    }
+    return join('and', nodes)
+  }
+
+  const expression = (after: string): ConditionNode => {
+    const nodes = [term(after)]
+    for (;;) {
+      const connector = take(keyword('or(?:\\s+where)?'))
+      if (!connector) {
+        break
+      }
+      nodes.push(term(connector.toLowerCase().replace(/\s+/g, ' ')))
+    }
+    return join('or', nodes)
+  }
+
+  const node = expression('where')
+  skipSpace()
+  if (rest().startsWith(')')) {
+    throw new Error(`Unexpected ) in a where clause: ${shown()}`)
+  }
+  if (rest() && !expressionEnd.test(rest()) && conditionMatch.test(rest())) {
+    throw new Error(`Missing and/or before: ${shown()}`)
+  }
+  return { node, end: at }
+}
+
+/**
+ * Extract the where clause from the query into a tree (see ConditionNode): `where` followed by conditions joined with
+ * `and` / `or`, `not`, and brackets, nested to any depth. Each condition is `<field> <comparator> <value>`, or
+ * `<field> is null`, `is not null`, `exists` or `does not exist`. A comparison with the literal null (`= null`) is
+ * refused: it would never match, as null equals nothing (see where). The expression ends at the next clause keyword
+ * outside brackets, so clauses may come in any order; several separate `where`s (or `and where` after another clause)
+ * are joined with `and`, as before.
  * @param parsed
  * @param query
- * @throws {Error} For `or where`, and for a comparison with null.
+ * @throws {Error} For the errors readExpression and readCondition describe, and `or where` after another clause.
  */
 export const findConditions = (parsed: ParsedQuery, query: string): string => {
-  const conditions: ParsedCondition[] = []
-  const conditionsFound: IterableIterator<RegExpMatchArray> = query.matchAll(conditionMatch)
-  // @ts-ignore
-  for (const condition of conditionsFound) {
-    if (typeof condition[2] !== 'undefined' && condition[2].toLowerCase() === 'or') {
-      throw new Error('`or where` is not supported yet: use `and where`, or run one query per alternative')
+  const expressions: ConditionNode[] = []
+  for (let found = query.match(whereMatch); found; found = query.match(whereMatch)) {
+    if ((found[3] || '').toLowerCase() === 'or') {
+      throw new Error('`or where` must follow the conditions it joins: put them in one where clause')
     }
-    if (typeof condition[5] !== 'undefined') {
-      conditions.push({
-        property: condition[4],
-        comparator: condition[5].toLowerCase().replace(/\s+/g, ' '),
-        value: null
-      })
-    } else {
-      const value = parseLiteralValue(condition, 8)
-      if (value === null) {
-        throw new Error(`\`${condition[4]} ${condition[6]} null\` never matches (null equals nothing, as in SQL): use \`${condition[4]} is null\` or \`${condition[4]} is not null\``)
-      }
-      if (condition[6].toLowerCase() === 'between' && Array.isArray(value) && value.includes(null)) {
-        throw new Error(`\`${condition[4]} between\` can't have a null bound: it would never match`)
-      }
-      conditions.push({
-        property: condition[4],
-        comparator: condition[6],
-        value
-      })
-    }
-    // Leave out the character before the condition (group 1): it isn't part of it, and an earlier removal may have trimmed it
-    query = removeFromQuery(condition[0].slice(condition[1].length), query)
+    const whereStart = found.index + found[1].length
+    const { node, end } = readExpression(query, whereStart + found[2].length)
+    expressions.push(node)
+    query = `${query.slice(0, whereStart)} ${query.slice(end)}`.replace(/\s+/g, ' ').trim()
   }
-  // Each `where` / `and where` joins its condition with `and` (or and grouping: the where-clauses epic's parser task)
-  parsed['where'] = allOf(conditions)
+  parsed['where'] = expressions.length ? join('and', expressions) : allOf([])
   return query
 }
