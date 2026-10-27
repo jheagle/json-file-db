@@ -56,17 +56,6 @@ export const runQuery = async (parsed) => {
     case 'show':
       return { [parsed.entity]: await showRecords() }
   }
-  // update/delete apply their conditions before any join or merge runs, so a condition on another entity's field
-  // can't be checked there. An indexed one used to be dropped once its index had narrowed the joined rows, and the
-  // command then hit every row the other conditions allowed (`delete workouts.exercises on ... where
-  // exercises._id = 1` deleted every workout)
-  if (parsed.command === 'update' || parsed.command === 'delete') {
-    const other = conditionsOf(parsed.where).find(condition =>
-      isEntityProperty(condition.property) && splitEntityProperty(condition.property).entity !== parsed.entity)
-    if (other) {
-      throw new Error(`${parsed.command} can only use conditions on ${parsed.entity}'s own fields, not ${other.property}`)
-    }
-  }
   const recordData = {
     [parsed.entity]: await retrieveRecord(parsed.entity)
   }

@@ -14,6 +14,9 @@ import { conditionsOf } from './conditionTree'
  *   that isn't in the query at all (these used to match nothing, or fail to read the entity)
  *
  * update and delete apply their conditions before any join or merge runs, so they only take the entity's own fields.
+ * (An indexed joined-field condition used to be dropped once its index had narrowed the joined rows, so the command hit
+ * every row the other conditions allowed: `delete workouts.exercises on ... where exercises._id = 1` deleted every
+ * workout. Refused since #79.)
  * @param parsed - its conditions on the queried entity lose their `entity.` prefix
  * @throws {Error} For a condition on a field the query can't check
  */
