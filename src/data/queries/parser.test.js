@@ -1,3 +1,4 @@
+import { allOf, conditionsOf } from '../utilities/conditionTree'
 import { parser } from './parser'
 
 describe('parser', () => {
@@ -12,13 +13,13 @@ describe('parser', () => {
         selectClauses: [],
         insertValues: [],
         updateValues: { reps: 12, note: 'done' },
-        conditions: [
+        where: allOf([
           {
             property: 'date',
             comparator: '=',
             value: '2024-06-02'
           }
-        ],
+        ]),
         joinClauses: [],
         mergeJoins: [],
         sortClauses: [],
@@ -40,7 +41,7 @@ describe('parser', () => {
         selectClauses: [],
         insertValues: [{ reps: 12, date: '2024-06-02' }],
         updateValues: {},
-        conditions: [],
+        where: undefined,
         joinClauses: [],
         mergeJoins: [],
         sortClauses: [],
@@ -63,13 +64,13 @@ describe('parser', () => {
         selectClauses: [],
         insertValues: [],
         updateValues: {},
-        conditions: [
+        where: allOf([
           {
             property: 'date',
             comparator: '=',
             value: '2024-06-02'
           }
-        ],
+        ]),
         joinClauses: [],
         mergeJoins: [],
         sortClauses: [],
@@ -95,13 +96,13 @@ describe('parser', () => {
         selectClauses: [],
         insertValues: [],
         updateValues: {},
-        conditions: [
+        where: allOf([
           {
             property: 'muscles.alias',
             comparator: '=',
             value: 'chest'
           }
-        ],
+        ]),
         joinClauses: [
           {
             propertyA: 'workouts.exercise_id',
@@ -145,13 +146,13 @@ describe('parser', () => {
         selectClauses: [],
         insertValues: [],
         updateValues: {},
-        conditions: [
+        where: allOf([
           {
             property: 'muscles.alias',
             comparator: '=',
             value: 'chest'
           }
-        ],
+        ]),
         joinClauses: [
           {
             propertyA: 'workouts.exercise_id',
@@ -199,7 +200,7 @@ describe('parser', () => {
         selectClauses: [],
         insertValues: [],
         updateValues: {},
-        conditions: [],
+        where: undefined,
         joinClauses: [],
         mergeJoins: [],
         sortClauses: [
@@ -225,7 +226,7 @@ describe('parser', () => {
         selectClauses: [],
         insertValues: [],
         updateValues: {},
-        conditions: [],
+        where: undefined,
         joinClauses: [],
         mergeJoins: [],
         sortClauses: [],
@@ -265,7 +266,7 @@ describe('parser', () => {
         ],
         insertValues: [],
         updateValues: {},
-        conditions: [],
+        where: undefined,
         joinClauses: [
           {
             propertyA: 'workouts.exercise_id',
@@ -307,7 +308,7 @@ describe('parser', () => {
         ],
         insertValues: [],
         updateValues: {},
-        conditions: [],
+        where: undefined,
         joinClauses: [
           {
             propertyA: 'workouts.exercise_id',
@@ -330,7 +331,7 @@ describe('parser', () => {
         selectClauses: [],
         insertValues: [],
         updateValues: {},
-        conditions: [],
+        where: undefined,
         joinClauses: [],
         mergeJoins: [],
         sortClauses: [],
@@ -377,7 +378,7 @@ describe('parser', () => {
     const only = (queries) => parser(queries)[0]
 
     test('reads each string of a two-condition where on its own (main read one condition: x\' and where b = \'y)', () => {
-      expect(only("read t where a = 'x' and where b = 'y'").conditions.map(({ value }) => value)).toEqual(['x', 'y'])
+      expect(conditionsOf(only("read t where a = 'x' and where b = 'y'").where).map(({ value }) => value)).toEqual(['x', 'y'])
     })
 
     test('lets a string hold the other quote', () => {
@@ -392,15 +393,15 @@ describe('parser', () => {
 
     test('keeps keywords, commas and = inside a string out of the other clauses', () => {
       const read = only("read t where a = 'x sort b desc limit 1'")
-      expect(read.conditions.map(({ value }) => value)).toEqual(['x sort b desc limit 1'])
+      expect(conditionsOf(read.where).map(({ value }) => value)).toEqual(['x sort b desc limit 1'])
       expect(read.sortClauses).toEqual([])
       expect(read.limit).toBeUndefined()
       expect(only("update t set note = 'a, b = 2', n = 1").updateValues).toEqual({ note: 'a, b = 2', n: 1 })
     })
 
     test('reads strings inside an array, with either quote', () => {
-      expect(only('read t where a in ["x","y"]').conditions[0].value).toEqual(['x', 'y'])
-      expect(only("read t where a in ['x', 'it\\'s']").conditions[0].value).toEqual(['x', 'it\'s'])
+      expect(conditionsOf(only('read t where a in ["x","y"]').where)[0].value).toEqual(['x', 'y'])
+      expect(conditionsOf(only("read t where a in ['x', 'it\\'s']").where)[0].value).toEqual(['x', 'it\'s'])
     })
 
     test('rejects mismatched quotes instead of reading them as one string', () => {
@@ -416,7 +417,7 @@ describe('parser', () => {
     const only = (queries) => parser(queries)[0]
 
     test('reads two array conditions as two arrays (each used to run to the last ])', () => {
-      expect(only('read t where a in [1,2] and where b in [3]').conditions.map(({ value }) => value)).toEqual([[1, 2], [3]])
+      expect(conditionsOf(only('read t where a in [1,2] and where b in [3]').where).map(({ value }) => value)).toEqual([[1, 2], [3]])
     })
 
     test('reads nested arrays in insert and update (each used to stop at the first ])', () => {
@@ -425,11 +426,11 @@ describe('parser', () => {
     })
 
     test('keeps decimals, negatives and exponents (a decimal used to lose its fraction)', () => {
-      expect(only('read t where a in [1.5, -2, 1e3]').conditions[0].value).toEqual([1.5, -2, 1000])
+      expect(conditionsOf(only('read t where a in [1.5, -2, 1e3]').where)[0].value).toEqual([1.5, -2, 1000])
     })
 
     test('keeps a ] or a keyword inside a string in an array', () => {
-      expect(only("read t where a in ['x]', 'sort b'] limit 2").conditions[0].value).toEqual(['x]', 'sort b'])
+      expect(conditionsOf(only("read t where a in ['x]', 'sort b'] limit 2").where)[0].value).toEqual(['x]', 'sort b'])
       expect(only("read t where a in ['x]', 'sort b'] limit 2").limit).toBe(2)
     })
 
@@ -479,42 +480,43 @@ describe('parser', () => {
   describe('conditions', () => {
     const only = (queries) => parser(queries)[0]
 
-    test('or where is refused, instead of being read as and where', () => {
-      expect(() => parser('read t where a = 1 or where b = 2'))
-        .toThrow('`or where` is not supported yet: use `and where`, or run one query per alternative')
-      expect(() => parser('read t where a = 1 OR WHERE b = 2')).toThrow('`or where` is not supported yet')
+    test('or where is the older spelling of or (it was refused, and in 1.x read as and)', () => {
+      const a = { property: 'a', comparator: '=', value: 1 }
+      const b = { property: 'b', comparator: '=', value: 2 }
+      expect(only('read t where a = 1 or where b = 2').where).toEqual({ or: [a, b] })
+      expect(only('read t where a = 1 OR WHERE b = 2').where).toEqual({ or: [a, b] })
     })
 
     test('and where still joins conditions, in any case', () => {
-      expect(only('read t where a = 1 AND WHERE b = 2').conditions.map(({ property }) => property)).toEqual(['a', 'b'])
+      expect(conditionsOf(only('read t where a = 1 AND WHERE b = 2').where).map(({ property }) => property)).toEqual(['a', 'b'])
     })
 
     test.each(['color', 'brand', 'floor', 'band'])('a join field ending in and/or (%s) keeps its whole name', name => {
       const read = only(`read t.u on t.x = u.${name} where a = 1`)
       expect(read.joinClauses[0].propertyB).toBe(`u.${name}`)
-      expect(read.conditions).toEqual([{ property: 'a', comparator: '=', value: 1 }])
+      expect(conditionsOf(read.where)).toEqual([{ property: 'a', comparator: '=', value: 1 }])
     })
 
     test('where only as a whole word', () => {
       const read = only('read t.u on t.x = u.somewhere where a = 1')
       expect(read.joinClauses[0].propertyB).toBe('u.somewhere')
-      expect(read.conditions).toHaveLength(1)
+      expect(conditionsOf(read.where)).toHaveLength(1)
     })
 
     test('a condition between a join and a sort: all three parse', () => {
       const read = only('read t.u on t.x = u.y where a = 1 and where b = 2 sort a')
       expect(read.joinClauses).toEqual([{ propertyA: 't.x', comparator: '=', propertyB: 'u.y' }])
-      expect(read.conditions.map(({ property }) => property)).toEqual(['a', 'b'])
+      expect(conditionsOf(read.where).map(({ property }) => property)).toEqual(['a', 'b'])
       expect(read.sortClauses).toEqual([{ property: 'a', direction: 'asc' }])
     })
 
     test('connectors after a newline or a tab', () => {
-      expect(only('read t where a = 1\nand\twhere b = 2').conditions).toHaveLength(2)
-      expect(() => parser('read t where a = 1\nor\twhere b = 2')).toThrow('`or where` is not supported yet')
+      expect(conditionsOf(only('read t where a = 1\nand\twhere b = 2').where)).toHaveLength(2)
+      expect(only('read t where a = 1\nor\twhere b = 2').where).toEqual({ or: [{ property: 'a', comparator: '=', value: 1 }, { property: 'b', comparator: '=', value: 2 }] })
     })
 
     test('or inside a string is just text', () => {
-      expect(only("read t where a = 'x or where b = 2'").conditions[0].value).toBe('x or where b = 2')
+      expect(conditionsOf(only("read t where a = 'x or where b = 2'").where)[0].value).toBe('x or where b = 2')
     })
   })
 
@@ -522,7 +524,7 @@ describe('parser', () => {
     const only = (queries) => parser(queries)[0]
 
     test.each([
-      ['where a = 1', 'conditions'],
+      ['where a = 1', 'where'],
       ['sort a', 'sortClauses'],
       ['limit 1', 'limit'],
       ['group by a', 'groupBy']
@@ -567,25 +569,25 @@ describe('parser', () => {
     ])('reads %s in insert, update and where', (written, value) => {
       expect(only(`insert t values n = ${written}, s = 'x'`).insertValues).toEqual([{ n: value, s: 'x' }])
       expect(only(`update t set n = ${written} where s = 'x'`).updateValues).toEqual({ n: value })
-      expect(only(`read t where n > ${written} and where s = 'x'`).conditions).toEqual([
+      expect(conditionsOf(only(`read t where n > ${written} and where s = 'x'`).where)).toEqual([
         { property: 'n', comparator: '>', value },
         { property: 's', comparator: '=', value: 'x' }
       ])
     })
 
     test('reads 1.5 as a number, not as the field 5 of a record named 1 (main tried to read 5.json)', () => {
-      expect(only('read t where n = 1.5').conditions).toEqual([{ property: 'n', comparator: '=', value: 1.5 }])
+      expect(conditionsOf(only('read t where n = 1.5').where)).toEqual([{ property: 'n', comparator: '=', value: 1.5 }])
       expect(only('insert t values n = 1.5').insertValues).toEqual([{ n: 1.5 }])
     })
 
     test('still reads a join entity, with or without a space before its dot, next to a decimal', () => {
-      expect(only('read workouts.muscles where n = 1.5')).toMatchObject({ joinEntity: 'muscles', conditions: [{ property: 'n', comparator: '=', value: 1.5 }] })
+      expect(only('read workouts.muscles where n = 1.5')).toMatchObject({ joinEntity: 'muscles', where: allOf([{ property: 'n', comparator: '=', value: 1.5 }]) })
       expect(only('read workouts .muscles').joinEntity).toBe('muscles')
       expect(only('read workouts where n = 1.5').joinEntity).toBeUndefined()
     })
 
     test('still reads name.field (a join\'s field) as a name', () => {
-      expect(only('read t where u.n = 1').conditions).toEqual([{ property: 'u.n', comparator: '=', value: 1 }])
+      expect(conditionsOf(only('read t where u.n = 1').where)).toEqual([{ property: 'u.n', comparator: '=', value: 1 }])
     })
 
     test.each(['1.5.2', '5abc', '1.', '--3', '1e'])('refuses %s, which is not a number', (written) => {

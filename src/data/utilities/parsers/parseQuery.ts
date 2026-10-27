@@ -4,7 +4,8 @@ import { findInsertValues, ParsedInsertRow } from './findInsertValues'
 import { findUpdateValues, ParsedUpdateValues } from './findUpdateValues'
 import { findJoinEntity, ParsedJoinEntity } from './findJoinEntity'
 import { findSelects, ParsedSelect } from './findSelects'
-import { findConditions, ParsedCondition } from './findConditions'
+import { findConditions } from './findConditions'
+import { ConditionNode } from '../conditionTree'
 import { findJoinClauses, ParsedJoinClause } from './findJoinClauses'
 import { findMergeJoins, ParsedMergeJoin } from './findMergeJoins'
 import { findSortClauses, ParsedSortClause } from './findSortClauses'
@@ -23,7 +24,8 @@ export type ParsedQuery = {
   selectClauses: ParsedSelect[]
   insertValues: ParsedInsertRow[]
   updateValues: ParsedUpdateValues
-  conditions: ParsedCondition[]
+  // The where clause as a tree (see ConditionNode); undefined when the query has none
+  where: ConditionNode | undefined
   joinClauses: ParsedJoinClause[]
   mergeJoins: ParsedMergeJoin[]
   sortClauses: ParsedSortClause[]
@@ -46,7 +48,7 @@ export const parseQuery = (query: string): ParsedQuery => {
     selectClauses: [],
     insertValues: [],
     updateValues: {},
-    conditions: [],
+    where: undefined,
     joinClauses: [],
     mergeJoins: [],
     sortClauses: [],

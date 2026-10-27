@@ -8,7 +8,7 @@ import { describeRecord } from '../queries/describeRecord'
 import { showRecords } from '../queries/showRecords'
 import { joinEntity } from '../queries/joinEntity'
 import { mergeJoins } from '../queries/mergeJoins'
-import { where } from '../queries/where'
+import { whereTree } from '../queries/where'
 import { sortBy } from '../queries/sortBy'
 import { groupBy } from '../queries/groupBy'
 import { limitOffset } from '../queries/limitOffset'
@@ -19,6 +19,8 @@ import { getJoinIndexedList } from './getJoinIndexedList'
 import { isEntityProperty } from './parsers/isEntityProperty'
 import { splitEntityProperty } from './parsers/splitEntityProperty'
 import { fieldType } from './fieldType'
+import { conditionsOf } from './conditionTree'
+import { conditionEntities } from './conditionEntities'
 
 /**
  * Give each condition and sort clause its field's declared type, so where and sortBy compare by it
@@ -27,7 +29,7 @@ import { fieldType } from './fieldType'
  * @param recordData
  */
 const typeClauses = async (parsed, recordData) => {
-  for (const clause of [...parsed.conditions, ...parsed.sortClauses]) {
+  for (const clause of [...conditionsOf(parsed.where), ...parsed.sortClauses]) {
     let entity = parsed.entity
     let property = clause.property
     if (isEntityProperty(property)) {
@@ -41,6 +43,8 @@ const typeClauses = async (parsed, recordData) => {
 }
 
 export const runQuery = async (parsed) => {
+  // Checked before anything is read: which entity each condition is on, and whether it needs per-pair evaluation
+  const perPair = typeof parsed.where !== 'undefined' && conditionEntities(parsed)
   // Schema statements act on the database, not on entries (for create there is no record to read yet)
   switch (parsed.command) {
     case 'create':
@@ -51,17 +55,6 @@ export const runQuery = async (parsed) => {
       return { [parsed.entity]: await describeRecord(parsed.entity) }
     case 'show':
       return { [parsed.entity]: await showRecords() }
-  }
-  // update/delete apply their conditions before any join or merge runs, so a condition on another entity's field
-  // can't be checked there. An indexed one used to be dropped once its index had narrowed the joined rows, and the
-  // command then hit every row the other conditions allowed (`delete workouts.exercises on ... where
-  // exercises._id = 1` deleted every workout)
-  if (parsed.command === 'update' || parsed.command === 'delete') {
-    const other = parsed.conditions.find(condition =>
-      isEntityProperty(condition.property) && splitEntityProperty(condition.property).entity !== parsed.entity)
-    if (other) {
-      throw new Error(`${parsed.command} can only use conditions on ${parsed.entity}'s own fields, not ${other.property}`)
-    }
   }
   const recordData = {
     [parsed.entity]: await retrieveRecord(parsed.entity)
@@ -77,7 +70,7 @@ export const runQuery = async (parsed) => {
   // An indexed condition that matches nothing leaves dataSet[entity] at [] - the same state it starts in before
   // anything has looked at it at all. readEntity() (below) can't tell those two states apart on its own (it reloads
   // whenever the array is empty), so getConditionIndexedList reports which entities it resolved: once any indexed
-  // condition has narrowed entity's rows, they are final (the conditions left over are applied to them below) and
+  // condition has narrowed entity's rows, they are the candidates (every condition is applied to them below) and
   // must not be reloaded. This used to ask whether EVERY condition was indexed, so `where date = 'none' and where
   // reps = 10` reloaded every row and returned, updated or deleted all rows with reps 10.
   const resolved = new Set<string>()
@@ -87,16 +80,13 @@ export const runQuery = async (parsed) => {
 
   // delete/update act on whatever is already in dataSet[entity] - unlike read, which loads
   // everything and lets the where-reduce below narrow it down afterward, they never get a second
-  // pass. So the matching rows have to be fully resolved (indexed conditions already are, via
-  // getConditionIndexedList above; anything left in parsed.conditions is not) before either runs.
+  // pass. So every condition is applied to the candidates (all rows, or the ones the indexes picked)
+  // before either runs.
   if (parsed.command === 'delete' || parsed.command === 'update') {
     if (!entityResolved) {
       dataSet = await readEntity(parsed.entity, dataSet)
     }
-    dataSet[parsed.entity] = parsed.conditions.reduce(
-      (remainingData, condition) => where(remainingData, condition),
-      dataSet[parsed.entity]
-    )
+    dataSet[parsed.entity] = whereTree(dataSet[parsed.entity], parsed.where)
   }
 
   switch (parsed.command) {
@@ -117,20 +107,15 @@ export const runQuery = async (parsed) => {
     default:
       throw new Error(`Unknown command: ${parsed.command}`)
   }
-  dataSet = await joinEntity(parsed.entity, parsed.joinEntity, dataSet, parsed.joinClauses, entityResolved)
+  dataSet = await joinEntity(parsed.entity, parsed.joinEntity, dataSet, parsed.joinClauses, entityResolved, resolved.has(parsed.joinEntity))
   dataSet = await mergeJoins(dataSet, parsed.mergeJoins)
 
-  // delete/update already had parsed.conditions applied above, before they ran. Re-applying the
+  // delete/update already had parsed.where applied above, before they ran. Re-applying the
   // same conditions here would be wrong, not just redundant, for update specifically: if the
   // update just changed the very field a condition filters on, re-checking that condition against
   // the now-changed data would filter the just-updated rows back out.
   if (parsed.command !== 'delete' && parsed.command !== 'update') {
-    dataSet[parsed.entity] = parsed.conditions.reduce(
-      (remainingData, condition) => {
-        return where(remainingData, condition)
-      },
-      dataSet[parsed.entity]
-    )
+    dataSet[parsed.entity] = whereTree(dataSet[parsed.entity], parsed.where, perPair ? parsed.joinEntity : undefined)
   }
 
   dataSet[parsed.entity] = sortBy(dataSet[parsed.entity], parsed.sortClauses)
