@@ -151,15 +151,45 @@ export const treeTruth = (data, node: ConditionNode): Truth => {
 }
 
 /**
+ * One row seen together with one of its joined rows, for evaluating a where clause on the pair: the row's own fields,
+ * plus the joined row's as `joinEntity.field` (a field already on the row, such as a merged one, is kept).
+ * @param row
+ * @param joinEntity
+ * @param joinedRow
+ */
+const pairView = (row, joinEntity: string, joinedRow) => {
+  const view = Object.assign({}, row)
+  for (const field of Object.keys(joinedRow)) {
+    // A merged field on the joined row is already named `entity.field`
+    const name = field.includes('.') ? field : `${joinEntity}.${field}`
+    if (!Object.prototype.hasOwnProperty.call(view, name)) {
+      view[name] = joinedRow[field]
+    }
+  }
+  return view
+}
+
+/**
  * The rows that match a where-clause tree (see ConditionNode): only those for which the whole tree is true, so
  * `not (n = 5)` returns the same rows as `n != 5` (neither returns a row where n is null or missing). Every row when
  * there is no where clause.
+ *
+ * With a joinEntity (the tree uses its fields, see conditionEntities), it's SQL's inner join, evaluated per pair: each
+ * row keeps the joined rows for which the tree is true with that pair, and a row left with none is dropped.
  * @param dataSet
  * @param node
+ * @param joinEntity
  */
-export const whereTree = (dataSet = [], node: ConditionNode | undefined = undefined) => {
+export const whereTree = (dataSet = [], node: ConditionNode | undefined = undefined, joinEntity: string | undefined = undefined) => {
   if (typeof node === 'undefined') {
     return dataSet
   }
-  return dataSet.filter(data => treeTruth(data, node) === true)
+  if (typeof joinEntity === 'undefined') {
+    return dataSet.filter(data => treeTruth(data, node) === true)
+  }
+  return dataSet.flatMap(data => {
+    const joined = Array.isArray(data[joinEntity]) ? data[joinEntity] : []
+    const kept = joined.filter(joinedRow => treeTruth(pairView(data, joinEntity, joinedRow), node) === true)
+    return kept.length ? [Object.assign({}, data, { [joinEntity]: kept })] : []
+  })
 }

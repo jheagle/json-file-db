@@ -574,14 +574,13 @@ describe('query', () => {
     })
   })
 
-  describe('conditions on a joined entity (until the where-clauses joined-entities task)', () => {
+  describe('conditions on a joined entity (an inner join, see joinedConditions.test.js)', () => {
     const joined = async (text) => (await query(text))[0].map(row => [String(row._id), row.exercises.map(exercise => String(exercise._id))])
 
-    // Pins what an indexed condition on a joined field does today: every main row, each with only the matching joined
-    // rows. The joined-entities task changes this to an inner join (rows 1 and 4 only).
-    test('an indexed condition on a joined field filters the joined rows', async () => {
+    // Until the where-clauses epic, this returned every main row, the others with no joined rows
+    test('an indexed condition on a joined field keeps only the rows with a matching joined row', async () => {
       expect(await joined('read workouts.exercises on workouts.exercise_id = exercises._id where exercises._id = 1')).toEqual([
-        ['1', ['1']], ['2', []], ['3', []], ['4', ['1']], ['5', []], ['6', []]
+        ['1', ['1']], ['4', ['1']]
       ])
     })
 

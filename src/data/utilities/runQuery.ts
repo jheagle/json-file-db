@@ -20,6 +20,7 @@ import { isEntityProperty } from './parsers/isEntityProperty'
 import { splitEntityProperty } from './parsers/splitEntityProperty'
 import { fieldType } from './fieldType'
 import { conditionsOf } from './conditionTree'
+import { conditionEntities } from './conditionEntities'
 
 /**
  * Give each condition and sort clause its field's declared type, so where and sortBy compare by it
@@ -42,6 +43,8 @@ const typeClauses = async (parsed, recordData) => {
 }
 
 export const runQuery = async (parsed) => {
+  // Checked before anything is read: which entity each condition is on, and whether it needs per-pair evaluation
+  const perPair = typeof parsed.where !== 'undefined' && conditionEntities(parsed)
   // Schema statements act on the database, not on entries (for create there is no record to read yet)
   switch (parsed.command) {
     case 'create':
@@ -52,17 +55,6 @@ export const runQuery = async (parsed) => {
       return { [parsed.entity]: await describeRecord(parsed.entity) }
     case 'show':
       return { [parsed.entity]: await showRecords() }
-  }
-  // update/delete apply their conditions before any join or merge runs, so a condition on another entity's field
-  // can't be checked there. An indexed one used to be dropped once its index had narrowed the joined rows, and the
-  // command then hit every row the other conditions allowed (`delete workouts.exercises on ... where
-  // exercises._id = 1` deleted every workout)
-  if (parsed.command === 'update' || parsed.command === 'delete') {
-    const other = conditionsOf(parsed.where).find(condition =>
-      isEntityProperty(condition.property) && splitEntityProperty(condition.property).entity !== parsed.entity)
-    if (other) {
-      throw new Error(`${parsed.command} can only use conditions on ${parsed.entity}'s own fields, not ${other.property}`)
-    }
   }
   const recordData = {
     [parsed.entity]: await retrieveRecord(parsed.entity)
@@ -115,7 +107,7 @@ export const runQuery = async (parsed) => {
     default:
       throw new Error(`Unknown command: ${parsed.command}`)
   }
-  dataSet = await joinEntity(parsed.entity, parsed.joinEntity, dataSet, parsed.joinClauses, entityResolved)
+  dataSet = await joinEntity(parsed.entity, parsed.joinEntity, dataSet, parsed.joinClauses, entityResolved, resolved.has(parsed.joinEntity))
   dataSet = await mergeJoins(dataSet, parsed.mergeJoins)
 
   // delete/update already had parsed.where applied above, before they ran. Re-applying the
@@ -123,7 +115,7 @@ export const runQuery = async (parsed) => {
   // update just changed the very field a condition filters on, re-checking that condition against
   // the now-changed data would filter the just-updated rows back out.
   if (parsed.command !== 'delete' && parsed.command !== 'update') {
-    dataSet[parsed.entity] = whereTree(dataSet[parsed.entity], parsed.where)
+    dataSet[parsed.entity] = whereTree(dataSet[parsed.entity], parsed.where, perPair ? parsed.joinEntity : undefined)
   }
 
   dataSet[parsed.entity] = sortBy(dataSet[parsed.entity], parsed.sortClauses)
