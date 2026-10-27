@@ -174,7 +174,7 @@ only link them (`exercise_muscle` in `workouts.muscles`) are an error.
   accepted. Every example and error listed in the Grammar section becomes a test, plus a regression test that `or`
   no longer errors. Flatten nested groups of the same kind (`a and (b and c)` -> one `and` of three): only the
   top-level `and`'s direct conditions narrow rows through an index (`requiredConditions`).
-- [ ] **Evaluation**: three-valued logic (true / false / unknown) for `and`, `or`, `not`; a row is kept only when
+- [x] **Evaluation** (#77): three-valued logic (true / false / unknown) for `and`, `or`, `not`; a row is kept only when
   the whole expression is true. Tests: `not (n = 5)` gives the same rows as `n != 5`; the truth tables.
 - [ ] **Indexes for the tree**: candidate rows per node (intersection for `and`, union for `or` when every branch is
   indexed, all rows otherwise and for `not`). Tests: every Grammar example gives the same rows with and without
