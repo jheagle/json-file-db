@@ -36,6 +36,8 @@ describe('where clause grammar', () => {
       ['where a = 1 or where b = 1', { or: [c('a'), c('b')] }],
       ['where a = 1 where b = 1', { and: [c('a'), c('b')] }],
       ['where a = 1 sort a and where b = 1', { and: [c('a'), c('b')] }],
+      // Separate where clauses join with and around each whole expression: (a or b) and c, not a or (b and c)
+      ['where a = 1 or b = 1 sort a and where c = 1', { and: [{ or: [c('a'), c('b')] }, c('c')] }],
       ['WHERE a = 1 AND (b = 1 OR NOT c = 1)', { and: [c('a'), { or: [c('b'), { not: c('c') }] }] }]
     ])('%s', (text, tree) => {
       expect(whereOf(text)).toEqual(tree)
@@ -94,7 +96,9 @@ describe('where clause grammar', () => {
       ['where a = 1 or', 'Missing a condition after or'],
       ['where (a = 1 and)', 'Missing a condition after and: )'],
       ['where (not) and a = 1', 'Missing a condition after not: ) and a = 1'],
-      ['where a = 1 sort a or where b = 1', '`or where` must follow the conditions it joins']
+      ['where a = 1 sort a or where b = 1', '`or where` must follow the conditions it joins'],
+      // Text after the expression that isn't a condition or a clause is left for parseQuery, which refuses it
+      ['where a = 1 foo', 'Unrecognized query value: foo']
     ])('%s', (text, message) => {
       expect(() => parser(`read t ${text}`)).toThrow(message)
     })
