@@ -1,5 +1,5 @@
 import { query } from './query'
-import { readFile } from 'fs/promises'
+import { readFile, writeFile } from 'fs/promises'
 import { create } from '../introspect/create'
 import { setUp } from 'test-filesystem'
 import { configure } from '../utilities/config'
@@ -488,6 +488,29 @@ describe('query', () => {
       expect(await names(`read ${record} where x = 1`)).toEqual(['one', 'two'])
       expect(await names(`read ${record} where y = 1`)).toEqual(['one', 'three'])
       expect(await names(`read ${record} where x = 1 and where y = 2`)).toEqual(['two'])
+    })
+  })
+
+  describe('an index only narrows the rows: every condition still applies', () => {
+    // A stale index entry (a crash between writing a row and its index can leave one) lists row 4, dated 2024-06-05,
+    // under 2024-06-02. The index picks it as a candidate, but the condition itself is still checked on it.
+    beforeEach(async () => {
+      const file = `${databasePath}__indexes/workouts/index_date.json`
+      const index = JSON.parse(await readFile(file, 'utf8'))
+      index.find(entry => entry.value === '2024-06-02').record.push('2024-06-05-001.json')
+      await writeFile(file, JSON.stringify(index))
+    })
+    const ids = async (text) => (await query(text))[0].map(row => String(row._id)).sort()
+
+    test('read', async () => {
+      expect(await ids("read workouts where date = '2024-06-02'")).toEqual(['1', '2', '3'])
+    })
+
+    test('update and delete touch only rows the condition really matches', async () => {
+      await query("update workouts set note = 'x' where date = '2024-06-02'")
+      expect(await ids("read workouts where note = 'x'")).toEqual(['1', '2', '3'])
+      await query("delete workouts where date = '2024-06-02'")
+      expect(await ids('read workouts')).toEqual(['4', '5', '6'])
     })
   })
 })

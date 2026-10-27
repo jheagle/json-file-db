@@ -66,7 +66,7 @@ export const runQuery = async (parsed) => {
   // An indexed condition that matches nothing leaves dataSet[entity] at [] - the same state it starts in before
   // anything has looked at it at all. readEntity() (below) can't tell those two states apart on its own (it reloads
   // whenever the array is empty), so getConditionIndexedList reports which entities it resolved: once any indexed
-  // condition has narrowed entity's rows, they are final (the conditions left over are applied to them below) and
+  // condition has narrowed entity's rows, they are the candidates (every condition is applied to them below) and
   // must not be reloaded. This used to ask whether EVERY condition was indexed, so `where date = 'none' and where
   // reps = 10` reloaded every row and returned, updated or deleted all rows with reps 10.
   const resolved = new Set<string>()
@@ -76,8 +76,8 @@ export const runQuery = async (parsed) => {
 
   // delete/update act on whatever is already in dataSet[entity] - unlike read, which loads
   // everything and lets the where-reduce below narrow it down afterward, they never get a second
-  // pass. So the matching rows have to be fully resolved (indexed conditions already are, via
-  // getConditionIndexedList above; anything left in parsed.conditions is not) before either runs.
+  // pass. So every condition is applied to the candidates (all rows, or the ones the indexes picked)
+  // before either runs.
   if (parsed.command === 'delete' || parsed.command === 'update') {
     if (!entityResolved) {
       dataSet = await readEntity(parsed.entity, dataSet)
