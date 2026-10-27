@@ -1,4 +1,5 @@
 import { compareAs, sameValue } from '../utilities/compareAs'
+import { ConditionNode, isCondition } from '../utilities/conditionTree'
 
 const likeMatch = (dataValue, pattern) => {
   if (typeof dataValue !== 'string' || typeof pattern !== 'string') {
@@ -84,3 +85,29 @@ export const where = (
     return makeCondition(data, testProperty, comparator, value, type)
   })
 }
+
+/**
+ * Whether one row matches a where-clause tree.
+ * @param data
+ * @param node
+ * @throws {Error} For `or` and `not`, which nothing produces yet (the where-clauses epic adds them with SQL's
+ * three-valued logic).
+ */
+const matchesTree = (data, node: ConditionNode): boolean => {
+  if (isCondition(node)) {
+    const { property = '', joinEntity = undefined, comparator = '=', value = null, type = undefined } = node as any
+    return makeCondition(data, joinEntity ? `${joinEntity}.${property}` : property, comparator, value, type)
+  }
+  if ('and' in node) {
+    return node.and.every(child => matchesTree(data, child))
+  }
+  throw new Error(`\`${'or' in node ? 'or' : 'not'}\` conditions are not supported yet`)
+}
+
+/**
+ * The rows that match a where-clause tree (see ConditionNode); every row when there is no where clause.
+ * @param dataSet
+ * @param node
+ */
+export const whereTree = (dataSet = [], node: ConditionNode | undefined = undefined) =>
+  typeof node === 'undefined' ? dataSet : dataSet.filter(data => matchesTree(data, node))

@@ -8,7 +8,7 @@ import { describeRecord } from '../queries/describeRecord'
 import { showRecords } from '../queries/showRecords'
 import { joinEntity } from '../queries/joinEntity'
 import { mergeJoins } from '../queries/mergeJoins'
-import { where } from '../queries/where'
+import { whereTree } from '../queries/where'
 import { sortBy } from '../queries/sortBy'
 import { groupBy } from '../queries/groupBy'
 import { limitOffset } from '../queries/limitOffset'
@@ -19,6 +19,7 @@ import { getJoinIndexedList } from './getJoinIndexedList'
 import { isEntityProperty } from './parsers/isEntityProperty'
 import { splitEntityProperty } from './parsers/splitEntityProperty'
 import { fieldType } from './fieldType'
+import { conditionsOf } from './conditionTree'
 
 /**
  * Give each condition and sort clause its field's declared type, so where and sortBy compare by it
@@ -27,7 +28,7 @@ import { fieldType } from './fieldType'
  * @param recordData
  */
 const typeClauses = async (parsed, recordData) => {
-  for (const clause of [...parsed.conditions, ...parsed.sortClauses]) {
+  for (const clause of [...conditionsOf(parsed.where), ...parsed.sortClauses]) {
     let entity = parsed.entity
     let property = clause.property
     if (isEntityProperty(property)) {
@@ -82,10 +83,7 @@ export const runQuery = async (parsed) => {
     if (!entityResolved) {
       dataSet = await readEntity(parsed.entity, dataSet)
     }
-    dataSet[parsed.entity] = parsed.conditions.reduce(
-      (remainingData, condition) => where(remainingData, condition),
-      dataSet[parsed.entity]
-    )
+    dataSet[parsed.entity] = whereTree(dataSet[parsed.entity], parsed.where)
   }
 
   switch (parsed.command) {
@@ -109,17 +107,12 @@ export const runQuery = async (parsed) => {
   dataSet = await joinEntity(parsed.entity, parsed.joinEntity, dataSet, parsed.joinClauses, entityResolved)
   dataSet = await mergeJoins(dataSet, parsed.mergeJoins)
 
-  // delete/update already had parsed.conditions applied above, before they ran. Re-applying the
+  // delete/update already had parsed.where applied above, before they ran. Re-applying the
   // same conditions here would be wrong, not just redundant, for update specifically: if the
   // update just changed the very field a condition filters on, re-checking that condition against
   // the now-changed data would filter the just-updated rows back out.
   if (parsed.command !== 'delete' && parsed.command !== 'update') {
-    dataSet[parsed.entity] = parsed.conditions.reduce(
-      (remainingData, condition) => {
-        return where(remainingData, condition)
-      },
-      dataSet[parsed.entity]
-    )
+    dataSet[parsed.entity] = whereTree(dataSet[parsed.entity], parsed.where)
   }
 
   dataSet[parsed.entity] = sortBy(dataSet[parsed.entity], parsed.sortClauses)

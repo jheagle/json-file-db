@@ -1,4 +1,4 @@
-import { where } from './where'
+import { where, whereTree } from './where'
 
 const dataSet = [
   {
@@ -232,6 +232,26 @@ describe('where', () => {
       const withNulls = [{ s: '9' }, { s: null }, {}]
       expect(values(withNulls, 's', 'string', '>', 1)).toEqual(['9'])
       expect(values(withNulls, 's', 'string', 'between', [null, 'z'])).toEqual([])
+    })
+  })
+
+  describe('whereTree', () => {
+    const rows = [{ id: 1, n: 1, s: 'x' }, { id: 2, n: 2, s: 'x' }, { id: 3, n: 2, s: 'y' }]
+    const n2 = { property: 'n', comparator: '=', value: 2 }
+    const sx = { property: 's', comparator: '=', value: 'x' }
+
+    test('no where clause keeps every row', () => {
+      expect(whereTree(rows, undefined)).toEqual(rows)
+    })
+
+    test('one condition, and an and of several', () => {
+      expect(whereTree(rows, n2).map(row => row.id)).toEqual([2, 3])
+      expect(whereTree(rows, { and: [n2, sx] }).map(row => row.id)).toEqual([2])
+    })
+
+    test('or and not are refused until the where-clauses epic builds them', () => {
+      expect(() => whereTree(rows, { or: [n2, sx] })).toThrow('`or` conditions are not supported yet')
+      expect(() => whereTree(rows, { not: n2 })).toThrow('`not` conditions are not supported yet')
     })
   })
 })
