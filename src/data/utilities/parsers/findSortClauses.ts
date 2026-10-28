@@ -27,7 +27,7 @@ export const findSortClauses = (parsed: ParsedQuery, query: string): string => {
     for (const sortClause of sortRulesFound) {
       parsed['sortClauses'].push({
         property: sortClause[2],
-        direction: sortClause[3] || 'asc',
+        direction: (sortClause[3] || 'asc').toLowerCase(),
       })
     }
     return removeFromQuery(sortFound[0], query)
