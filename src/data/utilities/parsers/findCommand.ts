@@ -17,7 +17,7 @@ export const findCommand = (parsed: ParsedQuery, query: string): string => {
   parsed['command'] = undefined
   parsed['entity'] = undefined
   if (commandFound) {
-    parsed['command'] = commandFound[1]
+    parsed['command'] = commandFound[1].toLowerCase()
     parsed['entity'] = commandFound[2]
     return removeFromQuery(commandFound[0], query)
   }
