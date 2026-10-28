@@ -64,9 +64,9 @@ const [workouts, exercises] = await query("read workouts where date = '2024-06-0
 
 The `;` after the last (or only) query is optional. A `;` inside a string, a comment or brackets doesn't end a query.
 
-Write the commands `read`, `insert`, `update` and `delete`, and the sort directions `asc` and `desc`, in lowercase:
-`READ t` is an error, and `sort a ASC` sorts descending. Other keywords (`where`, `and`, `sort`, `limit`, `create`,
-`show records`...) and comparators can be written in any case.
+Keywords (`where`, `and`, `sort`, `limit`, `create`, `show records`...), command words (`read`, `insert`, `update`,
+`delete`), sort directions (`asc`, `desc`) and comparators can be written in any case: `READ t` and `sort a ASC` work.
+Record and field names are case-sensitive.
 
 ### Strings
 
@@ -369,6 +369,8 @@ queryStatus('read notes;')                   // { complete: true, waitingFor: ''
 - A condition on a record that isn't in the query, or only links a join, is an error. Before, it matched nothing or
   failed to read the record.
 - Comparators are case-insensitive (`IN`, `LIKE`). Before, only lowercase ones matched anything.
+- Command words and sort directions are case-insensitive (`READ t`, `sort a ASC`). Before, `READ t` was an
+  error and `sort a ASC` sorted descending.
 
 ## Configuration
 
