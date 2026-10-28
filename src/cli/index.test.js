@@ -108,4 +108,11 @@ describe('the interactive CLI', () => {
     expect(process.exit).toHaveBeenCalledWith(0)
     expect(receivedQueries()).toEqual([])
   })
+
+  test('semi-colon in unclosed string does not close the query', () => {
+    const rl = startCli()
+    rl.emit('line', 'read foo where note = "hello;')
+    rl.emit('line', ' world";')
+    expect(receivedQueries()).toEqual(['read foo where note = "hello;\n world";'])
+  })
 })

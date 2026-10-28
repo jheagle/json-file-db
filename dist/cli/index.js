@@ -25,19 +25,20 @@ rl.prompt();
 rl.on('line', line => {
   const trimmedLine = line.trim();
   // Check if the user wants to exit
-  if (trimmedLine.toLowerCase() === '/exit') {
+  if (!inputBuffer && trimmedLine.toLowerCase() === '/exit') {
     rl.close();
     return;
   }
   // Skip blank lines, they add nothing to the query
-  if (!trimmedLine) {
+  if (!inputBuffer && !trimmedLine) {
     rl.prompt();
     return;
   }
   // Append current line to the buffer
-  inputBuffer += (inputBuffer ? ' ' : '') + trimmedLine;
+  inputBuffer += (inputBuffer ? '\n' : '') + trimmedLine;
   // Check if the line ends with a semicolon
-  if (trimmedLine.endsWith(';')) {
+  // TOOD: this changes when we check open quotes and brackets, because a semicolon can be part of a multi-line query
+  if (queryStatus(inputBuffer).complete) {
     // Process the accumulated input
     processInput(inputBuffer);
     // Reset the buffer and prompt for next command

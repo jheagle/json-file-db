@@ -29,12 +29,14 @@ rl.on('line', (line: string): void => {
   const trimmedLine: string = line.trim()
 
   // Check if the user wants to exit
+  // TODO: if need to check if this is within open quotes or brackets, because it could be part of a multi-line query
   if (trimmedLine.toLowerCase() === '/exit') {
     rl.close()
     return
   }
 
   // Skip blank lines, they add nothing to the query
+  // TODO: this changes when we check open quotes and brackets, because a blank line can be part of a multi-line query
   if (!trimmedLine) {
     rl.prompt()
     return
@@ -44,6 +46,7 @@ rl.on('line', (line: string): void => {
   inputBuffer += (inputBuffer ? ' ' : '') + trimmedLine
 
   // Check if the line ends with a semicolon
+  // TOOD: this changes when we check open quotes and brackets, because a semicolon can be part of a multi-line query
   if (trimmedLine.endsWith(';')) {
     // Process the accumulated input
     processInput(inputBuffer)
