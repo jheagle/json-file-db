@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import * as readline from 'readline'
 import { styleText } from 'util'
-import { queryStatus } from '../data/queries/queryStatus'
+import { QueryStatus, queryStatus } from '../data/queries/queryStatus'
 
 const promptPrefix: string = 'JSON-Query> '
 
@@ -44,7 +44,7 @@ rl.on('line', (line: string): void => {
   // Append current line to the buffer
   inputBuffer += (inputBuffer ? '\n' : '') + line
 
-  const status = queryStatus(inputBuffer)
+  const status: QueryStatus = queryStatus(inputBuffer)
 
   // Check if the line ends the query (closed query and semicolon present)
   if (status.complete) {
@@ -62,11 +62,12 @@ rl.on('line', (line: string): void => {
   rl.prompt()
 })
 
-rl.on('SIGINT', () => {
-  if (!inputBuffer) {
+rl.on('SIGINT', (): void => {
+  if (!inputBuffer && !rl.line) {
     rl.close()
     return
   }
+  rl.write(null, { ctrl: true, name: 'u' })
   inputBuffer = ''
   rl.setPrompt(promptPrefix)
   rl.prompt()
