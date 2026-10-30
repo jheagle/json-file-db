@@ -35,7 +35,7 @@ rl.on('line', (line: string): void => {
     return
   }
 
-  // Skip blank lines, they add nothing to the query
+  // Skip blank lines on their own, accept them mid-query
   if (!inputBuffer && !trimmedLine) {
     rl.prompt()
     return
@@ -46,7 +46,7 @@ rl.on('line', (line: string): void => {
 
   const status = queryStatus(inputBuffer)
 
-  // Check if the line ends with a semicolon
+  // Check if the line ends the query (closed query and semicolon present)
   if (status.complete) {
     // Process the accumulated input
     processInput(inputBuffer)
@@ -59,6 +59,16 @@ rl.on('line', (line: string): void => {
     rl.setPrompt(continuePrefix(status.waitingFor))
   }
 
+  rl.prompt()
+})
+
+rl.on('SIGINT', () => {
+  if (!inputBuffer) {
+    rl.close()
+    return
+  }
+  inputBuffer = ''
+  rl.setPrompt(promptPrefix)
   rl.prompt()
 })
 

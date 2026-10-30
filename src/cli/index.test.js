@@ -118,12 +118,10 @@ describe('the interactive CLI', () => {
 
   test('/exit inside unclosed query will just add to query buffer', () => {
     const rl = startCli()
-    rl.emit('line', 'this query has /exit in it')
-    rl.emit('line', 'and it is not closed yet;')
+    rl.emit('line', 'read foo')
     rl.emit('line', '/exit')
-    expect(rl.close).toHaveBeenCalled()
-    expect(process.exit).toHaveBeenCalledWith(0)
-    expect(receivedQueries()).toEqual(['this query has /exit in it\nand it is not closed yet;'])
+    rl.emit('line', ';')
+    expect(receivedQueries()).toEqual(['read foo\n/exit\n;'])
   })
 
   test('a comment with -- does not roll to the next line', () => {
@@ -137,5 +135,55 @@ describe('the interactive CLI', () => {
     const rl = startCli()
     rl.emit('line', 'read foo; -- note this is a comment')
     expect(receivedQueries()).toEqual(['read foo; -- note this is a comment'])
+  })
+
+  test('prompt will show single quote is still open', () => {
+    const rl = startCli()
+    rl.emit('line', "read foo from bar where note = '")
+    expect(lastPrompt(rl)).toBe("         '> ")
+  })
+
+  test('prompt will show double quote is still open', () => {
+    const rl = startCli()
+    rl.emit('line', 'read foo from bar where note = "')
+    expect(lastPrompt(rl)).toBe('         "> ')
+  })
+
+  test('prompt will show parentheses is still open', () => {
+    const rl = startCli()
+    rl.emit('line', 'read foo from bar where status in (')
+    expect(lastPrompt(rl)).toBe('         (> ')
+  })
+
+  test('prompt will show multi-line comment is still open', () => {
+    const rl = startCli()
+    rl.emit('line', 'read foo from bar where status in /*')
+    expect(lastPrompt(rl)).toBe('        /*> ')
+  })
+
+  test('prompt will clear when mid query if Ctrl+C is pressed', () => {
+    const rl = startCli()
+    rl.emit('line', 'read foo from bar where status in (')
+    expect(lastPrompt(rl)).toBe('         (> ')
+    rl.emit('SIGINT')
+    expect(lastPrompt(rl)).toBe('JSON-Query> ')
+  })
+
+  test('Ctrl+C at the start of a query will exit', () => {
+    const rl = startCli()
+    rl.emit('SIGINT')
+    expect(rl.close).toHaveBeenCalled()
+    expect(process.exit).toHaveBeenCalledWith(0)
+  })
+
+  test('Ctrl+C after will clear a query and then exit on the next Ctrl+C', () => {
+    const rl = startCli()
+    rl.emit('line', 'read foo from bar where status in (')
+    expect(lastPrompt(rl)).toBe('         (> ')
+    rl.emit('SIGINT')
+    expect(lastPrompt(rl)).toBe('JSON-Query> ')
+    rl.emit('SIGINT')
+    expect(rl.close).toHaveBeenCalled()
+    expect(process.exit).toHaveBeenCalledWith(0)
   })
 })
