@@ -4,10 +4,11 @@
 require("core-js/modules/esnext.weak-map.delete-all.js");
 var readline = _interopRequireWildcard(require("readline"));
 var _util = require("util");
+var _queryStatus = require("../data/queries/queryStatus");
 function _interopRequireWildcard(e, t) { if ("function" == typeof WeakMap) var r = new WeakMap(), n = new WeakMap(); return (_interopRequireWildcard = function (e, t) { if (!t && e && e.__esModule) return e; var o, i, f = { __proto__: null, default: e }; if (null === e || "object" != typeof e && "function" != typeof e) return f; if (o = t ? n : r) { if (o.has(e)) return o.get(e); o.set(e, f); } for (const t in e) "default" !== t && {}.hasOwnProperty.call(e, t) && ((i = (o = Object.defineProperty) && Object.getOwnPropertyDescriptor(e, t)) && (i.get || i.set) ? o(f, t, i) : f[t] = e[t]); return f; })(e, t); }
 const promptPrefix = 'JSON-Query> ';
 // Continuation prompt, padded to line up with the first line and dimmed so it reads as secondary
-const continuePrefix = (0, _util.styleText)('dim', '-> '.padStart(promptPrefix.length));
+const continuePrefix = waitingFor => (0, _util.styleText)('dim', `${waitingFor}> `.padStart(promptPrefix.length));
 // Create the interface for reading from standard input/output
 const rl = readline.createInterface({
   input: process.stdin,
@@ -35,10 +36,10 @@ rl.on('line', line => {
     return;
   }
   // Append current line to the buffer
-  inputBuffer += (inputBuffer ? '\n' : '') + trimmedLine;
+  inputBuffer += (inputBuffer ? '\n' : '') + line;
+  const status = (0, _queryStatus.queryStatus)(inputBuffer);
   // Check if the line ends with a semicolon
-  // TOOD: this changes when we check open quotes and brackets, because a semicolon can be part of a multi-line query
-  if (queryStatus(inputBuffer).complete) {
+  if (status.complete) {
     // Process the accumulated input
     processInput(inputBuffer);
     // Reset the buffer and prompt for next command
@@ -46,7 +47,7 @@ rl.on('line', line => {
     rl.setPrompt(promptPrefix);
   } else {
     // Change prompt visually to show it is expecting continuation
-    rl.setPrompt(continuePrefix);
+    rl.setPrompt(continuePrefix(status.waitingFor));
   }
   rl.prompt();
 });

@@ -1,11 +1,12 @@
 #!/usr/bin/env node
 import * as readline from 'readline'
 import { styleText } from 'util'
+import { queryStatus } from '../data/queries/queryStatus'
 
 const promptPrefix: string = 'JSON-Query> '
 
 // Continuation prompt, padded to line up with the first line and dimmed so it reads as secondary
-const continuePrefix: string = styleText('dim', '-> '.padStart(promptPrefix.length))
+const continuePrefix = (waitingFor: string): string => styleText('dim', `${waitingFor}> `.padStart(promptPrefix.length))
 
 // Create the interface for reading from standard input/output
 const rl: readline.Interface = readline.createInterface({
@@ -29,25 +30,24 @@ rl.on('line', (line: string): void => {
   const trimmedLine: string = line.trim()
 
   // Check if the user wants to exit
-  // TODO: if need to check if this is within open quotes or brackets, because it could be part of a multi-line query
-  if (trimmedLine.toLowerCase() === '/exit') {
+  if (!inputBuffer && trimmedLine.toLowerCase() === '/exit') {
     rl.close()
     return
   }
 
   // Skip blank lines, they add nothing to the query
-  // TODO: this changes when we check open quotes and brackets, because a blank line can be part of a multi-line query
-  if (!trimmedLine) {
+  if (!inputBuffer && !trimmedLine) {
     rl.prompt()
     return
   }
 
   // Append current line to the buffer
-  inputBuffer += (inputBuffer ? ' ' : '') + trimmedLine
+  inputBuffer += (inputBuffer ? '\n' : '') + line
+
+  const status = queryStatus(inputBuffer)
 
   // Check if the line ends with a semicolon
-  // TOOD: this changes when we check open quotes and brackets, because a semicolon can be part of a multi-line query
-  if (trimmedLine.endsWith(';')) {
+  if (status.complete) {
     // Process the accumulated input
     processInput(inputBuffer)
 
@@ -56,7 +56,7 @@ rl.on('line', (line: string): void => {
     rl.setPrompt(promptPrefix)
   } else {
     // Change prompt visually to show it is expecting continuation
-    rl.setPrompt(continuePrefix)
+    rl.setPrompt(continuePrefix(status.waitingFor))
   }
 
   rl.prompt()

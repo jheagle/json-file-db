@@ -54,7 +54,7 @@ describe('the interactive CLI', () => {
     const rl = startCli()
     rl.emit('line', 'read foo')
     expect(receivedQueries()).toEqual([])
-    expect(lastPrompt(rl)).toBe('         -> ')
+    expect(lastPrompt(rl)).toBe('         ;> ')
 
     rl.emit('line', 'where note = \'hello\';')
     expect(receivedQueries()).toHaveLength(1)
@@ -65,15 +65,15 @@ describe('the interactive CLI', () => {
     const rl = startCli()
     rl.emit('line', 'read foo')
     expect(lastPrompt(rl)).toHaveLength('JSON-Query> '.length)
-    expect(lastPrompt(rl).endsWith('-> ')).toBe(true)
+    expect(lastPrompt(rl).endsWith(';> ')).toBe(true)
   })
 
-  test('continued lines are joined with a space instead of a newline', () => {
+  test('continued lines are joined with a newline', () => {
     const rl = startCli()
     rl.emit('line', 'read foo')
     rl.emit('line', '  where note = \'hello\'')
     rl.emit('line', '  limit 1;')
-    expect(receivedQueries()).toEqual(['read foo where note = \'hello\' limit 1;'])
+    expect(receivedQueries()).toEqual(['read foo\n  where note = \'hello\'\n  limit 1;'])
   })
 
   test('a blank line at the start of a query is ignored', () => {
@@ -86,12 +86,12 @@ describe('the interactive CLI', () => {
     expect(receivedQueries()).toEqual(['read foo;'])
   })
 
-  test('a blank line in the middle of a query adds nothing to it', () => {
+  test('a blank line in the middle of a query will be retained', () => {
     const rl = startCli()
     rl.emit('line', 'read foo')
     rl.emit('line', '')
     rl.emit('line', 'limit 1;')
-    expect(receivedQueries()).toEqual(['read foo limit 1;'])
+    expect(receivedQueries()).toEqual(['read foo\n\nlimit 1;'])
   })
 
   test('the buffer is reset after each query', () => {
@@ -114,5 +114,28 @@ describe('the interactive CLI', () => {
     rl.emit('line', 'read foo where note = "hello;')
     rl.emit('line', ' world";')
     expect(receivedQueries()).toEqual(['read foo where note = "hello;\n world";'])
+  })
+
+  test('/exit inside unclosed query will just add to query buffer', () => {
+    const rl = startCli()
+    rl.emit('line', 'this query has /exit in it')
+    rl.emit('line', 'and it is not closed yet;')
+    rl.emit('line', '/exit')
+    expect(rl.close).toHaveBeenCalled()
+    expect(process.exit).toHaveBeenCalledWith(0)
+    expect(receivedQueries()).toEqual(['this query has /exit in it\nand it is not closed yet;'])
+  })
+
+  test('a comment with -- does not roll to the next line', () => {
+    const rl = startCli()
+    rl.emit('line', '-- this is a comment;')
+    rl.emit('line', 'and this concludes the input;')
+    expect(receivedQueries()).toEqual(['-- this is a comment;\nand this concludes the input;'])
+  })
+
+  test('a comment after a semi-colon can be complete', () => {
+    const rl = startCli()
+    rl.emit('line', 'read foo; -- note this is a comment')
+    expect(receivedQueries()).toEqual(['read foo; -- note this is a comment'])
   })
 })
