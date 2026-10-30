@@ -13,6 +13,8 @@ const startCli = () => {
   rl.prompt = jest.fn()
   rl.setPrompt = jest.fn()
   rl.close = jest.fn(() => rl.emit('close'))
+  rl.line = ''
+  rl.write = jest.fn()
   readline.createInterface.mockReturnValue(rl)
   jest.isolateModules(() => require('./index'))
   return rl
@@ -185,5 +187,14 @@ describe('the interactive CLI', () => {
     rl.emit('SIGINT')
     expect(rl.close).toHaveBeenCalled()
     expect(process.exit).toHaveBeenCalledWith(0)
+  })
+
+  test('Ctrl+C with text typed on the first line clears it instead of exiting', () => {
+    const rl = startCli()
+    rl.line = 'read fo'
+    rl.emit('SIGINT')
+    expect(rl.write).toHaveBeenCalledWith(null, { ctrl: true, name: 'u' })
+    expect(rl.close).not.toHaveBeenCalled()
+    expect(process.exit).not.toHaveBeenCalled()
   })
 })
