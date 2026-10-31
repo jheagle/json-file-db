@@ -108,11 +108,14 @@ describe('which entities a condition can name', () => {
   })
 
   test.each([
-    `delete ${workoutsJoin.replace('read ', '')} where exercises._id = 1`,
-    `update ${workoutsJoin.replace('read ', '')} set reps = 1 where date = '2024-06-02' and exercises.name = 'Squat'`,
-    `delete ${workoutsJoin.replace('read ', '')} where date = '2024-06-02' or exercises._id = 1`
-  ])('update and delete only take the entity\'s own fields, and change nothing: %s', async (text) => {
-    await expect(query(text)).rejects.toThrow('can only use conditions on workouts\'s own fields')
+    ['delete workouts where exercises._id = 1', 'can only use conditions on workouts\'s own fields'],
+    ["update workouts set reps = 1 where date = '2024-06-02' and exercises.name = 'Squat'", 'can only use conditions on workouts\'s own fields'],
+    ["delete workouts where date = '2024-06-02' or exercises._id = 1", 'can only use conditions on workouts\'s own fields'],
+    // and take no on clause since 3.0.0 (see splitClauses)
+    [`delete ${workoutsJoin.replace('read ', '')} where exercises._id = 1`, '"on" isn\'t allowed in a delete query'],
+    [`update ${workoutsJoin.replace('read ', '')} set reps = 1 where date = '2024-06-02' and exercises.name = 'Squat'`, '"on" isn\'t allowed in an update query']
+  ])('update and delete only take the entity\'s own fields, and change nothing: %s', async (text, message) => {
+    await expect(query(text)).rejects.toThrow(message)
     const [rows] = await query('read workouts')
     expect(rows.map(row => row.reps)).toEqual([10, 10, 10, 10, 10, 10])
   })

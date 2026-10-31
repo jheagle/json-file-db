@@ -448,8 +448,8 @@ describe('parser', () => {
       expect(read.limit).toBe(1)
     })
 
-    test('several fields, separated by commas, before offset and limit', () => {
-      const read = only('read t sort a, b desc, c offset 2 limit 3')
+    test('several fields, separated by commas, before limit and offset', () => {
+      const read = only('read t sort a, b desc, c limit 3 offset 2')
       expect(read.sortClauses).toEqual([
         { property: 'a', direction: 'asc' },
         { property: 'b', direction: 'desc' },
@@ -459,8 +459,8 @@ describe('parser', () => {
       expect(read.limit).toBe(3)
     })
 
-    test('before group by', () => {
-      const read = only('read t sort a group by b')
+    test('after group by', () => {
+      const read = only('read t group by b sort a')
       expect(read.sortClauses).toEqual([{ property: 'a', direction: 'asc' }])
       expect(read.groupBy).toBeDefined()
     })

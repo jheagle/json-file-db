@@ -201,7 +201,7 @@ describe('query', () => {
   })
 
   test('it can use sort and group by', async () => {
-    const queryString = 'read workouts sort date desc, order asc group by date'
+    const queryString = 'read workouts group by date sort date desc, order asc'
     const result = await query(queryString)
     expect(result).toEqual([
       {
@@ -310,7 +310,7 @@ describe('query', () => {
   })
 
   test('offset skips that many rows, and combines with limit to page through a real query string', async () => {
-    const result = await query('read workouts sort date asc, order asc offset 2 limit 2')
+    const result = await query('read workouts sort date asc, order asc limit 2 offset 2')
     expect(result[0]).toHaveLength(2)
     expect(result[0].map(row => row._id)).toEqual([3, 4])
   })
@@ -325,7 +325,7 @@ describe('query', () => {
   })
 
   test('select, limit and offset all combine on the same real query string', async () => {
-    const result = await query('read workouts select _id, date sort date asc, order asc offset 1 limit 2')
+    const result = await query('read workouts select _id, date sort date asc, order asc limit 2 offset 1')
     expect(result[0]).toEqual([
       { _id: 2, date: '2024-06-02' },
       { _id: 3, date: '2024-06-02' }
@@ -468,11 +468,14 @@ describe('query', () => {
 
     // exercises._id is indexed: it used to be dropped once its index had narrowed the exercises, and the delete then
     // hit every workout
+    // update and delete take no on clause since 3.0.0 (see splitClauses); the conditions are still checked without one
     test.each([
-      [`delete ${join} where exercises._id = 1`, 'delete can only use conditions on workouts\'s own fields, not exercises._id'],
-      [`delete ${join} where exercises.name = 'Bench Press'`, 'not exercises.name'],
-      [`delete ${join} where date = '2024-06-02' and where exercises._id = 1`, 'not exercises._id'],
-      [`update ${join} set reps = 1 where exercises._id = 1`, 'update can only use conditions on workouts\'s own fields, not exercises._id']
+      ['delete workouts where exercises._id = 1', 'delete can only use conditions on workouts\'s own fields, not exercises._id'],
+      ["delete workouts where exercises.name = 'Bench Press'", 'not exercises.name'],
+      ["delete workouts where date = '2024-06-02' and where exercises._id = 1", 'not exercises._id'],
+      ['update workouts set reps = 1 where exercises._id = 1', 'update can only use conditions on workouts\'s own fields, not exercises._id'],
+      [`delete ${join} where exercises._id = 1`, '"on" isn\'t allowed in a delete query (allowed: where)'],
+      [`update ${join} set reps = 1 where exercises._id = 1`, '"on" isn\'t allowed in an update query (allowed: set, where)']
     ])('%s is refused and changes nothing', async (text, message) => {
       await expect(query(text)).rejects.toThrow(message)
       expect(await count()).toBe(6)
