@@ -2,6 +2,7 @@
 import * as readline from 'readline'
 import { styleText } from 'util'
 import { QueryStatus, queryStatus } from '../data/queries/queryStatus'
+import { query } from '../data/queries/query'
 
 const promptPrefix: string = 'JSON-Query> '
 
@@ -26,7 +27,7 @@ console.log('Type "/exit" or press Ctrl+C to quit.\n')
 rl.prompt()
 
 // Handle line-by-line input
-rl.on('line', (line: string): void => {
+rl.on('line', async (line: string): Promise<void> => {
   const trimmedLine: string = line.trim()
 
   // Check if the user wants to exit
@@ -49,7 +50,7 @@ rl.on('line', (line: string): void => {
   // Check if the line ends the query (closed query and semicolon present)
   if (status.complete) {
     // Process the accumulated input
-    processInput(inputBuffer)
+    await processInput(inputBuffer)
 
     // Reset the buffer and prompt for next command
     inputBuffer = ''
@@ -80,8 +81,9 @@ rl.on('close', (): void => {
 })
 
 // Business logic function to handle completed commands
-function processInput (input: string): void {
+async function processInput (input: string): Promise<void> {
   console.log('\n--- Processing Input ---')
-  console.log(`Received:\n${input}`)
+  const result = await query(input)
+  console.log(`Received:\n${result}`)
   console.log('------------------------\n')
 }
