@@ -81,6 +81,14 @@ describe('splitClauses', () => {
       .toThrow(`"${keyword}" isn't allowed in ${article} ${command} query (allowed: ${clauseOrder[command].join(', ')})`)
   })
 
+  test.each([
+    ['insert t.u values a = 1', 'A joined record (t.u) isn\'t allowed in an insert query'],
+    ['update t.u set a = 1', 'A joined record (t.u) isn\'t allowed in an update query'],
+    ['delete t.u where a = 1', 'A joined record (t.u) isn\'t allowed in a delete query'],
+  ])('only read takes a joined record: %s', (query, message) => {
+    expect(() => split(query)).toThrow(message)
+  })
+
   describe('carrying on a clause', () => {
     test('and on adds to the on clause', () => {
       expect(split('read t.v on t.x = u.y and on u.z = v.w where a = 1').clauses).toEqual([

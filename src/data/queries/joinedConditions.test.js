@@ -111,9 +111,9 @@ describe('which entities a condition can name', () => {
     ['delete workouts where exercises._id = 1', 'can only use conditions on workouts\'s own fields'],
     ["update workouts set reps = 1 where date = '2024-06-02' and exercises.name = 'Squat'", 'can only use conditions on workouts\'s own fields'],
     ["delete workouts where date = '2024-06-02' or exercises._id = 1", 'can only use conditions on workouts\'s own fields'],
-    // and take no on clause since 3.0.0 (see splitClauses)
-    [`delete ${workoutsJoin.replace('read ', '')} where exercises._id = 1`, '"on" isn\'t allowed in a delete query'],
-    [`update ${workoutsJoin.replace('read ', '')} set reps = 1 where date = '2024-06-02' and exercises.name = 'Squat'`, '"on" isn\'t allowed in an update query']
+    // and take no joined record since 3.0.0 (see splitClauses)
+    [`delete ${workoutsJoin.replace('read ', '')} where exercises._id = 1`, 'A joined record (workouts.exercises) isn\'t allowed in a delete query'],
+    [`update ${workoutsJoin.replace('read ', '')} set reps = 1 where date = '2024-06-02' and exercises.name = 'Squat'`, 'A joined record (workouts.exercises) isn\'t allowed in an update query']
   ])('update and delete only take the entity\'s own fields, and change nothing: %s', async (text, message) => {
     await expect(query(text)).rejects.toThrow(message)
     const [rows] = await query('read workouts')

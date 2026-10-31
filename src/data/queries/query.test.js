@@ -468,14 +468,14 @@ describe('query', () => {
 
     // exercises._id is indexed: it used to be dropped once its index had narrowed the exercises, and the delete then
     // hit every workout
-    // update and delete take no on clause since 3.0.0 (see splitClauses); the conditions are still checked without one
+    // update and delete take no joined record since 3.0.0 (see splitClauses); the conditions are still checked without one
     test.each([
       ['delete workouts where exercises._id = 1', 'delete can only use conditions on workouts\'s own fields, not exercises._id'],
       ["delete workouts where exercises.name = 'Bench Press'", 'not exercises.name'],
       ["delete workouts where date = '2024-06-02' and where exercises._id = 1", 'not exercises._id'],
       ['update workouts set reps = 1 where exercises._id = 1', 'update can only use conditions on workouts\'s own fields, not exercises._id'],
-      [`delete ${join} where exercises._id = 1`, '"on" isn\'t allowed in a delete query (allowed: where)'],
-      [`update ${join} set reps = 1 where exercises._id = 1`, '"on" isn\'t allowed in an update query (allowed: set, where)']
+      [`delete ${join} where exercises._id = 1`, 'A joined record (workouts.exercises) isn\'t allowed in a delete query'],
+      [`update ${join} set reps = 1 where exercises._id = 1`, 'A joined record (workouts.exercises) isn\'t allowed in an update query']
     ])('%s is refused and changes nothing', async (text, message) => {
       await expect(query(text)).rejects.toThrow(message)
       expect(await count()).toBe(6)

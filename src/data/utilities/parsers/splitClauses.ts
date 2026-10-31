@@ -14,7 +14,7 @@ export const clauseOrder: { [command: string]: string[] } = {
 const clauseWords: string[] = [...new Set(Object.values(clauseOrder).flat())]
 
 // The command, the record name and an optional joined record (`read workouts.exercises`)
-const headMatch: RegExp = /^\s*(delete|insert|read|update)\s+[a-z0-9_-]+(?:\.[a-z0-9_-]+)?/i
+const headMatch: RegExp = /^\s*(delete|insert|read|update)\s+([a-z0-9_-]+(\.[a-z0-9_-]+)?)/i
 
 // Placeholders (see maskStrings) as one token each, so their hex can't read as a word; words; then the two-character
 // comparators before any other single character
@@ -53,7 +53,8 @@ export type SplitQuery = {
  * (`sort limit`), after a comma or `as`, or before a comparator (`where limit = 1`).
  * @param query
  * @returns undefined when the query doesn't start with read, insert, update or delete (left to the find* steps).
- * @throws {Error} For a clause the command doesn't allow, a repeated clause, or a clause out of order.
+ * @throws {Error} For a joined record outside read, a clause the command doesn't allow, a repeated clause, or a clause
+ * out of order.
  */
 export const splitClauses = (query: string): SplitQuery | undefined => {
   const head = query.match(headMatch)
@@ -62,6 +63,10 @@ export const splitClauses = (query: string): SplitQuery | undefined => {
   }
   const command = head[1].toLowerCase()
   const allowed = clauseOrder[command]
+  const article = /^[aeiou]/.test(command) ? 'an' : 'a'
+  if (head[3] && command !== 'read') {
+    throw new Error(`A joined record (${head[2]}) isn't allowed in ${article} ${command} query`)
+  }
   const tokens = [...query.slice(head[0].length).matchAll(tokenMatch)]
     .map(({ 0: text, index }) => ({ text, lower: text.toLowerCase(), start: head[0].length + index }))
 
@@ -86,7 +91,7 @@ export const splitClauses = (query: string): SplitQuery | undefined => {
       continue
     }
     if (!allowed.includes(keyword)) {
-      throw new Error(`"${keyword}" isn't allowed in ${/^[aeiou]/.test(command) ? 'an' : 'a'} ${command} query (allowed: ${allowed.join(', ')})`)
+      throw new Error(`"${keyword}" isn't allowed in ${article} ${command} query (allowed: ${allowed.join(', ')})`)
     }
     if (current && allowed.indexOf(keyword) < allowed.indexOf(current)) {
       throw new Error(`"${keyword}" can't come after "${current}" (order: ${allowed.join(', ')})`)
