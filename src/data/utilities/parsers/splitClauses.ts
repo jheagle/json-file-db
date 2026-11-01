@@ -13,8 +13,8 @@ export const clauseOrder: { [command: string]: string[] } = {
 
 const clauseWords: string[] = [...new Set(Object.values(clauseOrder).flat())]
 
-// The command, the record name and an optional joined record (`read workouts.exercises`)
-const headMatch: RegExp = /^\s*(delete|insert|read|update)\s+([a-z0-9_-]+(\.[a-z0-9_-]+)?)/i
+// The command, the record name and an optional joined record (`read workouts.exercises`, or `read workouts .exercises`)
+const headMatch: RegExp = /^\s*(delete|insert|read|update)\s+([a-z0-9_-]+(\s*\.[a-z0-9_-]+)?)/i
 
 // Placeholders (see maskStrings) as one token each, so their hex can't read as a word; words; then the two-character
 // comparators before any other single character
@@ -42,7 +42,7 @@ export type SplitQuery = {
   command: string
   // The command and record name(s), as written
   head: string
-  // Any text between the head and the first clause, trimmed (an error once the find* steps parse slices)
+  // Any text between the head and the first clause, trimmed (parseQuery refuses it)
   leading: string
   clauses: SplitClause[]
 }
