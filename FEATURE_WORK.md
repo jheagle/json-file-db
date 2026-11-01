@@ -41,7 +41,7 @@ Each clause is optional and may appear at most once, in this order:
   changing them yet (they still find their clause in the reassembled text), so this PR only adds the order rule.
   Tests: every clause pair in both orders, every repeat, every clause not allowed per command, keywords inside
   strings/arrays/brackets ignored.
-- [ ] **`find*` steps parse a slice.** Each step gets only its clause's body from the splitter instead of searching
+- [x] **`find*` steps parse a slice.** (#89) Each step gets only its clause's body from the splitter instead of searching
   the whole query; `removeFromQuery` and the leftover-text bookkeeping go. Leftover text becomes "unexpected ... after
   ...". No behaviour change beyond error messages: the existing parser tests must pass unchanged (except messages).
 - [ ] **Remove the old where forms.** `and where`, `or where`, a second `where` -> errors with a hint
