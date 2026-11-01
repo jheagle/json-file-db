@@ -118,10 +118,11 @@ export const runQuery = async (parsed) => {
     dataSet[parsed.entity] = whereTree(dataSet[parsed.entity], parsed.where, perPair ? parsed.joinEntity : undefined)
   }
 
+  // Sorted before grouping, so the groups come in sorted order; limit and offset count groups once there are any
   dataSet[parsed.entity] = sortBy(dataSet[parsed.entity], parsed.sortClauses)
-  dataSet[parsed.entity] = limitOffset(dataSet[parsed.entity], parsed.offset, parsed.limit)
   dataSet[parsed.entity] = groupBy(dataSet[parsed.entity], parsed.groupBy)
-  dataSet[parsed.entity] = selectFields(dataSet[parsed.entity], parsed.selectClauses)
+  dataSet[parsed.entity] = limitOffset(dataSet[parsed.entity], parsed.offset, parsed.limit)
+  dataSet[parsed.entity] = selectFields(dataSet[parsed.entity], parsed.selectClauses, Boolean(parsed.groupBy?.length))
 
   return dataSet
 }

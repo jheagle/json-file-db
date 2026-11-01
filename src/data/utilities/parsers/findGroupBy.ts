@@ -1,30 +1,27 @@
 import { ParsedQuery } from './parseQuery'
 
-const groupMatch: RegExp = /^[a-z0-9._-]+/i
-// More fields after the first (`a, b`): nested groups, not supported yet
-const moreFieldsMatch: RegExp = /^,\s*([a-z0-9._-]+(?:\s*,\s*[a-z0-9._-]+)*)$/i
+const groupMatch: RegExp = /^[a-z0-9._-]+(?:\s*,\s*[a-z0-9._-]+)*/i
 
-export type ParsedGroupBy = string
+// The fields to group by, in order: `group by a, b` groups by a, then by b within each group
+export type ParsedGroupBy = string[]
 
 /**
- * Read a group by clause body (one field, see splitClauses).
+ * Read a group by clause body (`a, b`, see splitClauses).
  * @param parsed
  * @param body
- * @returns The rest of the body, after the field.
- * @throws {Error} For more than one field: grouping by a, then by b (nested groups) isn't supported yet, and 2.x
- * silently grouped every row under "undefined" instead.
+ * @returns The rest of the body, after the last field.
+ * @throws {Error} For a field named twice.
  */
 export const findGroupBy = (parsed: ParsedQuery, body: string): string => {
   const groupFound: RegExpMatchArray = body.match(groupMatch)
   if (groupFound) {
-    const rest = body.slice(groupFound[0].length).trim()
-    const moreFields = rest.match(moreFieldsMatch)
-    if (moreFields) {
-      const fields = [groupFound[0], ...moreFields[1].split(/\s*,\s*/)]
-      throw new Error(`group by takes one field for now: grouping by ${fields.join(', then by ')} isn't supported yet`)
+    const fields = groupFound[0].split(/\s*,\s*/)
+    const repeated = fields.find((field, index) => fields.indexOf(field) !== index)
+    if (repeated) {
+      throw new Error(`"${repeated}" is in group by twice`)
     }
-    parsed['groupBy'] = groupFound[0]
-    return rest
+    parsed['groupBy'] = fields
+    return body.slice(groupFound[0].length).trim()
   }
   return body
 }
