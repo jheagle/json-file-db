@@ -490,6 +490,10 @@ describe('parser', () => {
       expect(() => parser(query)).toThrow(`(${message})`)
     })
 
+    test('a field named where after and is still a condition (a clause word before a comparator is a name)', () => {
+      expect(conditionsOf(only('read t where a = 1 and where = 2').where).map(({ property }) => property)).toEqual(['a', 'where'])
+    })
+
     test('and / or join conditions, in any case', () => {
       const a = { property: 'a', comparator: '=', value: 1 }
       const b = { property: 'b', comparator: '=', value: 2 }
