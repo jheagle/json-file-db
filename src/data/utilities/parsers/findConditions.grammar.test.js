@@ -30,10 +30,8 @@ describe('where clause grammar', () => {
     })
   })
 
-  describe('the older spellings and forms still work', () => {
+  describe('keywords in any case', () => {
     test.each([
-      ['where a = 1 and where b = 1', { and: [c('a'), c('b')] }],
-      ['where a = 1 or where b = 1', { or: [c('a'), c('b')] }],
       ['WHERE a = 1 AND (b = 1 OR NOT c = 1)', { and: [c('a'), { or: [c('b'), { not: c('c') }] }] }]
     ])('%s', (text, tree) => {
       expect(whereOf(text)).toEqual(tree)
@@ -83,9 +81,9 @@ describe('where clause grammar', () => {
       ['where a = 1 or', 'Missing a condition after or'],
       ['where (a = 1 and)', 'Missing a condition after and: )'],
       ['where (not) and a = 1', 'Missing a condition after not: ) and a = 1'],
-      // The clause order is checked first (see splitClauses): a where, or an on, after another clause is out of order
-      ['where a = 1 sort a or where b = 1', '"where" can\'t come after "sort"'],
-      ['where a = 1 sort a and where b = 1', '"where" can\'t come after "sort"'],
+      // The clause rules come first (see splitClauses): the 2.x forms of a second where, then the order
+      ['where a = 1 sort a or where b = 1', '"or where" is no longer supported'],
+      ['where a = 1 sort a and where b = 1', '"and where" is no longer supported'],
       ['where a = 1 where b = 1', 'Only one "where" clause is allowed'],
       ['where a = 1 or b = 1 and on t.x = u.y', '"on" can\'t come after "where"'],
       ['limit 2 where a = 1 or b = 1 sort a', '"where" can\'t come after "limit"'],

@@ -107,11 +107,18 @@ describe('splitClauses', () => {
         .toEqual(['merge', 'where'])
     })
 
-    test('and where / or where carry on the where clause (the older spellings of and / or)', () => {
-      expect(split('read t where a = 1 and where b = 2 or where c = 3 sort a').clauses).toEqual([
-        { keyword: 'where', body: 'a = 1 and where b = 2 or where c = 3' },
-        { keyword: 'sort', body: 'a' },
-      ])
+    test.each(['and', 'or', 'AND'])('%s where after a where is the 2.x form, an error with a hint', (connector) => {
+      expect(() => split(`read t where a = 1 ${connector} where b = 2 sort a`))
+        .toThrow(`"${connector.toLowerCase()} where" is no longer supported: use and / or inside one where clause`)
+    })
+
+    test('a plain second where is a repeat, with the same hint', () => {
+      expect(() => split('read t where a = 1 where b = 2'))
+        .toThrow('Only one "where" clause is allowed: use and / or inside one where clause')
+    })
+
+    test('and where with no where before it is just out of place', () => {
+      expect(() => split('read t sort a and where b = 1')).toThrow('"where" can\'t come after "sort"')
     })
   })
 

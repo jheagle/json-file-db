@@ -23,13 +23,15 @@ const tokenMatch: RegExp = new RegExp(`${placeholderSource}|${arraySource}|[a-z0
 // What can follow a field in a condition: a clause word followed by one of these is a field (`where limit = 1`)
 const conditionWords: string[] = ['=', '!=', '<>', '>', '<', '>=', '<=', 'in', 'between', 'like', 'is', 'exists', 'does']
 
-// `and on`, `and where` and `or where` carry on the clause before them instead of starting another; so does a merge
-// straight after another (`merge a.x with b.y merge c.z with d.w`, with or without `and`)
+// `and on` carries on the on clause instead of starting another; so does a merge straight after another
+// (`merge a.x with b.y merge c.z with d.w`, with or without `and`)
 const continues: { [clause: string]: (previous: string) => boolean } = {
   on: previous => previous === 'and',
   merge: () => true,
-  where: previous => previous === 'and' || previous === 'or',
 }
+
+// What a second where clause should have been: its conditions joined with and / or inside the first
+const whereHint = 'use and / or inside one where clause (where a = 1 and b = 2)'
 
 export type SplitClause = {
   // The clause word(s), lowercase (`group by`)
@@ -53,8 +55,8 @@ export type SplitQuery = {
  * (`sort limit`), after a comma or `as`, or before a comparator (`where limit = 1`).
  * @param query
  * @returns undefined when the query doesn't start with read, insert, update or delete (left to the find* steps).
- * @throws {Error} For a joined record outside read, a clause the command doesn't allow, a repeated clause, or a clause
- * out of order.
+ * @throws {Error} For a joined record outside read, a clause the command doesn't allow, a repeated clause, a clause out
+ * of order, or the 2.x forms of a second where (`and where`, `or where`, or a plain repeat).
  */
 export const splitClauses = (query: string): SplitQuery | undefined => {
   const head = query.match(headMatch)
@@ -90,6 +92,11 @@ export const splitClauses = (query: string): SplitQuery | undefined => {
     if (current === keyword && continues[keyword]?.(previous)) {
       continue
     }
+    // 2.x read `and where` / `or where` as `and` / `or`, and a second where as `and`
+    const hasWhere = found.some(clause => clause.keyword === 'where')
+    if (keyword === 'where' && hasWhere && (previous === 'and' || previous === 'or')) {
+      throw new Error(`"${previous} where" is no longer supported: ${whereHint}`)
+    }
     if (!allowed.includes(keyword)) {
       throw new Error(`"${keyword}" isn't allowed in ${article} ${command} query (allowed: ${allowed.join(', ')})`)
     }
@@ -97,7 +104,7 @@ export const splitClauses = (query: string): SplitQuery | undefined => {
       throw new Error(`"${keyword}" can't come after "${current}" (order: ${allowed.join(', ')})`)
     }
     if (found.some(clause => clause.keyword === keyword)) {
-      throw new Error(`Only one "${keyword}" clause is allowed`)
+      throw new Error(`Only one "${keyword}" clause is allowed${keyword === 'where' ? `: ${whereHint}` : ''}`)
     }
     if (keyword === 'group by') {
       index++
