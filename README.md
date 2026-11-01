@@ -166,7 +166,8 @@ matches any text, `_` one character, ignoring case). `is null`, `is not null`, `
 for null and missing fields (see below). In a where clause, the keywords (`where`, `and`, `or`, `not`, `is null`...) and comparators (`IN`, `LIKE`) can be
 written in any case (see the casing note under Writing queries).
 
-The older form, a `where` per condition (`where a = 1 and where b = 2`, `or where`), still works and means the same.
+A query has one where clause: join every condition inside it. The 2.x forms of a second where (`and where`,
+`or where`, or another `where`) are errors since 3.0, with a hint to use `and` / `or` instead.
 
 Mistakes are errors that point at the place: an unclosed or unexpected bracket, an operator with nothing after it
 (`where a = 1 and`), empty brackets, or two conditions with nothing between them (`where a = 1 b = 2`).
@@ -254,12 +255,18 @@ These are errors:
 - a condition on a record that only links the join (`exercise_muscle` above)
 - a condition on a record that isn't in the query
 - in `update` and `delete`, any condition on another record's fields. They only change the record they name, and
-  check its own fields before any join runs.
+  take no join (see Clause order).
 
 ### Clause order
 
-Clauses can come in any order after the record name, but the SQL order reads best and is recommended (a fixed order
-may become required in a later version):
+Every clause is optional and can come at most once, in this order (as in SQL):
+
+| Command | Clauses, in order |
+|---|---|
+| `read <record>[.<joined>]` | `select`, `on`, `merge`, `where`, `group by`, `sort`, `limit`, `offset` |
+| `insert <record>` | `values` |
+| `update <record>` | `set`, `where` |
+| `delete <record>` | `where` |
 
 ```sql
 read workouts.exercises select date, reps
@@ -269,6 +276,22 @@ read workouts.exercises select date, reps
   sort date desc
   limit 10 offset 0
 ```
+
+Two clauses carry on instead of repeating: `and on` adds another join step, and a `merge` straight after another
+(with or without `and`) adds another merge. `group by` takes one field for now.
+
+Anything else is an error that says what's wrong:
+
+| Query | Error |
+|---|---|
+| `read t limit 1 where a = 1` | `"where" can't come after "limit" (order: select, on, merge, where, group by, sort, limit, offset)` |
+| `read t sort a sort b` | `Only one "sort" clause is allowed` |
+| `delete t where a = 1 limit 1` | `"limit" isn't allowed in a delete query (allowed: where)` |
+| `update t.u set a = 1` | `A joined record (t.u) isn't allowed in an update query` |
+| `read t sort a b` | `Unexpected "b" after "sort a"` |
+
+A clause word is still a name where a name has to go: as a clause's first word (`sort limit`), after a comma or `as`
+(`select a, offset`), and before a comparator (`where limit = 1`).
 
 ### Creating a record: `create`
 
@@ -353,7 +376,7 @@ queryStatus('read notes;')                   // { complete: true, waitingFor: ''
   stored the text `"null"` and an `int` field stored `0`.
 - `create()` throws for a default that doesn't fit its field's type, and for a nullable primary key field.
 - `or where` means `or` (2.3). In 1.x it was read as `and where`, returning the wrong rows, and in 2.0 to 2.2 it was an
-  error.
+  error. Since 3.0 it's an error again: use `or` inside one where clause.
 - A select alias needs `as`: `select name as n`. Before, the first field took the next word as its alias, so
   `select name where a = 1` failed and `select name limit 1` lost its limit; `select name n` is now an error.
 - Sort fields need a comma between them: `sort a, b desc`. Before, the list ran on into the next clause, so
@@ -361,7 +384,7 @@ queryStatus('read notes;')                   // { complete: true, waitingFor: ''
 
 ### Upgrading to 2.3
 
-- `and`, `or`, `not` and brackets in a where clause (above). `or where` works again, now as `or`.
+- `and`, `or`, `not` and brackets in a where clause (above). `or where` works again, now as `or` (until 3.0).
 - A condition on a joined record's field works, as an inner join. Before, an unindexed one matched nothing, and an
   indexed one (`exercises._id = 1`) returned every row, most of them with an empty list of joined rows. Only rows
   with a matching joined row are returned now.
@@ -371,6 +394,24 @@ queryStatus('read notes;')                   // { complete: true, waitingFor: ''
 - Comparators are case-insensitive (`IN`, `LIKE`). Before, only lowercase ones matched anything.
 - Command words and sort directions are case-insensitive (`READ t`, `sort a ASC`). Before, `READ t` was an
   error and `sort a ASC` sorted descending.
+
+### Upgrading to 3.0
+
+Queries that worked in 2.x can be errors now. Each error names the problem:
+
+- Clauses come in a fixed order, at most once each (see Clause order). In 2.x any order worked, and a repeated
+  clause gave a confusing error or was quietly joined.
+- One where clause per query. `and where`, `or where` and a second `where` are errors: write
+  `where a = 1 and b = 2` (or `or`).
+- Only `read` takes a joined record (`t.u`) and `on`. In 2.x a join on `update` or `delete` did nothing useful: a
+  condition on the joined record's fields was refused, and without `on` the join was ignored.
+- `sort`, `limit` and `offset` are only for `read`. In 2.x they were accepted on `update` and `delete`, but they ran
+  after the change, so they never limited which rows were changed.
+- `group by` takes one field. In 2.x `group by a,b` didn't group by either field: every row went into one
+  `"undefined"` group.
+- Text a clause can't read is reported against that clause, as `Unexpected "b" after "sort a"` or
+  `Missing a whole number after limit: x`. In 2.x these were `Unrecognized query value: ...`. Check any code that
+  matches on that message.
 
 ## Configuration
 
