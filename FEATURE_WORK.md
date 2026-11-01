@@ -47,7 +47,7 @@ Each clause is optional and may appear at most once, in this order:
 - [x] **Remove the old where forms.** (#90) `and where`, `or where`, a second `where` -> errors with a hint
   ("use `and` / `or` inside one where clause"). Remove their handling from `findConditions` and the tests that cover
   them (keep one test per form asserting the error).
-- [ ] **Docs + consumers.** README: "Clause order" becomes a rule (with the error), remove the old-forms mention in
+- [x] **Docs + consumers.** (#91) README: "Clause order" becomes a rule (with the error), remove the old-forms mention in
   "Where clauses", add "Upgrading to 3.0". Check every query in workout-planner and task-manager (and the website's
   json-fs-query demo, if any) against the new rules; list what needs changing in the PR description.
 
