@@ -642,6 +642,11 @@ describe('parser', () => {
       expect(read.mergeJoins.map(({ propertyA }) => propertyA)).toEqual(['a.x', 'c.z', 'e.f'])
     })
 
+    test.each(['a,b', 'a, b', 'a ,b,c'])('group by %s: one field for now, nested groups are an error (2.x grouped every row under "undefined")', (fields) => {
+      const named = fields.split(/\s*,\s*/).join(', then by ')
+      expect(() => parser(`read t group by ${fields} sort a`)).toThrow(`group by takes one field for now: grouping by ${named} isn't supported yet`)
+    })
+
     test('a field named on after and is a condition (and on used to end the where clause)', () => {
       expect(conditionsOf(parser('read t where a = 1 and on = 2')[0].where).map(({ property }) => property)).toEqual(['a', 'on'])
     })
