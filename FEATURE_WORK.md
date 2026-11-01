@@ -51,6 +51,14 @@ Each clause is optional and may appear at most once, in this order:
   "Where clauses", add "Upgrading to 3.0". Check every query in workout-planner and task-manager (and the website's
   json-fs-query demo, if any) against the new rules; list what needs changing in the PR description.
 
+- [ ] **Fix group by** (added 2026-11-01). Today a read runs sort -> limit/offset -> group by -> select, and groups are
+  plain-object keys. Three fixes: (1) `limit` / `offset` apply after grouping and count groups, not rows (SQL's
+  meaning); (2) groups keep the sort order (integer-like object keys always come out ascending today, so `sort n desc
+  group by n` loses its order); (3) nested `group by a, b` (group by a, then by b within each group; an error since
+  task 2). Needs a result shape that keeps order, e.g. an array of `{ key, rows }` (null keys stay null, not
+  `"null"`): a breaking change, which is why it's in 3.0. This task updates its own README section and lists the
+  shape change in "Upgrading to 3.0". Aggregates (count, sum, ...) are a separate epic after this one.
+
 ## Notes
 
 - The CLI epic (`feature/create-cli`) only uses `queryStatus()`, which this epic doesn't change; whichever epic lands
