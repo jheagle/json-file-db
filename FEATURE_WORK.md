@@ -35,7 +35,7 @@ Each clause is optional and may appear at most once, in this order:
 
 ## Work Split
 
-- [ ] **Clause splitter + order errors.** One function walks the masked query's top-level words once and splits it
+- [x] **Clause splitter + order errors.** (#88) One function walks the masked query's top-level words once and splits it
   into `{ clause keyword -> body text }` in the allowed order for the command. Out of order, repeated, or not allowed
   for the command (`sort` on `delete`) -> the errors above. Wire it in front of the existing `find*` steps without
   changing them yet (they still find their clause in the reassembled text), so this PR only adds the order rule.
