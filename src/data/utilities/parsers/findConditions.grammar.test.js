@@ -89,8 +89,8 @@ describe('where clause grammar', () => {
       ['where a = 1 where b = 1', 'Only one "where" clause is allowed'],
       ['where a = 1 or b = 1 and on t.x = u.y', '"on" can\'t come after "where"'],
       ['limit 2 where a = 1 or b = 1 sort a', '"where" can\'t come after "limit"'],
-      // Text after the expression that isn't a condition or a clause is left for parseQuery, which refuses it
-      ['where a = 1 foo', 'Unrecognized query value: foo']
+      // Text after the expression that isn't a condition is left for parseQuery, which refuses it
+      ['where a = 1 foo', 'Unexpected "foo" after "where a = 1"']
     ])('%s', (text, message) => {
       expect(() => parser(`read t ${text}`)).toThrow(message)
     })

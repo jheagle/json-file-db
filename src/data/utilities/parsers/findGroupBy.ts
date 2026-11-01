@@ -1,20 +1,20 @@
-import { removeFromQuery } from './removeFromQuery'
 import { ParsedQuery } from './parseQuery'
 
-const groupMatch: RegExp = /group\s+by\s+(,?[a-z0-9._-]+)+/i
+const groupMatch: RegExp = /^(,?[a-z0-9._-]+)+/i
 
 export type ParsedGroupBy = string
 
 /**
- * Extract the group by clauses from the query.
+ * Read a group by clause body (a field, see splitClauses).
  * @param parsed
- * @param query
+ * @param body
+ * @returns The rest of the body, after the field.
  */
-export const findGroupBy = (parsed: ParsedQuery, query: string): string => {
-  const groupFound: RegExpMatchArray = query.match(groupMatch)
+export const findGroupBy = (parsed: ParsedQuery, body: string): string => {
+  const groupFound: RegExpMatchArray = body.match(groupMatch)
   if (groupFound) {
     parsed['groupBy'] = groupFound ? groupFound[1] : undefined
-    return removeFromQuery(groupFound[0], query)
+    return body.slice(groupFound[0].length).trim()
   }
-  return query
+  return body
 }

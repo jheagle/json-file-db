@@ -371,7 +371,7 @@ describe('parser', () => {
   })
 
   test('reports which query failed, with the reason', () => {
-    expect(() => parser('read workouts; read exercises sort')).toThrow('Failed to interpret query 2 of 2: read exercises sort (Unrecognized query value:')
+    expect(() => parser('read workouts; read exercises sort')).toThrow('Failed to interpret query 2 of 2: read exercises sort (Missing a field after sort)')
   })
 
   describe('strings', () => {
@@ -409,7 +409,7 @@ describe('parser', () => {
     })
 
     test('shows a stray string as it was written in the error', () => {
-      expect(() => parser("read t where a = 'x' 'stray'")).toThrow("(Unrecognized query value: 'stray')")
+      expect(() => parser("read t where a = 'x' 'stray'")).toThrow("(Unexpected \"'stray'\" after \"where a = 'x'\")")
     })
   })
 
@@ -473,7 +473,7 @@ describe('parser', () => {
     })
 
     test('fields without commas between them are an error, not extra sort fields', () => {
-      expect(() => parser('read t sort a b')).toThrow('Unrecognized query value')
+      expect(() => parser('read t sort a b')).toThrow('Unexpected "b" after "sort a"')
     })
   })
 
@@ -550,7 +550,7 @@ describe('parser', () => {
     })
 
     test('an alias without as is an error, not a silent guess', () => {
-      expect(() => parser('read t select name n')).toThrow('Unrecognized query value: n')
+      expect(() => parser('read t select name n')).toThrow('Unexpected "n" after "select name"')
     })
   })
 
@@ -613,6 +613,37 @@ describe('parser', () => {
 
     test('keeps a large number written as a string, as text', () => {
       expect(only("insert t values n = '9007199254740993'").insertValues).toEqual([{ n: '9007199254740993' }])
+    })
+  })
+
+  describe('text a clause can\'t read (each clause reads only its own body)', () => {
+    test.each([
+      ['read t foo bar where a = 1', 'Unexpected "foo bar" after "read t"'],
+      ['read t select', 'Missing a field after select'],
+      ["read t select a 'x y'", 'Unexpected "\'x y\'" after "select a"'],
+      ['read t.u on t.x = u.y junk', 'Unexpected "junk" after "on t.x = u.y"'],
+      ['read t.u on t.x = u.y and on junk', 'Unexpected "and on junk" after "on t.x = u.y"'],
+      ['read t merge a.x with b.y and merge q', 'Unexpected "and merge q" after "merge a.x with b.y"'],
+      ['read t group by', 'Missing a field after group by'],
+      ['read t limit x', 'Missing a whole number after limit: x'],
+      ['read t limit 5 6', 'Unexpected "6" after "limit 5"'],
+      ['read t offset', 'Missing a whole number after offset'],
+      ['insert t values', 'Missing an assignment (field = value) after values'],
+      ['insert t values a', 'Missing an assignment (field = value) after values: a'],
+      ['update t set a = 1 b = 2', 'Unexpected "b = 2" after "set a = 1"'],
+      ['readt x', 'Unrecognized query value: readt x']
+    ])('%s', (query, message) => {
+      expect(() => parser(query)).toThrow(`(${message})`)
+    })
+
+    test('several joins and merges, with or without and', () => {
+      const read = parser('read t.u on t.x = u.y and on u.z = v.w merge a.x with b.y merge c.z with d.w and merge e.f with g.h')[0]
+      expect(read.joinClauses.map(({ propertyA }) => propertyA)).toEqual(['t.x', 'u.z'])
+      expect(read.mergeJoins.map(({ propertyA }) => propertyA)).toEqual(['a.x', 'c.z', 'e.f'])
+    })
+
+    test('a field named on after and is a condition (and on used to end the where clause)', () => {
+      expect(conditionsOf(parser('read t where a = 1 and on = 2')[0].where).map(({ property }) => property)).toEqual(['a', 'on'])
     })
   })
 })
