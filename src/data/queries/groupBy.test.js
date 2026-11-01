@@ -36,8 +36,13 @@ describe('groupBy', () => {
     ])
   })
 
-  test('arrays with the same items are one group', () => {
+  test('arrays with the same items in the same order are one group', () => {
     expect(groupBy([{ v: [1, 2] }, { v: [1, 2] }, { v: [2, 1] }], ['v']).map(({ rows }) => rows.length)).toEqual([2, 1])
+  })
+
+  test('objects with the same keys and values are one group, whatever their key order', () => {
+    const grouped = groupBy([{ v: { a: 1, b: { c: 2, d: 3 } } }, { v: { b: { d: 3, c: 2 }, a: 1 } }, { v: { a: 2 } }], ['v'])
+    expect(grouped.map(({ rows }) => rows.length)).toEqual([2, 1])
   })
 
   test('several fields nest: groups by the first, then by the next within each group', () => {

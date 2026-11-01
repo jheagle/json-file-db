@@ -315,7 +315,8 @@ read workouts select _id, reps group by date sort date desc
   `group by date sort date desc limit 7` is the seven latest dates, with all their rows.
 - Several fields nest: `group by date, exercise_id` groups by date, then by exercise within each date. An outer group
   has `groups` instead of `rows`.
-- A value keeps its type: `1` and `'1'` are two groups, and so are `null` and a missing field. A group of rows
+- A value keeps its type: `1` and `'1'` are two groups, and so are `null` and a missing field. Arrays share a group
+  when their items are the same, in order; objects when their keys and values are, in any key order. A group of rows
   missing the field has `missing: true` and no `value` (see Null and missing fields).
 
 There are no aggregates (`count`, `sum`, ...) yet, so a group always lists its rows.

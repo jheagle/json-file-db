@@ -11,13 +11,27 @@ export type Group = {
   groups?: Group[]
 }
 
+// An object's keys in sorted order, at any depth, so { a, b } and { b, a } are the same value; arrays keep their order
+const sortedKeys = (value: any): any => {
+  if (Array.isArray(value)) {
+    return value.map(sortedKeys)
+  }
+  if (value !== null && typeof value === 'object') {
+    return Object.keys(value).sort().reduce((sorted: Object, key: string) => {
+      sorted[key] = sortedKeys(value[key])
+      return sorted
+    }, {})
+  }
+  return value
+}
+
 // Rows share a group when their values are the same, type included: 1 and '1' are two groups, as are null and missing
 const groupKey = (row: Object, field: string): string => {
   if (!Object.prototype.hasOwnProperty.call(row, field)) {
     return 'missing'
   }
   const value = row[field]
-  return value !== null && typeof value === 'object' ? `json:${JSON.stringify(value)}` : `${typeof value}:${String(value)}`
+  return value !== null && typeof value === 'object' ? `json:${JSON.stringify(sortedKeys(value))}` : `${typeof value}:${String(value)}`
 }
 
 /**

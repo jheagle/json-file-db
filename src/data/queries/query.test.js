@@ -225,6 +225,16 @@ describe('query', () => {
       expect(summary(groups)).toEqual(expected)
     })
 
+    test('rows missing the field are a group of their own, sorted first, counted by limit and shaped by select', async () => {
+      // weight_effort is optional: this workout leaves it out
+      await query("insert workouts values _id = '7', exercise_id = 2, reps = 8, sets = 3, order = 0, date = '2024-06-09'")
+      const [groups] = await query('read workouts select date group by weight_effort sort weight_effort, _id limit 2')
+      expect(groups).toEqual([
+        { field: 'weight_effort', missing: true, rows: [{ date: '2024-06-09' }] },
+        { field: 'weight_effort', value: '115lbs', rows: [{ date: '2024-06-02' }] }
+      ])
+    })
+
     test('several fields nest, and select shapes the rows inside (the group fields stay on the groups)', async () => {
       const [groups] = await query('read workouts select _id group by date, weight_effort sort date desc, _id')
       expect(summary(groups)).toEqual([
