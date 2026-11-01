@@ -31,7 +31,7 @@ const continues: { [clause: string]: (previous: string) => boolean } = {
 }
 
 // What a second where clause should have been: its conditions joined with and / or inside the first
-const whereHint = 'use and / or inside one where clause (where a = 1 and b = 2)'
+export const whereHint = 'use and / or inside one where clause (where a = 1 and b = 2)'
 
 export type SplitClause = {
   // The clause word(s), lowercase (`group by`)

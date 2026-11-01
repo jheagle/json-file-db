@@ -2,6 +2,7 @@ import { numberSource, parseLiteralValue, LiteralValue } from './parseLiteralVal
 import { ParsedQuery } from './parseQuery'
 import { ConditionNode, isCondition } from '../conditionTree'
 import { arraySource, placeholderSource, unmaskStrings } from './maskStrings'
+import { whereHint } from './splitClauses'
 
 export type ConditionValue = LiteralValue
 
@@ -85,6 +86,10 @@ const readExpression = (text: string): { node: ConditionNode, end: number } => {
     if (condition) {
       at += condition[0].length
       return readCondition(condition)
+    }
+    // The 2.x `and where` / `or where` inside brackets, where splitClauses doesn't look
+    if ((after === 'and' || after === 'or') && keyword('where').test(rest())) {
+      throw new Error(`"${after} where" is no longer supported: ${whereHint}`)
     }
     if (take(keyword('not'))) {
       return { not: factor('not') }

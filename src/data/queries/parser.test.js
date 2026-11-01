@@ -485,7 +485,9 @@ describe('parser', () => {
     test.each([
       ['read t where a = 1 and where b = 2', `"and where" is no longer supported: ${hint}`],
       ['read t where a = 1 OR WHERE b = 2', `"or where" is no longer supported: ${hint}`],
-      ['read t where a = 1 where b = 2', `Only one "where" clause is allowed: ${hint}`]
+      ['read t where a = 1 where b = 2', `Only one "where" clause is allowed: ${hint}`],
+      ['read t where (a = 1 and where b = 2)', `"and where" is no longer supported: ${hint}`],
+      ['read t where c = 3 and (a = 1 OR where b = 2)', `"or where" is no longer supported: ${hint}`]
     ])('the 2.x forms of a second where are errors (3.0): %s', (query, message) => {
       expect(() => parser(query)).toThrow(`(${message})`)
     })
