@@ -200,77 +200,49 @@ describe('query', () => {
     })
   })
 
-  test('it can use sort and group by', async () => {
-    const queryString = 'read workouts group by date sort date desc, order asc'
-    const result = await query(queryString)
-    expect(result).toEqual([
-      {
-        '2024-06-02': [
-          {
-            _id: 1,
-            exercise_id: 1,
-            weight_effort: '115lbs',
-            reps: 10,
-            sets: 3,
-            note: '',
-            order: 0,
-            date: '2024-06-02'
-          },
-          {
-            _id: 2,
-            exercise_id: 2,
-            weight_effort: '155lbs',
-            reps: 10,
-            sets: 3,
-            note: '',
-            order: 1,
-            date: '2024-06-02'
-          },
-          {
-            _id: 3,
-            exercise_id: 3,
-            weight_effort: '155lbs',
-            reps: 10,
-            sets: 3,
-            note: '',
-            order: 2,
-            date: '2024-06-02'
-          },
-        ],
-        '2024-06-05': [
-          {
-            _id: 4,
-            exercise_id: 1,
-            weight_effort: '120lbs',
-            reps: 10,
-            sets: 3,
-            note: '',
-            order: 0,
-            date: '2024-06-05'
-          },
-          {
-            _id: 5,
-            exercise_id: 2,
-            weight_effort: '160lbs',
-            reps: 10,
-            sets: 3,
-            note: '',
-            order: 1,
-            date: '2024-06-05'
-          },
-          {
-            _id: 6,
-            exercise_id: 3,
-            weight_effort: '160lbs',
-            reps: 10,
-            sets: 3,
-            note: '',
-            order: 2,
-            date: '2024-06-05'
-          }
-        ]
-      }
-    ])
+  describe('group by', () => {
+    // The fixture: workouts 1-3 on 2024-06-02 and 4-6 on 2024-06-05, exercise_id 1, 2, 3 on each day
+    const summary = (groups) => groups.map(({ value, rows, groups: inner }) =>
+      [value, rows ? rows.map(({ _id }) => _id) : summary(inner)])
+
+    test('groups come as a list, in the sorted order, each with its rows in order', async () => {
+      const [groups] = await query('read workouts group by date sort date desc, order asc')
+      expect(groups.map(({ field, value }) => [field, value])).toEqual([['date', '2024-06-05'], ['date', '2024-06-02']])
+      expect(summary(groups)).toEqual([['2024-06-05', [4, 5, 6]], ['2024-06-02', [1, 2, 3]]])
+    })
+
+    test('a number field keeps the sort order (2.x always put number keys ascending)', async () => {
+      const [groups] = await query('read workouts group by exercise_id sort exercise_id desc, _id')
+      expect(summary(groups)).toEqual([[3, [3, 6]], [2, [2, 5]], [1, [1, 4]]])
+    })
+
+    test.each([
+      ['limit 1', [['2024-06-05', [4, 5, 6]]]],
+      ['limit 1 offset 1', [['2024-06-02', [1, 2, 3]]]],
+      ['offset 1', [['2024-06-02', [1, 2, 3]]]]
+    ])('%s counts groups, not rows (2.x limited the rows, then grouped them)', async (clauses, expected) => {
+      const [groups] = await query(`read workouts group by date sort date desc, _id ${clauses}`)
+      expect(summary(groups)).toEqual(expected)
+    })
+
+    test('rows missing the field are a group of their own, sorted first, counted by limit and shaped by select', async () => {
+      // weight_effort is optional: this workout leaves it out
+      await query("insert workouts values _id = '7', exercise_id = 2, reps = 8, sets = 3, order = 0, date = '2024-06-09'")
+      const [groups] = await query('read workouts select date group by weight_effort sort weight_effort, _id limit 2')
+      expect(groups).toEqual([
+        { field: 'weight_effort', missing: true, rows: [{ date: '2024-06-09' }] },
+        { field: 'weight_effort', value: '115lbs', rows: [{ date: '2024-06-02' }] }
+      ])
+    })
+
+    test('several fields nest, and select shapes the rows inside (the group fields stay on the groups)', async () => {
+      const [groups] = await query('read workouts select _id group by date, weight_effort sort date desc, _id')
+      expect(summary(groups)).toEqual([
+        ['2024-06-05', [['120lbs', [4]], ['160lbs', [5, 6]]]],
+        ['2024-06-02', [['115lbs', [1]], ['155lbs', [2, 3]]]]
+      ])
+      expect(groups[0].groups[1]).toEqual({ field: 'weight_effort', value: '160lbs', rows: [{ _id: 5 }, { _id: 6 }] })
+    })
   })
 
   test('a multi-field unique key works end-to-end through insert/update query strings', async () => {

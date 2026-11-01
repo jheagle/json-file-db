@@ -278,7 +278,7 @@ read workouts.exercises select date, reps
 ```
 
 Two clauses carry on instead of repeating: `and on` adds another join step, and a `merge` straight after another
-(with or without `and`) adds another merge. `group by` takes one field for now.
+(with or without `and`) adds another merge.
 
 Anything else is an error that says what's wrong:
 
@@ -292,6 +292,34 @@ Anything else is an error that says what's wrong:
 
 A clause word is still a name where a name has to go: as a clause's first word (`sort limit`), after a comma or `as`
 (`select a, offset`), and before a comparator (`where limit = 1`).
+
+### Grouping: `group by`
+
+`group by` splits the rows into groups that share a value. A read with it returns a list of groups instead of rows.
+Each group has the field, the value, and its rows, in the order the rows were sorted. For example:
+
+```sql
+read workouts select _id, reps group by date sort date desc
+```
+
+```js
+[
+  { field: 'date', value: '2024-06-05', rows: [{ _id: 4, reps: 10 }, { _id: 5, reps: 10 }] },
+  { field: 'date', value: '2024-06-02', rows: [{ _id: 1, reps: 10 }] }
+]
+```
+
+- Rows are grouped on all their fields, before `select`, so you can group by a field you don't select. `select`
+  shapes the rows inside each group, and each group keeps its own `field` and `value`.
+- `sort` runs first, so it orders the groups and the rows within them. `limit` and `offset` count groups:
+  `group by date sort date desc limit 7` is the seven latest dates, with all their rows.
+- Several fields nest: `group by date, exercise_id` groups by date, then by exercise within each date. An outer group
+  has `groups` instead of `rows`.
+- A value keeps its type: `1` and `'1'` are two groups, and so are `null` and a missing field. Arrays share a group
+  when their items are the same, in order; objects when their keys and values are, in any key order. A group of rows
+  missing the field has `missing: true` and no `value` (see Null and missing fields).
+
+There are no aggregates (`count`, `sum`, ...) yet, so a group always lists its rows.
 
 ### Creating a record: `create`
 
@@ -397,7 +425,7 @@ queryStatus('read notes;')                   // { complete: true, waitingFor: ''
 
 ### Upgrading to 3.0
 
-Queries that worked in 2.x can be errors now. Each error names the problem:
+Queries that worked in 2.x can be errors now (each error names the problem), and a grouped read returns a new shape:
 
 - Clauses come in a fixed order, at most once each (see Clause order). In 2.x any order worked, and a repeated
   clause gave a confusing error or was quietly joined.
@@ -407,8 +435,10 @@ Queries that worked in 2.x can be errors now. Each error names the problem:
   condition on the joined record's fields was refused, and without `on` the join was ignored.
 - `sort`, `limit` and `offset` are only for `read`. In 2.x they were accepted on `update` and `delete`, but they ran
   after the change, so they never limited which rows were changed.
-- `group by` takes one field. In 2.x `group by a,b` didn't group by either field: every row went into one
-  `"undefined"` group.
+- `group by` returns a list of groups (see Grouping), not an object keyed by value. Because 2.x used an object, its
+  number keys always came out ascending (whatever the sort), and every key became a string (`null` became
+  `"null"`). `limit` and `offset` count groups now: in 2.x they cut the rows before grouping. Several fields
+  (`group by a, b`) nest. In 2.x `group by a,b` grouped every row into one `"undefined"` group.
 - Text a clause can't read is reported against that clause, as `Unexpected "b" after "sort a"` or
   `Missing a whole number after limit: x`. In 2.x these were `Unrecognized query value: ...`. Check any code that
   matches on that message.

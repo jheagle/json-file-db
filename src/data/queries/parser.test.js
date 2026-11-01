@@ -230,7 +230,7 @@ describe('parser', () => {
         joinClauses: [],
         mergeJoins: [],
         sortClauses: [],
-        groupBy: 'date',
+        groupBy: ['date'],
         limit: undefined,
         offset: undefined,
       }
@@ -654,9 +654,16 @@ describe('parser', () => {
       expect(read.mergeJoins.map(({ propertyA }) => propertyA)).toEqual(['a.x', 'c.z', 'e.f'])
     })
 
-    test.each(['a,b', 'a, b', 'a ,b,c'])('group by %s: one field for now, nested groups are an error (2.x grouped every row under "undefined")', (fields) => {
-      const named = fields.split(/\s*,\s*/).join(', then by ')
-      expect(() => parser(`read t group by ${fields} sort a`)).toThrow(`group by takes one field for now: grouping by ${named} isn't supported yet`)
+    test.each([['a,b', ['a', 'b']], ['a, b', ['a', 'b']], ['a ,b,c', ['a', 'b', 'c']]])('group by %s: every field, in order (2.x kept only ",b")', (fields, expected) => {
+      expect(parser(`read t group by ${fields} sort a`)[0].groupBy).toEqual(expected)
+    })
+
+    test('a field named twice in group by is an error', () => {
+      expect(() => parser('read t group by a, b, a')).toThrow('("a" is in group by twice)')
+    })
+
+    test('group by fields need commas between them', () => {
+      expect(() => parser('read t group by a b')).toThrow('(Unexpected "b" after "group by a")')
     })
 
     test('a field named on after and is a condition (and on used to end the where clause)', () => {
