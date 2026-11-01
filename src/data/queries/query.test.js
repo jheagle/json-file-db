@@ -472,7 +472,7 @@ describe('query', () => {
     test.each([
       ['delete workouts where exercises._id = 1', 'delete can only use conditions on workouts\'s own fields, not exercises._id'],
       ["delete workouts where exercises.name = 'Bench Press'", 'not exercises.name'],
-      ["delete workouts where date = '2024-06-02' and where exercises._id = 1", 'not exercises._id'],
+      ["delete workouts where date = '2024-06-02' and exercises._id = 1", 'not exercises._id'],
       ['update workouts set reps = 1 where exercises._id = 1', 'update can only use conditions on workouts\'s own fields, not exercises._id'],
       [`delete ${join} where exercises._id = 1`, 'A joined record (workouts.exercises) isn\'t allowed in a delete query'],
       [`update ${join} set reps = 1 where exercises._id = 1`, 'A joined record (workouts.exercises) isn\'t allowed in an update query']
@@ -493,25 +493,25 @@ describe('query', () => {
     const ids = async (text) => (await query(text))[0].map(row => String(row._id)).sort()
 
     test('every indexed condition must match, in either order (each used to replace the one before)', async () => {
-      expect(await ids("read workouts where date = '2024-06-02' and where exercise_id = 1")).toEqual(['1'])
-      expect(await ids("read workouts where exercise_id = 1 and where date = '2024-06-02'")).toEqual(['1'])
-      expect(await ids("read workouts where exercise_id = 1 and where date = '2024-06-05'")).toEqual(['4'])
-      expect(await ids("read workouts where exercise_id = 1 and where date = '2024-06-09'")).toEqual([])
+      expect(await ids("read workouts where date = '2024-06-02' and exercise_id = 1")).toEqual(['1'])
+      expect(await ids("read workouts where exercise_id = 1 and date = '2024-06-02'")).toEqual(['1'])
+      expect(await ids("read workouts where exercise_id = 1 and date = '2024-06-05'")).toEqual(['4'])
+      expect(await ids("read workouts where exercise_id = 1 and date = '2024-06-09'")).toEqual([])
     })
 
     test('an indexed and an unindexed condition together', async () => {
-      expect(await ids("read workouts where date = '2024-06-05' and where reps = 10 and where exercise_id in [2, 3]")).toEqual(['5', '6'])
+      expect(await ids("read workouts where date = '2024-06-05' and reps = 10 and exercise_id in [2, 3]")).toEqual(['5', '6'])
     })
 
     test('update changes only the rows every condition matches', async () => {
-      await query("update workouts set note = 'x' where date = '2024-06-02' and where exercise_id = 1")
+      await query("update workouts set note = 'x' where date = '2024-06-02' and exercise_id = 1")
       expect(await ids("read workouts where note = 'x'")).toEqual(['1'])
     })
 
     test.each([
-      ['read', "read workouts where date = '2024-06-09' and where reps = 10"],
-      ['update', "update workouts set note = 'x' where date = '2024-06-09' and where reps = 10"],
-      ['delete', "delete workouts where date = '2024-06-09' and where reps = 10"]
+      ['read', "read workouts where date = '2024-06-09' and reps = 10"],
+      ['update', "update workouts set note = 'x' where date = '2024-06-09' and reps = 10"],
+      ['delete', "delete workouts where date = '2024-06-09' and reps = 10"]
     ])('%s: an indexed condition matching nothing, with an unindexed one, matches nothing (it used to match every row with reps 10)', async (command, text) => {
       expect((await query(text))[0]).toEqual([])
       expect(await ids('read workouts')).toEqual(['1', '2', '3', '4', '5', '6'])
@@ -519,7 +519,7 @@ describe('query', () => {
     })
 
     test('delete removes only the rows every condition matches (it used to delete every row with exercise_id 1)', async () => {
-      await query("delete workouts where date = '2024-06-02' and where exercise_id = 1")
+      await query("delete workouts where date = '2024-06-02' and exercise_id = 1")
       expect(await ids('read workouts')).toEqual(['2', '3', '4', '5', '6'])
     })
   })
@@ -541,7 +541,7 @@ describe('query', () => {
     test.each(['both', 'composite'])('%s: conditions on either field find their rows', async (record) => {
       expect(await names(`read ${record} where x = 1`)).toEqual(['one', 'two'])
       expect(await names(`read ${record} where y = 1`)).toEqual(['one', 'three'])
-      expect(await names(`read ${record} where x = 1 and where y = 2`)).toEqual(['two'])
+      expect(await names(`read ${record} where x = 1 and y = 2`)).toEqual(['two'])
     })
   })
 
@@ -562,11 +562,11 @@ describe('query', () => {
 
     test('two indexed conditions: the stale row survives the intersection, then the condition drops it', async () => {
       // row 4 has exercise_id 1, so it is in both indexes' answers
-      expect(await ids("read workouts where date = '2024-06-02' and where exercise_id = 1")).toEqual(['1'])
+      expect(await ids("read workouts where date = '2024-06-02' and exercise_id = 1")).toEqual(['1'])
     })
 
     test('an indexed and an unindexed condition', async () => {
-      expect(await ids("read workouts where date = '2024-06-02' and where reps = 10")).toEqual(['1', '2', '3'])
+      expect(await ids("read workouts where date = '2024-06-02' and reps = 10")).toEqual(['1', '2', '3'])
     })
 
     test('update and delete touch only rows the condition really matches', async () => {

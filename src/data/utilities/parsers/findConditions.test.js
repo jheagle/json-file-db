@@ -12,7 +12,7 @@ const parse = (query) => {
 describe('findConditions', () => {
   test('the where clause is a tree: one condition is itself, several are one and node', () => {
     expect(parse('a = 1').parsed.where).toEqual({ property: 'a', comparator: '=', value: 1 })
-    expect(parse("a = 1 and where b = 'x' and where c is null").parsed.where).toEqual({
+    expect(parse("a = 1 and b = 'x' and c is null").parsed.where).toEqual({
       and: [
         { property: 'a', comparator: '=', value: 1 },
         { property: 'b', comparator: '=', value: 'x' },
@@ -60,7 +60,7 @@ describe('findConditions', () => {
     ['exists', 'exists'],
     ['does not exist', 'does not exist']
   ])('extracts %s, which takes no value', (written, comparator) => {
-    const { parsed, remaining } = parse(`note ${written} and where reps > 1`)
+    const { parsed, remaining } = parse(`note ${written} and reps > 1`)
     expect(conditionsOf(parsed.where)).toEqual([
       { property: 'note', comparator, value: null },
       { property: 'reps', comparator: '>', value: 1 }
@@ -73,7 +73,7 @@ describe('findConditions', () => {
   })
 
   test('still reads a field named like the keywords', () => {
-    const { parsed } = parse('exists = 1 and where is_null exists')
+    const { parsed } = parse('exists = 1 and is_null exists')
     expect(conditionsOf(parsed.where)).toEqual([
       { property: 'exists', comparator: '=', value: 1 },
       { property: 'is_null', comparator: 'exists', value: null }

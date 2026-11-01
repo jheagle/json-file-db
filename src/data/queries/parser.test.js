@@ -377,8 +377,8 @@ describe('parser', () => {
   describe('strings', () => {
     const only = (queries) => parser(queries)[0]
 
-    test('reads each string of a two-condition where on its own (main read one condition: x\' and where b = \'y)', () => {
-      expect(conditionsOf(only("read t where a = 'x' and where b = 'y'").where).map(({ value }) => value)).toEqual(['x', 'y'])
+    test('reads each string of a two-condition where on its own (main read one condition: x\' and b = \'y)', () => {
+      expect(conditionsOf(only("read t where a = 'x' and b = 'y'").where).map(({ value }) => value)).toEqual(['x', 'y'])
     })
 
     test('lets a string hold the other quote', () => {
@@ -417,7 +417,7 @@ describe('parser', () => {
     const only = (queries) => parser(queries)[0]
 
     test('reads two array conditions as two arrays (each used to run to the last ])', () => {
-      expect(conditionsOf(only('read t where a in [1,2] and where b in [3]').where).map(({ value }) => value)).toEqual([[1, 2], [3]])
+      expect(conditionsOf(only('read t where a in [1,2] and b in [3]').where).map(({ value }) => value)).toEqual([[1, 2], [3]])
     })
 
     test('reads nested arrays in insert and update (each used to stop at the first ])', () => {
@@ -480,15 +480,27 @@ describe('parser', () => {
   describe('conditions', () => {
     const only = (queries) => parser(queries)[0]
 
-    test('or where is the older spelling of or (it was refused, and in 1.x read as and)', () => {
-      const a = { property: 'a', comparator: '=', value: 1 }
-      const b = { property: 'b', comparator: '=', value: 2 }
-      expect(only('read t where a = 1 or where b = 2').where).toEqual({ or: [a, b] })
-      expect(only('read t where a = 1 OR WHERE b = 2').where).toEqual({ or: [a, b] })
+    const hint = 'use and / or inside one where clause (where a = 1 and b = 2)'
+
+    test.each([
+      ['read t where a = 1 and where b = 2', `"and where" is no longer supported: ${hint}`],
+      ['read t where a = 1 OR WHERE b = 2', `"or where" is no longer supported: ${hint}`],
+      ['read t where a = 1 where b = 2', `Only one "where" clause is allowed: ${hint}`],
+      ['read t where (a = 1 and where b = 2)', `"and where" is no longer supported: ${hint}`],
+      ['read t where c = 3 and (a = 1 OR where b = 2)', `"or where" is no longer supported: ${hint}`]
+    ])('the 2.x forms of a second where are errors (3.0): %s', (query, message) => {
+      expect(() => parser(query)).toThrow(`(${message})`)
     })
 
-    test('and where still joins conditions, in any case', () => {
-      expect(conditionsOf(only('read t where a = 1 AND WHERE b = 2').where).map(({ property }) => property)).toEqual(['a', 'b'])
+    test('a field named where after and is still a condition (a clause word before a comparator is a name)', () => {
+      expect(conditionsOf(only('read t where a = 1 and where = 2').where).map(({ property }) => property)).toEqual(['a', 'where'])
+    })
+
+    test('and / or join conditions, in any case', () => {
+      const a = { property: 'a', comparator: '=', value: 1 }
+      const b = { property: 'b', comparator: '=', value: 2 }
+      expect(only('read t where a = 1 OR b = 2').where).toEqual({ or: [a, b] })
+      expect(only('read t where a = 1 AND b = 2').where).toEqual({ and: [a, b] })
     })
 
     test.each(['color', 'brand', 'floor', 'band'])('a join field ending in and/or (%s) keeps its whole name', name => {
@@ -504,18 +516,18 @@ describe('parser', () => {
     })
 
     test('a condition between a join and a sort: all three parse', () => {
-      const read = only('read t.u on t.x = u.y where a = 1 and where b = 2 sort a')
+      const read = only('read t.u on t.x = u.y where a = 1 and b = 2 sort a')
       expect(read.joinClauses).toEqual([{ propertyA: 't.x', comparator: '=', propertyB: 'u.y' }])
       expect(conditionsOf(read.where).map(({ property }) => property)).toEqual(['a', 'b'])
       expect(read.sortClauses).toEqual([{ property: 'a', direction: 'asc' }])
     })
 
     test('connectors after a newline or a tab', () => {
-      expect(conditionsOf(only('read t where a = 1\nand\twhere b = 2').where)).toHaveLength(2)
-      expect(only('read t where a = 1\nor\twhere b = 2').where).toEqual({ or: [{ property: 'a', comparator: '=', value: 1 }, { property: 'b', comparator: '=', value: 2 }] })
+      expect(conditionsOf(only('read t where a = 1\nand\tb = 2').where)).toHaveLength(2)
+      expect(only('read t where a = 1\nor\tb = 2').where).toEqual({ or: [{ property: 'a', comparator: '=', value: 1 }, { property: 'b', comparator: '=', value: 2 }] })
     })
 
-    test('or inside a string is just text', () => {
+    test('or where inside a string is just text', () => {
       expect(conditionsOf(only("read t where a = 'x or where b = 2'").where)[0].value).toBe('x or where b = 2')
     })
   })
@@ -569,7 +581,7 @@ describe('parser', () => {
     ])('reads %s in insert, update and where', (written, value) => {
       expect(only(`insert t values n = ${written}, s = 'x'`).insertValues).toEqual([{ n: value, s: 'x' }])
       expect(only(`update t set n = ${written} where s = 'x'`).updateValues).toEqual({ n: value })
-      expect(conditionsOf(only(`read t where n > ${written} and where s = 'x'`).where)).toEqual([
+      expect(conditionsOf(only(`read t where n > ${written} and s = 'x'`).where)).toEqual([
         { property: 'n', comparator: '>', value },
         { property: 's', comparator: '=', value: 'x' }
       ])

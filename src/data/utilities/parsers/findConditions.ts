@@ -2,6 +2,7 @@ import { numberSource, parseLiteralValue, LiteralValue } from './parseLiteralVal
 import { ParsedQuery } from './parseQuery'
 import { ConditionNode, isCondition } from '../conditionTree'
 import { arraySource, placeholderSource, unmaskStrings } from './maskStrings'
+import { whereHint } from './splitClauses'
 
 export type ConditionValue = LiteralValue
 
@@ -55,7 +56,7 @@ const join = (kind: 'and' | 'or', nodes: ConditionNode[]): ConditionNode => {
 
 /**
  * Read one where expression from the start of a where clause body (masked, see maskStrings). Precedence, loosest
- * first: `or`, `and`, `not`; brackets group. `and where` / `or where` are the older spellings of `and` / `or`.
+ * first: `or`, `and`, `not`; brackets group.
  * @param text
  * @returns The expression's tree and where it ends (at the first text that can't carry it on, or the end).
  * @throws {Error} For an unbalanced bracket, empty brackets, an operator with no condition after it, or two conditions
@@ -86,6 +87,10 @@ const readExpression = (text: string): { node: ConditionNode, end: number } => {
       at += condition[0].length
       return readCondition(condition)
     }
+    // The 2.x `and where` / `or where` inside brackets, where splitClauses doesn't look
+    if ((after === 'and' || after === 'or') && keyword('where').test(rest())) {
+      throw new Error(`"${after} where" is no longer supported: ${whereHint}`)
+    }
     if (take(keyword('not'))) {
       return { not: factor('not') }
     }
@@ -107,7 +112,7 @@ const readExpression = (text: string): { node: ConditionNode, end: number } => {
   const term = (after: string): ConditionNode => {
     const nodes = [factor(after)]
     for (;;) {
-      const connector = take(keyword('and(?:\\s+where)?'))
+      const connector = take(keyword('and'))
       if (!connector) {
         break
       }
@@ -119,7 +124,7 @@ const readExpression = (text: string): { node: ConditionNode, end: number } => {
   const expression = (after: string): ConditionNode => {
     const nodes = [term(after)]
     for (;;) {
-      const connector = take(keyword('or(?:\\s+where)?'))
+      const connector = take(keyword('or'))
       if (!connector) {
         break
       }
