@@ -15,6 +15,7 @@ import { findOffset, ParsedOffset } from './findOffset'
 import { maskArrays, maskStrings, unmaskStrings } from './maskStrings'
 import { createMatch, parseCreate, ParsedCreate } from './parseCreate'
 import { parseSchemaStatement, schemaStatementMatch } from './parseSchemaStatement'
+import { splitClauses } from './splitClauses'
 import { startsQueryMatch } from './startsQuery'
 
 export type ParsedQuery = {
@@ -72,6 +73,10 @@ export const parseQuery = (query: string): ParsedQuery => {
   if (schemaStatementMatch.test(query)) {
     return Object.assign(parsedQuery, parseSchemaStatement(query))
   }
+
+  // Clauses come at most once each, in a fixed order (see clauseOrder); the find* steps below still search the whole
+  // query for their own clause
+  splitClauses(query)
 
   query = pipe(
     curry(findCommand)(parsedQuery),
