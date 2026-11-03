@@ -51,7 +51,8 @@ JSON can leave a key out or store it as `null`:
 
 `useDefault: true, defaultValue: …` fills in a field that is left out. `create()` checks the default against the
 field's type (a `null` default needs `nullable: true`) and throws if it doesn't fit. Primary key fields can't be
-nullable. As in SQL, a `null` is never a duplicate in a unique key (any number of rows can hold it), and
+nullable. Each key needs a non-empty `fields` list naming defined fields, and unknown key properties are rejected.
+As in SQL, a `null` is never a duplicate in a unique key (any number of rows can hold it), and
 a `null` foreign key isn't checked against the record it references.
 
 ## Writing queries

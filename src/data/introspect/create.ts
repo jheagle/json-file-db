@@ -5,11 +5,30 @@ import { registerRecord } from '../utilities/registerRecord'
 import { getSetting } from '../utilities/config'
 import { typeCheck } from './policies/typeCheck'
 
+const knownKeyProperties = ['type', 'fields', 'lookup', 'references']
+
+/**
+ * Reject a key with a property key() would ignore (a typo such as `keys` for `fields`), which has to be
+ * checked on the keys as given, before key() drops it.
+ * @param recordName
+ * @param keys
+ */
+const assertKnownKeyProperties = (recordName: string, keys: keyProperties[]): void => {
+  for (const key of keys) {
+    for (const property of Object.keys(key)) {
+      if (!knownKeyProperties.includes(property)) {
+        throw new Error(`Unknown property "${property}" on ${key.type ?? 'index'} key of ${recordName}; must be ${knownKeyProperties.join(', ')}`)
+      }
+    }
+  }
+}
+
 /**
  * Reject a definition that could never be written correctly, before anything is created: a
  * default that fails its field's type check (otherwise every insert leaving that field out would
  * fail instead), including a null default on a field that isn't nullable, and a nullable field in
- * the primary key (an entry's file name comes from its primary key value).
+ * the primary key (an entry's file name comes from its primary key value). Also a key with no fields,
+ * or with a field that isn't in the definition.
  * @param recordName
  * @param recordContent
  */
@@ -22,6 +41,16 @@ const assertValidDefinition = (recordName: string, recordContent: recordDefiniti
       typeCheck(field.type, field['default'], field.nullable)
     } catch (err) {
       throw new Error(`Invalid default for field "${field.name}" of ${recordName}: ${(err as Error).message}`)
+    }
+  }
+  for (const key of recordContent.keys) {
+    if (key.fields.length < 1) {
+      throw new Error(`The ${key.type} key of ${recordName} must have at least one field`)
+    }
+    for (const fieldName of key.fields) {
+      if (!recordContent.definition.some(field => field.name === fieldName)) {
+        throw new Error(`The ${key.type} key of ${recordName} names field "${fieldName}", which isn't in the definition`)
+      }
     }
   }
   const primaryKey = recordContent.keys.find(key => key.type === 'primary')
@@ -48,6 +77,7 @@ export const create = async (recordName: string, definition: fieldProperties[] =
   if (existsSync(`${databasePath}${recordName}.json`)) {
     return null
   }
+  assertKnownKeyProperties(recordName, keys)
   const recordContent = record({ path: recordName, definition, keys })
   assertValidDefinition(recordName, recordContent)
   await mkdir(databasePath, { recursive: true })
