@@ -100,5 +100,33 @@ describe('create', () => {
         { name: '_id', type: 'string', nullable: true }
       ], primary)).rejects.toThrow('Primary key field "_id" of foo can\'t be nullable')
     })
+
+    describe('invalid keys', () => {
+      const definition = [{ name: '_id', type: 'string' }]
+      const expectNothingWritten = () => {
+        expect(fileExists(`${databasePath}foo.json`)).toBeFalsy()
+        expect(fileExists(`${databasePath}foo`)).toBeFalsy()
+        const registry = fileExists(`${databasePath}__RECORDS.json`) ? require('fs').readFileSync(`${databasePath}__RECORDS.json`, 'utf8') : ''
+        expect(registry).not.toContain('foo.json')
+      }
+
+      test('rejects a key with no fields, creating nothing', async () => {
+        await expect(create('foo', definition, [{ type: 'primary' }]))
+          .rejects.toThrow('The primary key of foo must have at least one field')
+        expectNothingWritten()
+      })
+
+      test('rejects a key naming a field that is not in the definition, creating nothing', async () => {
+        await expect(create('foo', definition, [{ type: 'unique', fields: ['nope'] }]))
+          .rejects.toThrow('The unique key of foo names field "nope", which isn\'t in the definition')
+        expectNothingWritten()
+      })
+
+      test('rejects an unknown key property, creating nothing', async () => {
+        await expect(create('foo', definition, [{ type: 'primary', keys: ['_id'] }]))
+          .rejects.toThrow('Unknown property "keys" on primary key of foo; must be type, fields, lookup, references')
+        expectNothingWritten()
+      })
+    })
   })
 })
