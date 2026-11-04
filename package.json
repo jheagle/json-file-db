@@ -28,7 +28,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/jheagle/json-file-db.git"
+    "url": "git+https://github.com/jheagle/json-fs-query.git"
   },
   "keywords": [
     "database",
@@ -39,9 +39,9 @@
   "author": "Joshua Heagle <joshuaheagle@gmail.com>",
   "license": "GPL-3.0-or-later",
   "bugs": {
-    "url": "https://github.com/jheagle/json-file-db/issues"
+    "url": "https://github.com/jheagle/json-fs-query/issues"
   },
-  "homepage": "https://github.com/jheagle/json-file-db#readme",
+  "homepage": "https://github.com/jheagle/json-fs-query#readme",
   "devDependencies": {
     "@babel/core": "^8.1.0",
     "gulp": "^5.0.1",
