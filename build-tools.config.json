@@ -7,7 +7,7 @@
   "copyFiles": [
     {
       "from": "browser/*.js",
-      "to": "../joshuaheagle.local/projects/json-file-db/browser"
+      "to": "../joshuaheagle.local/projects/json-fs-query/browser"
     }
   ],
   "dist": {
@@ -17,7 +17,7 @@
     "enabled": true,
     "from": "src/data",
     "index": "MAIN.md",
-    "to": "../joshuaheagle.local/projects/json-file-db/docs",
+    "to": "../joshuaheagle.local/projects/json-fs-query/docs",
     "inBuild": false,
     "gitRevision": "main"
   },

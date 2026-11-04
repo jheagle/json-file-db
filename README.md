@@ -493,7 +493,7 @@ public API either way), but throw if actually called there, rather than being si
 
 ## Documentation
 
-The reference for every function is in [`docs/`](https://joshuaheagle.com/projects/json-file-db/docs/index.html) (or open `docs/index.html` locally). It is generated from the TypeScript source, and each module is a folder of `src/data/`:
+The reference for every function is in [`docs/`](https://joshuaheagle.com/projects/json-fs-query/docs/index.html) (or open `docs/index.html` locally). It is generated from the TypeScript source, and each module is a folder of `src/data/`:
 
 | Module | What it holds |
 | --- | --- |

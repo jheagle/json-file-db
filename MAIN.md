@@ -1,4 +1,4 @@
-# json-file-db
+# [json-fs-query](https://www.npmjs.com/package/json-fs-query)
 
 Read and manage data with JSON files - a small query engine that treats a folder of JSON files as a database, with
 a SQL-like query string (`read workouts where date = '2024-06-02'`) instead of a query builder API.
