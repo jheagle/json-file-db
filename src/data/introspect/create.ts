@@ -85,6 +85,15 @@ export const create = async (recordName: string, definition: fieldProperties[] =
   await mkdir(databasePath, { recursive: true })
   await writeFile(`${databasePath}${recordName}.json`, JSON.stringify(recordContent, null, 2))
   await mkdir(`${databasePath}${recordName}`, { recursive: true })
+  // Each indexed key starts with an empty index, so the new record reads like any other before its first insert
+  // (a where on a key used to fail with "Could not read __indexes/...", since the file only appeared with the first row)
+  const indexedKeys = recordContent.keys.filter(key => key.lookup)
+  if (indexedKeys.length) {
+    await mkdir(`${databasePath}__indexes/${recordName}`, { recursive: true })
+    for (const key of indexedKeys) {
+      await writeFile(`${databasePath}__indexes/${recordName}/${key.lookup}`, '[]')
+    }
+  }
   await registerRecord(recordName)
   return recordContent
 }
