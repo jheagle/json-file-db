@@ -3,6 +3,7 @@ import { keyProperties } from './definitions/key'
 import { fieldProperties } from './definitions/field'
 import { registerRecord } from '../utilities/registerRecord'
 import { getSetting } from '../utilities/config'
+import { requireNode } from '../utilities/requireNode'
 import { typeCheck } from './policies/typeCheck'
 
 const knownKeyProperties = ['type', 'fields', 'lookup', 'references']
@@ -68,6 +69,7 @@ const assertValidDefinition = (recordName: string, recordContent: recordDefiniti
  * @param keys
  */
 export const create = async (recordName: string, definition: fieldProperties[] = [], keys: keyProperties[] = []): Promise<recordDefinition | null> => {
+  requireNode('create()')
   const { writeFile, mkdir } = require('fs/promises')
   const { existsSync } = require('fs')
   const databasePath = getSetting('databasePath', 'database/')

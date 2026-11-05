@@ -1,10 +1,12 @@
 import { retrieveFile } from '../utilities/retrieveFile'
 import { deregisterRecord } from '../utilities/deregisterRecord'
 import { getSetting } from '../utilities/config'
+import { requireNode } from '../utilities/requireNode'
 
 const { rm } = require('fs/promises')
 
 export const drop = async (record) => {
+  requireNode('drop()')
   const databasePath = getSetting('databasePath', 'database/')
   if (record === '__RECORDS') {
     return null

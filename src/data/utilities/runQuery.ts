@@ -21,6 +21,7 @@ import { splitEntityProperty } from './parsers/splitEntityProperty'
 import { fieldType } from './fieldType'
 import { conditionsOf } from './conditionTree'
 import { conditionEntities } from './conditionEntities'
+import { requireNode } from './requireNode'
 
 /**
  * Give each condition and sort clause its field's declared type, so where and sortBy compare by it
@@ -45,6 +46,10 @@ const typeClauses = async (parsed, recordData) => {
 export const runQuery = async (parsed) => {
   // Checked before anything is read: which entity each condition is on, and whether it needs per-pair evaluation
   const perPair = typeof parsed.where !== 'undefined' && conditionEntities(parsed)
+  // Writes and schema changes need the filesystem; say so plainly in a browser
+  if (['insert', 'update', 'delete', 'create', 'drop'].includes(parsed.command)) {
+    requireNode(`"${parsed.command}"`)
+  }
   // Schema statements act on the database, not on entries (for create there is no record to read yet)
   switch (parsed.command) {
     case 'create':
