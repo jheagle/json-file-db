@@ -80,9 +80,7 @@ export const runQuery = async (parsed) => {
   const resolved = new Set<string>()
   parsed = await getConditionIndexedList(parsed, recordData, dataSet, resolved)
   const entityResolved = resolved.has(parsed.entity)
-  // The join itself is joinEntity's (below), for rows narrowed by an index too. It used to be done ahead of it for
-  // those rows from the joined records' indexes (getJoinIndexedList), which crashed on some joins through a linking
-  // record and returned only the first row's matches for others
+  // The join is joinEntity's (below), for rows an index narrowed too
 
   // delete/update act on whatever is already in dataSet[entity] - unlike read, which loads
   // everything and lets the where-reduce below narrow it down afterward, they never get a second
