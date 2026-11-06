@@ -13,21 +13,30 @@ import { splitEntityProperty } from '../utilities/parsers/splitEntityProperty'
 import { recordDefinition } from '../introspect/definitions/record'
 import { keyDefinition } from '../introspect/definitions/key'
 import { getSetting } from '../utilities/config'
-
-const { writeFile } = require('fs/promises')
+import { keyIndexFiles } from '../utilities/keyIndexFiles'
+import { writeJson } from '../storage'
 
 /**
  * Same reasoning as deleteEntity: a record object carries no memory of which entry file it came
- * from, so re-scan entries[] and match by the record's own primary key value(s) - a single field,
- * or a composite of several for a multi-field primary key.
+ * from, so find the file whose primary key value(s) match - a single field, or a composite of
+ * several for a multi-field primary key. The primary key's index says which file that is; the file
+ * is read to confirm it, and without an index (or when it leads nowhere) every entry is looked at
+ * in turn, as before.
  * @param record
  * @param primaryKey
  * @param primaryValue
  */
 const findEntryFile = async (record: recordDefinition, primaryKey: keyDefinition, primaryValue: any): Promise<string | null> => {
+  const type = keyValueType(record, primaryKey)
+  const isMatch = async (fileName: string): Promise<boolean> =>
+    sameValue(type, computeKeyValue(primaryKey.fields, await retrieveFile(`${record.path}/${fileName}`)), primaryValue)
+  for (const fileName of await keyIndexFiles(record, primaryKey, value => sameValue(type, value, primaryValue)) ?? []) {
+    if (await isMatch(fileName)) {
+      return fileName
+    }
+  }
   for (const fileName of record.entries) {
-    const data = await retrieveFile(`${record.path}/${fileName}`)
-    if (sameValue(keyValueType(record, primaryKey), computeKeyValue(primaryKey.fields, data), primaryValue)) {
+    if (await isMatch(fileName)) {
       return fileName
     }
   }
@@ -194,7 +203,6 @@ const applyFieldTypes = (record: recordDefinition, values: Object): Object => {
 }
 
 export const updateEntity = async (entity: string = '', values: Object = {}, dataSet: Object = {}): Promise<Object> => {
-  const databasePath = getSetting('databasePath', 'database/')
   const record = await retrieveRecord(entity)
   const primaryKey = record.keys.find(key => key.type === 'primary')
   if (!primaryKey) {
@@ -225,7 +233,7 @@ export const updateEntity = async (entity: string = '', values: Object = {}, dat
 
   for (const { fileName, oldData, newData } of planned) {
     await reconcileIndexes(record, oldData, newData, typedValues, fileName)
-    await writeFile(`${databasePath}${record.path}/${fileName}`, JSON.stringify(newData, null, 2))
+    await writeJson(`${record.path}/${fileName}`, newData)
   }
 
   dataSet[entity] = planned.map(({ newData }) => newData)
