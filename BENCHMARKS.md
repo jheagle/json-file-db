@@ -125,6 +125,32 @@ queried rows reach again, through the index: `read parents.children on parents._
 | files on disk | 129 | 1,119 |
 | bytes of data | 50 KB | 438 KB |
 
+### task 3c: key checks through indexes (2026-11-06, Node v24.21.0, 11th Gen Intel(R) Core(TM) i5-1135G7 @ 2.40GHz)
+
+Primary, unique and foreign key checks (and the dependents check on delete and update) are answered from the key's
+index instead of reading every row. Inserts are no longer quadratic: 196 -> 6.5 ms per row at 1,000 rows (389 ms in the
+baseline) and nearly the same at 100 (5.4 ms), so 1,000 inserts take 6.5 s instead of 196 s (6.5 minutes in the
+baseline). One insert reads 6 files instead of 1,105. This run is on the epic without task 3b (its own PR), so the joins
+are at task 3's level. Next in sight: updating or deleting one row by key still reads every row to find its file.
+
+| Operation | 100 rows | 1000 rows |
+|---|---:|---:|
+| insert each | 540 ms | 6.5 s |
+| insert per row | 5.4 ms | 6.5 ms |
+| read all | 35 ms | 343 ms |
+| indexed where | 3.0 ms | 7.0 ms |
+| join 1 | 67 ms | 2.5 s |
+| join 2 | 68 ms | 2.5 s |
+| update 1 by key | 38 ms | 335 ms |
+| update many by index | 24 ms | 347 ms |
+| delete 1 by key | 74 ms | 695 ms |
+| browser read all | 263 ms | 2.3 s |
+| browser indexed where | 11 ms | 50 ms |
+| browser join 1 | 307 ms | 4.1 s |
+| browser join 2 | 322 ms | 3.9 s |
+| files on disk | 129 | 1,119 |
+| bytes of data | 50 KB | 438 KB |
+
 ### task 3d: a row's file through the primary key index (2026-11-06, Node v24.21.0, 11th Gen Intel(R) Core(TM) i5-1135G7 @ 2.40GHz)
 
 `update` and `delete` find each row's file through the primary key index instead of reading every row. Update many by
@@ -148,5 +174,30 @@ before). This run is on the epic with 3b but without 3c (its own PR), so inserts
 | browser indexed where | 11 ms | 42 ms |
 | browser join 1 | 249 ms | 2.3 s |
 | browser join 2 | 283 ms | 2.3 s |
+| files on disk | 129 | 1,119 |
+| bytes of data | 50 KB | 438 KB |
+
+### 3b, 3c and 3d together (2026-11-06, Node v24.21.0, 11th Gen Intel(R) Core(TM) i5-1135G7 @ 2.40GHz)
+
+The first run with all three on the epic, which is what 3.2.0 ships. Against the baseline at 1,000 rows: inserts take 6.6 s
+instead of 6.5 minutes (6.6 ms per row instead of 389), one join takes 0.37 s instead of 5.2 s, and updating many rows by
+index takes 26 ms. The browser rows vary by up to a second between runs (join 1 was 3.9 s on the run before this one):
+they are still 1,000 sequential requests, which the parallel reads task addresses.
+
+| Operation | 100 rows | 1000 rows |
+|---|---:|---:|
+| insert each | 608 ms | 6.6 s |
+| insert per row | 6.1 ms | 6.6 ms |
+| read all | 36 ms | 366 ms |
+| indexed where | 3.7 ms | 6.9 ms |
+| join 1 | 50 ms | 371 ms |
+| join 2 | 47 ms | 391 ms |
+| update 1 by key | 43 ms | 360 ms |
+| update many by index | 4.9 ms | 26 ms |
+| delete 1 by key | 46 ms | 392 ms |
+| browser read all | 285 ms | 2.9 s |
+| browser indexed where | 13 ms | 45 ms |
+| browser join 1 | 295 ms | 3.4 s |
+| browser join 2 | 474 ms | 2.5 s |
 | files on disk | 129 | 1,119 |
 | bytes of data | 50 KB | 438 KB |
