@@ -84,14 +84,21 @@ reviewing data in pull requests. The big wins are fewer file operations and fewe
   as leaving the field out, or say so in the error.
 - [ ] **10. Clearer errors.** A malformed join (`read workouts on ...` without `workouts.<record>`) fails with
   `Could not read .json`; say what's wrong in query terms.
-- [ ] **11. `alter` for fields**: add, drop and rename a field on an existing record (no way today but editing JSON by
-  hand).
+### Schema
+
+- [ ] **11. `alter` for fields**: add, drop and rename a field, and change whether it's optional or nullable, on an
+  existing record (today the only way is editing its JSON by hand). Adding a field with a default fills existing rows;
+  dropping one removes it from every entry and from any index or key that uses it (or refuses while a key does).
+- [ ] **12. Several databases, and switching between them.** `create database <name>`, `use <name>`,
+  `drop database <name>` and `show databases`, plus `configure()` naming the active one. One program can work with
+  several databases (e.g. workout-planner's real data and a test copy) without reconfiguring paths by hand. The browser
+  side reads whichever database it's pointed at.
 
 ### Close
 
-- [ ] **12. Docs and positioning.** README opening (what it's for, when to use it, when to use SQLite instead), the
+- [ ] **13. Docs and positioning.** README opening (what it's for, when to use it, when to use SQLite instead), the
   benchmark numbers, a static-site example.
-- [ ] **13. Before merging ✱:** re-sync with `main`, full suite, benchmarks against the baseline, workout-planner's full
+- [ ] **14. Before merging ✱:** re-sync with `main`, full suite, benchmarks against the baseline, workout-planner's full
   history imported and its tests passing, then a release PR.
 
 ## Out of scope (tracked separately in TASKS.md)
@@ -99,7 +106,9 @@ reviewing data in pull requests. The big wins are fewer file operations and fewe
 - The **types epic** (`number` with decimals, dates, decimal/bigint, enum, ...): already planned on its own. Weights in
   workout-planner stay text (`"70.5lbs"`) until then.
 - **Transactions** (`begin` / `commit` / `rollback`, a crash journal): 4's write set is the base they build on.
-- Aggregates, outer joins, multiple databases, the CLI epic.
+- Aggregates, outer joins, user sessions, the CLI epic.
+- **Swappable storage backends** (other stores, encryption, a server with IP and port): task 2's storage module is the
+  seam for it, but the backends themselves are their own epic.
 - A multi-process lock (two programs writing one database at once).
 
 ## Release
