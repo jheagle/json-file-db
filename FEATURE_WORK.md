@@ -65,7 +65,7 @@ reviewing data in pull requests. The big wins are fewer file operations and fewe
   is read once and kept in memory; writes in the same call update the cache. Fixes joins re-reading the same files.
   Indexes are held in memory as maps (value -> entry files) instead of arrays searched with `find`.
   The maps moved to 3b: profiled after the cache, index lookups cost nothing measurable, the joins themselves do.
-- [ ] **3b. Join engine.** Profiled after 3, 1.7 s of a 2.3 s one-join read (1,000 rows) is `joinEntity` cloning every
+- [x] **3b. Join engine.** Profiled after 3, 1.7 s of a 2.3 s one-join read (1,000 rows) is `joinEntity` cloning every
   loaded row once per row it joins (and `getJoinIndexedList`, the `where` + join path, cloning the loaded indexes per
   row): it grows with the square of the row count. Replace both with one join: for `=`, a map (typed value -> joined
   rows) built once per `on` clause, then each row looks up its matches (other comparators scan, without cloning).
@@ -74,17 +74,19 @@ reviewing data in pull requests. The big wins are fewer file operations and fewe
   match gets), the base for the outer / left / right joins epic (TASKS.md), which then only adds the types.
   Found while characterizing joins: on `main`, the index path for `where` + join crashed on joins through a linking
   record and returned only the first row's matches on multi-step joins; fixed on `main` first (#115) by removing it.
-- [ ] **3c. Key checks through indexes.** One insert into a 1,000-row table reads all 1,000 rows and all 100 parent
+- [x] **3c. Key checks through indexes.** One insert into a 1,000-row table reads all 1,000 rows and all 100 parent
   rows: `keyUnique` (primary / unique keys, and `auto` ids) and `foreignKeyExists` read the whole table though those
   keys have indexes, and `hasDependents` (delete) does the same. Answer them from the key's index (one file), held as a
   map for repeated lookups in one call. This is what makes an import grow with the square of its size.
-- [ ] **3d. Find a row's file through the primary key index.** `update` / `delete` of one row by key still read every
+- [x] **3d. Find a row's file through the primary key index.** `update` / `delete` of one row by key still read every
   row to find its file (`findEntryFile`, `removeMatchingEntries`): 335 / 695 ms at 1,000 rows (3c's run). The primary
   key index lists the file; fall back to the scan when there's no usable index, as 3c does.
 
 **Release point (agreed 2026-11-06):** after 3c (and 3d if it's ready), cherry-pick tasks 1-3d onto a release branch
 from `main` as 3.2.0: queries return exactly what 3.1.4 returns (join and write characterization harnesses). Then merge
 `main` back into this branch with a real merge commit.
+  **Done 2026-11-06:** 3.2.0 published (#120, merge commit; queries checked byte-identical to 3.1.4 with a 52-query
+  script), `main` merged back (0b0d048). Results for 3b-3d together are the last run in `BENCHMARKS.md` before task 4.
 - [ ] **4. Write set: batched, all-or-nothing writes.** A query's writes are collected (path -> new content, or delete)
   and applied once at the end: a 1,000-row insert writes the record file and each index once, not 1,000 times. Every row
   is checked before anything is written, so a failed multi-row insert or update changes nothing (step 3 of the
@@ -107,6 +109,11 @@ from `main` as 3.2.0: queries return exactly what 3.1.4 returns (join and write 
 
 - [ ] **8. Multi-row insert syntax**, e.g. `insert workouts values (date = '2026-11-01', ...), (date = '2026-11-02', ...)`,
   so a batch is one statement (fast with 4).
+  Measured with 4 (one `insertEntity` statement): 1,000 rows 1 s (vs 6.3 s as 1,000 one-row inserts), but 5,000 rows
+  15.7 s: each row still reads, parses and re-serializes the growing record file and indexes from the write set, so the
+  work is quadratic in memory instead of on disk. With this task, `insertEntity` loads the record and its indexes once
+  per statement, checks each row against them plus the statement's earlier rows (as `assertUniqueWithinUpdate` does for
+  update), and writes them once.
 - [ ] **9. `null` in an optional field.** Inserting `null` into an optional (not nullable) field fails today; treat it
   as leaving the field out, or say so in the error.
 - [ ] **10. Clearer errors.** A malformed join (`read workouts on ...` without `workouts.<record>`) fails with
