@@ -124,3 +124,29 @@ queried rows reach again, through the index: `read parents.children on parents._
 | browser join 2 | 304 ms | 2.4 s |
 | files on disk | 129 | 1,119 |
 | bytes of data | 50 KB | 438 KB |
+
+### task 3d: a row's file through the primary key index (2026-11-06, Node v24.21.0, 11th Gen Intel(R) Core(TM) i5-1135G7 @ 2.40GHz)
+
+`update` and `delete` find each row's file through the primary key index instead of reading every row. Update many by
+index: 341 -> 20 ms at 1,000 rows (3c's run). The "1 by key" rows include the `read children limit 1` that picks the
+row, which reads every row (about 300 ms: `limit` doesn't stop reading early), so they hide the change. Timed alone on
+the same database, updating one row by key takes 7 ms (3 reads) and deleting one 10 ms (8 reads, 341 ms and 1,007 reads
+before). This run is on the epic with 3b but without 3c (its own PR), so inserts are at task 3's level.
+
+| Operation | 100 rows | 1000 rows |
+|---|---:|---:|
+| insert each | 2.3 s | 196.5 s |
+| insert per row | 23 ms | 196 ms |
+| read all | 31 ms | 307 ms |
+| indexed where | 2.8 ms | 7.9 ms |
+| join 1 | 37 ms | 341 ms |
+| join 2 | 37 ms | 366 ms |
+| update 1 by key | 39 ms | 314 ms |
+| update many by index | 3.6 ms | 20 ms |
+| delete 1 by key | 42 ms | 328 ms |
+| browser read all | 241 ms | 2.1 s |
+| browser indexed where | 11 ms | 42 ms |
+| browser join 1 | 249 ms | 2.3 s |
+| browser join 2 | 283 ms | 2.3 s |
+| files on disk | 129 | 1,119 |
+| bytes of data | 50 KB | 438 KB |
