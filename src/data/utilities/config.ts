@@ -2,12 +2,14 @@ export type RuntimeSettings = {
   databasePath: string
   relativePath: string
   enforceForeignKeys: boolean
+  readConcurrency: number
 }
 
 const defaults: RuntimeSettings = {
   databasePath: 'database/',
   relativePath: '',
-  enforceForeignKeys: true
+  enforceForeignKeys: true,
+  readConcurrency: 16
 }
 
 let settings: RuntimeSettings = { ...defaults }
@@ -47,6 +49,9 @@ export const trackDatabaseCall = (): (() => void) => {
  * that would leave another record's foreign key pointing at a value that no longer exists -
  * mirroring MySQL's own foreign_key_checks setting, which is also toggleable rather than always
  * on, since strict enforcement isn't always what every consumer wants.
+ *
+ * readConcurrency (default 16) is how many entry files a read has in flight at once (see retrieveFiles): in a browser,
+ * how many requests run together.
  *
  * Changing databasePath while calls are still running or queued throws (see trackDatabaseCall): await them first.
  * @param newSettings

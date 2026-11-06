@@ -455,12 +455,17 @@ const { configure } = require('json-fs-query')
 configure({
   databasePath: 'database/',   // where the JSON files live (default 'database/')
   relativePath: '',            // URL prefix prepended to databasePath when reading via fetch() in a browser
-  enforceForeignKeys: true     // RESTRICT delete/update of a record other entities still reference (default true)
+  enforceForeignKeys: true,    // RESTRICT delete/update of a record other entities still reference (default true)
+  readConcurrency: 16          // how many entry files a read has in flight at once (default 16)
 })
 ```
 
 Turning `enforceForeignKeys` off restores the pre-1.0 behavior (no referential integrity checks at all) - useful if
 it doesn't fit a particular workflow, mirroring MySQL's own toggleable `foreign_key_checks`.
+
+Reads fetch several entry files at once, `readConcurrency` at a time, and keep the record's order. In a browser each
+file is one request: 16 suits HTTP/2 static hosts (such as GitHub Pages), while over HTTP/1.1 a browser only opens about
+6 connections per host anyway. `readConcurrency: 1` reads one file at a time, as every read did before this setting.
 
 ## Several calls at once
 

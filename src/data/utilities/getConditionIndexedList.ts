@@ -2,7 +2,7 @@ import { isEntityProperty } from './parsers/isEntityProperty'
 import { splitEntityProperty } from './parsers/splitEntityProperty'
 import { retrieveRecord } from './retrieveRecord'
 import { where } from '../queries/where'
-import { retrieveFile } from './retrieveFile'
+import { retrieveFiles } from './retrieveFiles'
 import { ParsedQuery } from './parsers/parseQuery'
 import { retrieveIndexes } from './retrieveIndexes'
 import { isSingleFieldKey } from './isSingleFieldKey'
@@ -128,10 +128,7 @@ export const getConditionIndexedList = async (parsed: ParsedQuery, recordData, d
   }
   for (const entity of Object.keys(matchedFiles)) {
     resolved.add(entity)
-    dataSet[entity] = []
-    for (const file of matchedFiles[entity]) {
-      dataSet[entity].push(await retrieveFile(`${entity}/${file}`))
-    }
+    dataSet[entity] = await retrieveFiles([...matchedFiles[entity]].map(file => `${entity}/${file}`))
   }
   return parsed
 }

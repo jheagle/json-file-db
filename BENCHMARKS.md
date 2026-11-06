@@ -227,3 +227,40 @@ the query language can only do once multi-row insert (task 8) lands.
 | browser join 2 | 266 ms | 2.2 s |
 | files on disk | 129 | 1,119 |
 | bytes of data | 50 KB | 438 KB |
+
+### task 5: parallel reads (2026-11-06, Node v24.21.0, 11th Gen Intel(R) Core(TM) i5-1135G7 @ 2.40GHz)
+
+Entry files are read `readConcurrency` (default 16) at a time instead of one after another, for full reads, indexed
+`where` and the rows a join reads. At 1,000 rows: a full read is 0.15 s in Node (0.31 s in task 4's run) and 0.68 s in a
+browser (2.1 s); one join 0.72 s in a browser (2.2 s; 15 s in the baseline). Update and delete by key get faster too,
+since the `read children limit 1` they start with is a full read.
+
+| Operation | 100 rows | 1000 rows |
+|---|---:|---:|
+| insert each | 500 ms | 6.0 s |
+| insert per row | 5.0 ms | 6.0 ms |
+| read all | 14 ms | 149 ms |
+| indexed where | 2.6 ms | 4.2 ms |
+| join 1 | 18 ms | 172 ms |
+| join 2 | 21 ms | 176 ms |
+| update 1 by key | 20 ms | 147 ms |
+| update many by index | 3.1 ms | 19 ms |
+| delete 1 by key | 23 ms | 161 ms |
+| browser read all | 97 ms | 677 ms |
+| browser indexed where | 9.8 ms | 19 ms |
+| browser join 1 | 97 ms | 716 ms |
+| browser join 2 | 107 ms | 730 ms |
+| files on disk | 129 | 1,119 |
+| bytes of data | 50 KB | 438 KB |
+
+How many at once (1,000 rows, median of 3; the benchmark's local server is HTTP/1.1, where Chromium opens 6
+connections per host, so the browser levels off from about 8; HTTP/2 hosts such as GitHub Pages aren't capped that way):
+
+| readConcurrency | Node read all | Node join 1 | browser read all | browser join 1 |
+|---:|---:|---:|---:|---:|
+| 1 | 286 ms | 338 ms | 1,977 ms | 2,193 ms |
+| 4 | 156 ms | 177 ms | 771 ms | 840 ms |
+| 8 | 152 ms | 169 ms | 676 ms | 757 ms |
+| 16 | 151 ms | 168 ms | 664 ms | 761 ms |
+| 32 | 146 ms | 166 ms | 674 ms | 767 ms |
+| 64 | 144 ms | 155 ms | 689 ms | 781 ms |
