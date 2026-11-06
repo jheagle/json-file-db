@@ -88,7 +88,16 @@ describe('formatDatabase', () => {
     expect(fs.readFileSync(`${databasePath}README.txt`, 'utf8')).toBe('notes')
   })
 
-  test('rejects an unknown format', async () => {
+  test('rejects an unknown format, as an argument and as a setting', async () => {
     await expect(formatDatabase('tabs')).rejects.toThrow('Unknown format "tabs"')
+    expect(() => configure({ format: 'prety' })).toThrow('Unknown format "prety"')
+    await fill()
+    expect(fs.readFileSync(`${databasePath}items.json`, 'utf8')).not.toContain('\n')
+  })
+
+  test('formatDatabase(undefined) uses the configured format', async () => {
+    await fill()
+    configure({ format: 'pretty' })
+    expect(await formatDatabase(undefined)).toEqual({ files: 10, rewritten: 10 })
   })
 })

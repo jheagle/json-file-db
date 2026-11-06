@@ -489,6 +489,10 @@ await formatDatabase('compact')  // back to compact, whatever the setting
 It reads and checks every file before writing any: one that isn't valid JSON fails the call with its path and nothing
 is changed. Node only, like every write.
 
+**Upgrading a database kept in git:** before this setting every file was written indented, so after upgrading each
+file turns compact the next time it changes, and diffs mix both. Either run `formatDatabase('compact')` once and commit
+the result on its own, or set `format: 'pretty'` to keep writing indented files.
+
 ## Several calls at once
 
 Calls to `query()`, `create()`, `drop()`, `describe()` and `formatDatabase()` on one database (one `databasePath`)
