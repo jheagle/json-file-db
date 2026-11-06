@@ -96,3 +96,31 @@ cache and 10 ms after.
 | browser join 2 | 280 ms | 3.6 s |
 | files on disk | 129 | 1,119 |
 | bytes of data | 50 KB | 438 KB |
+
+### task 3b: join engine (2026-11-06, Node v24.21.0, 11th Gen Intel(R) Core(TM) i5-1135G7 @ 2.40GHz)
+
+One join for every row, from lookups built once (it used to copy every loaded row for each row joined). Against task
+3, at 1,000 rows: one join 2.3 s -> 468 ms and two joins 2.3 s -> 480 ms in Node; in a browser one join 3.6 -> 2.5 s and
+two joins 3.6 -> 2.4 s, now no more than reading the rows (browser read all: 2.7 s in this run), so what's left there
+is the sequential requests (task 5). This run was a little slower overall (read all 371 ms, 310 ms in task 3's), so
+compare the joins with read all rather than with each other. Indexed `where` + join reads only the joined rows the
+queried rows reach again, through the index: `read parents.children on parents._id = children.parent_id where _id =
+'p3'` reads 15 files in 14 ms (the fixed ordinary join on `main`, #115, reads 1,004 files in 392 ms).
+
+| Operation | 100 rows | 1000 rows |
+|---|---:|---:|
+| insert each | 2.6 s | 204.3 s |
+| insert per row | 26 ms | 204 ms |
+| read all | 35 ms | 371 ms |
+| indexed where | 3.7 ms | 9.5 ms |
+| join 1 | 39 ms | 468 ms |
+| join 2 | 44 ms | 480 ms |
+| update 1 by key | 36 ms | 384 ms |
+| update many by index | 21 ms | 423 ms |
+| delete 1 by key | 68 ms | 758 ms |
+| browser read all | 258 ms | 2.7 s |
+| browser indexed where | 11 ms | 50 ms |
+| browser join 1 | 253 ms | 2.5 s |
+| browser join 2 | 304 ms | 2.4 s |
+| files on disk | 129 | 1,119 |
+| bytes of data | 50 KB | 438 KB |
