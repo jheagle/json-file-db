@@ -78,6 +78,13 @@ reviewing data in pull requests. The big wins are fewer file operations and fewe
   rows: `keyUnique` (primary / unique keys, and `auto` ids) and `foreignKeyExists` read the whole table though those
   keys have indexes, and `hasDependents` (delete) does the same. Answer them from the key's index (one file), held as a
   map for repeated lookups in one call. This is what makes an import grow with the square of its size.
+- [ ] **3d. Find a row's file through the primary key index.** `update` / `delete` of one row by key still read every
+  row to find its file (`findEntryFile`, `removeMatchingEntries`): 335 / 695 ms at 1,000 rows (3c's run). The primary
+  key index lists the file; fall back to the scan when there's no usable index, as 3c does.
+
+**Release point (agreed 2026-11-06):** after 3c (and 3d if it's ready), cherry-pick tasks 1-3d onto a release branch
+from `main` as 3.2.0: queries return exactly what 3.1.4 returns (join and write characterization harnesses). Then merge
+`main` back into this branch with a real merge commit.
 - [ ] **4. Write set: batched, all-or-nothing writes.** A query's writes are collected (path -> new content, or delete)
   and applied once at the end: a 1,000-row insert writes the record file and each index once, not 1,000 times. Every row
   is checked before anything is written, so a failed multi-row insert or update changes nothing (step 3 of the
