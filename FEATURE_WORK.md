@@ -64,6 +64,14 @@ reviewing data in pull requests. The big wins are fewer file operations and fewe
 - [ ] **3. Per-query read cache.** Inside one `query()` call (the existing database lock already scopes it), each file
   is read once and kept in memory; writes in the same call update the cache. Fixes joins re-reading the same files.
   Indexes are held in memory as maps (value -> entry files) instead of arrays searched with `find`.
+  The maps moved to 3b: profiled after the cache, index lookups cost nothing measurable, the joins themselves do.
+- [ ] **3b. Join engine.** Profiled after 3, 1.7 s of a 2.3 s one-join read (1,000 rows) is `joinEntity` cloning every
+  loaded row once per row it joins (and `getJoinIndexedList`, the `where` + join path, cloning the loaded indexes per
+  row): it grows with the square of the row count. Replace both with one join: for `=`, a map (typed value -> joined
+  rows) built once per `on` clause, then each row looks up its matches (other comparators scan, without cloning).
+  Indexes only decide which files are read. Same results as today: typed comparison, null never matching, joined-row
+  order, independent copies of joined rows. Built so the join type is one decision in one place (what a row with no
+  match gets), the base for the outer / left / right joins epic (TASKS.md), which then only adds the types.
 - [ ] **4. Write set: batched, all-or-nothing writes.** A query's writes are collected (path -> new content, or delete)
   and applied once at the end: a 1,000-row insert writes the record file and each index once, not 1,000 times. Every row
   is checked before anything is written, so a failed multi-row insert or update changes nothing (step 3 of the
