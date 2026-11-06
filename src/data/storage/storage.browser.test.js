@@ -20,7 +20,7 @@ describe('storage (browser)', () => {
   test('readJson uses fetch(), not fs', async () => {
     configure({ databasePath: 'my-data/', relativePath: 'http://example.com/' })
     const content = { path: 'foo', entries: [] }
-    global.fetch = jest.fn().mockResolvedValue({ json: () => Promise.resolve(content) })
+    global.fetch = jest.fn().mockResolvedValue({ text: () => Promise.resolve(JSON.stringify(content)) })
     expect(await readJson('foo.json')).toEqual(content)
     expect(global.fetch).toHaveBeenCalledWith('http://example.com/my-data/foo.json')
   })

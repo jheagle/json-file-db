@@ -1,5 +1,6 @@
 import { storagePath } from './storagePath'
 import { nodeFiles } from './nodeFiles'
+import { cacheRemove } from './readCache'
 
 /**
  * Delete one file of the database. Node only.
@@ -7,5 +8,7 @@ import { nodeFiles } from './nodeFiles'
  * @throws {Error} When the file doesn't exist.
  */
 export const removeFile = async (path: string): Promise<void> => {
-  await nodeFiles().rm(storagePath(path))
+  const location = storagePath(path)
+  cacheRemove(location)
+  await nodeFiles().rm(location)
 }
