@@ -2,7 +2,7 @@ import { record, recordDefinition } from './definitions/record'
 import { keyProperties } from './definitions/key'
 import { fieldProperties } from './definitions/field'
 import { registerRecord } from '../utilities/registerRecord'
-import { getSetting } from '../utilities/config'
+import { fileExists, makeDirectory, writeJson } from '../storage'
 import { requireNode } from '../utilities/requireNode'
 import { typeCheck } from './policies/typeCheck'
 
@@ -70,28 +70,25 @@ const assertValidDefinition = (recordName: string, recordContent: recordDefiniti
  */
 export const create = async (recordName: string, definition: fieldProperties[] = [], keys: keyProperties[] = []): Promise<recordDefinition | null> => {
   requireNode('create()')
-  const { writeFile, mkdir } = require('fs/promises')
-  const { existsSync } = require('fs')
-  const databasePath = getSetting('databasePath', 'database/')
   if (recordName === '__RECORDS') {
     return null
   }
-  if (existsSync(`${databasePath}${recordName}.json`)) {
+  if (fileExists(`${recordName}.json`)) {
     return null
   }
   assertKnownKeyProperties(recordName, keys)
   const recordContent = record({ path: recordName, definition, keys })
   assertValidDefinition(recordName, recordContent)
-  await mkdir(databasePath, { recursive: true })
-  await writeFile(`${databasePath}${recordName}.json`, JSON.stringify(recordContent, null, 2))
-  await mkdir(`${databasePath}${recordName}`, { recursive: true })
+  await makeDirectory()
+  await writeJson(`${recordName}.json`, recordContent)
+  await makeDirectory(recordName)
   // Each indexed key starts with an empty index, so the new record reads like any other before its first insert
   // (a where on a key used to fail with "Could not read __indexes/...", since the file only appeared with the first row)
   const indexedKeys = recordContent.keys.filter(key => key.lookup)
   if (indexedKeys.length) {
-    await mkdir(`${databasePath}__indexes/${recordName}`, { recursive: true })
+    await makeDirectory(`__indexes/${recordName}`)
     for (const key of indexedKeys) {
-      await writeFile(`${databasePath}__indexes/${recordName}/${key.lookup}`, '[]')
+      await writeJson(`__indexes/${recordName}/${key.lookup}`, [])
     }
   }
   await registerRecord(recordName)

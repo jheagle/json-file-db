@@ -7,8 +7,7 @@ import { hasDependents } from '../introspect/policies/hasDependents'
 import { recordDefinition } from '../introspect/definitions/record'
 import { keyDefinition } from '../introspect/definitions/key'
 import { getSetting } from '../utilities/config'
-
-const { rm, writeFile } = require('fs/promises')
+import { removeFile, writeJson } from '../storage'
 
 /**
  * RESTRICT: reject the whole delete (before removing anything) if any row being deleted is still
@@ -42,7 +41,6 @@ const assertNoDependents = async (entity: string, primaryKey: keyDefinition, toD
  * @param deletedValues
  */
 const removeMatchingEntries = async (entity: string, record: recordDefinition, primaryKey: keyDefinition, deletedValues: Set<any>): Promise<string[]> => {
-  const databasePath = getSetting('databasePath', 'database/')
   const remainingEntries = []
   for (const fileName of record.entries) {
     const data = await retrieveFile(`${record.path}/${fileName}`)
@@ -50,7 +48,7 @@ const removeMatchingEntries = async (entity: string, record: recordDefinition, p
       remainingEntries.push(fileName)
       continue
     }
-    await rm(`${databasePath}${record.path}/${fileName}`)
+    await removeFile(`${record.path}/${fileName}`)
     for (const key of record.keys) {
       await removeFromIndex(record.path, key, computeKeyValue(key.fields, data), fileName, keyValueType(record, key))
     }
@@ -59,7 +57,6 @@ const removeMatchingEntries = async (entity: string, record: recordDefinition, p
 }
 
 export const deleteEntity = async (entity: string = '', dataSet: Object = {}): Promise<Object> => {
-  const databasePath = getSetting('databasePath', 'database/')
   const record = await retrieveRecord(entity)
   const primaryKey = record.keys.find(key => key.type === 'primary')
   if (!primaryKey) {
@@ -74,7 +71,7 @@ export const deleteEntity = async (entity: string = '', dataSet: Object = {}): P
   const deletedValues = new Set(toDelete.map(row => computeKeyValue(primaryKey.fields, row)))
 
   record.entries = await removeMatchingEntries(entity, record, primaryKey, deletedValues)
-  await writeFile(`${databasePath}${record.path}.json`, JSON.stringify(record, null, 2))
+  await writeJson(`${record.path}.json`, record)
 
   return dataSet
 }
