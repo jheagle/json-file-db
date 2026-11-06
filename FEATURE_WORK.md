@@ -46,7 +46,7 @@ reviewing data in pull requests. The big wins are fewer file operations and fewe
 
 ### Measure
 
-- [ ] **1. Benchmark script + baseline.** `npm run benchmark`: builds a scratch database with a realistic shape (a parent
+- [x] **1. Benchmark script + baseline.** `npm run benchmark`: builds a scratch database with a realistic shape (a parent
   record and a child record with a primary key, an index and a foreign key) at several sizes (100, 1,000, 5,000 rows), and
   times insert (one row per query, and many rows in one query), full read, indexed `where`, a one-join and a two-join
   read, update and delete; reads also in a real browser over `fetch()` (Playwright, from js-build-tools). Writes a
@@ -57,9 +57,10 @@ reviewing data in pull requests. The big wins are fewer file operations and fewe
 
 ### One storage layer (the existing "gather fs into one storage module" task)
 
-- [ ] **2. Storage module.** Every file read, write, delete and listing (create, drop, insert, update, delete, indexes,
+- [x] **2. Storage module.** Every file read, write, delete and listing (create, drop, insert, update, delete, indexes,
   registry, `fetch` in the browser) goes through `src/data/storage/`. No behaviour change; this is the seam for 3-5,
-  for transactions later, and for the swappable storage layer idea.
+  for transactions later, and for the swappable storage layer idea. Done in #113: benchmark unchanged, as intended.
+  No `listFiles` yet, since nothing lists a folder today; it comes with its first use (6).
 - [ ] **3. Per-query read cache.** Inside one `query()` call (the existing database lock already scopes it), each file
   is read once and kept in memory; writes in the same call update the cache. Fixes joins re-reading the same files.
   Indexes are held in memory as maps (value -> entry files) instead of arrays searched with `find`.
@@ -74,7 +75,9 @@ reviewing data in pull requests. The big wins are fewer file operations and fewe
 
 - [ ] **6. Compact JSON by default.** Generated files (indexes, record files, `__RECORDS.json`) and entry files are
   written compact; `configure({ format: 'pretty' })` keeps them pretty. Reading accepts both. A `json-fs-query format`
-  helper (or exported function) rewrites a whole database in the chosen format.
+  helper (or exported function) rewrites a whole database in the chosen format. That rewrite is the first thing that
+  has to list a folder, so it adds `listFiles` to the storage module (later uses: checking a packed table against the
+  files on disk in 7, rebuilding a missing `__RECORDS.json` from the record files).
 - [ ] **7. Packed tables for static hosting.** A build step writes each record's rows (and its indexes) into one file;
   the browser reads a whole record in one request when the packed file exists, and falls back to entry files when it
   doesn't. The entry files stay the copy that's edited and reviewed in git.
