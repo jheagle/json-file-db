@@ -13,8 +13,7 @@ import { splitEntityProperty } from '../utilities/parsers/splitEntityProperty'
 import { recordDefinition } from '../introspect/definitions/record'
 import { keyDefinition } from '../introspect/definitions/key'
 import { getSetting } from '../utilities/config'
-
-const { writeFile } = require('fs/promises')
+import { writeJson } from '../storage'
 
 /**
  * Same reasoning as deleteEntity: a record object carries no memory of which entry file it came
@@ -194,7 +193,6 @@ const applyFieldTypes = (record: recordDefinition, values: Object): Object => {
 }
 
 export const updateEntity = async (entity: string = '', values: Object = {}, dataSet: Object = {}): Promise<Object> => {
-  const databasePath = getSetting('databasePath', 'database/')
   const record = await retrieveRecord(entity)
   const primaryKey = record.keys.find(key => key.type === 'primary')
   if (!primaryKey) {
@@ -225,7 +223,7 @@ export const updateEntity = async (entity: string = '', values: Object = {}, dat
 
   for (const { fileName, oldData, newData } of planned) {
     await reconcileIndexes(record, oldData, newData, typedValues, fileName)
-    await writeFile(`${databasePath}${record.path}/${fileName}`, JSON.stringify(newData, null, 2))
+    await writeJson(`${record.path}/${fileName}`, newData)
   }
 
   dataSet[entity] = planned.map(({ newData }) => newData)

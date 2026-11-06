@@ -9,9 +9,7 @@ import { splitEntityProperty } from '../utilities/parsers/splitEntityProperty'
 import { computeKeyValue } from '../utilities/computeKeyValue'
 import { keyValueType } from '../utilities/fieldType'
 import { recordDefinition } from '../introspect/definitions/record'
-import { getSetting } from '../utilities/config'
-
-const { writeFile, mkdir } = require('fs/promises')
+import { makeDirectory, writeJson } from '../storage'
 
 /**
  * Build one entity's stored values from the raw input values, generating any autoGenerate
@@ -89,7 +87,6 @@ const assertForeignKeys = async (entity: string, record: recordDefinition, entit
 }
 
 export const insertEntity = async (entity: string = '', values: Object[] = [], dataSet: Object = {}): Promise<Object> => {
-  const databasePath = getSetting('databasePath', 'database/')
   const record = await retrieveRecord(entity)
   const primaryKey = record.keys.find(key => key.type === 'primary' && key.fields.length === 1)
 
@@ -99,7 +96,7 @@ export const insertEntity = async (entity: string = '', values: Object[] = [], d
 
   // The record's folder can be missing even though the record exists: git doesn't keep empty folders, so a database
   // committed before its first insert comes back from a fresh clone without it
-  await mkdir(`${databasePath}${record.path}`, { recursive: true })
+  await makeDirectory(record.path)
 
   for (const rowValues of values) {
     const entityValues = await buildEntityValues(entity, record, rowValues)
@@ -107,10 +104,10 @@ export const insertEntity = async (entity: string = '', values: Object[] = [], d
     await assertForeignKeys(entity, record, entityValues)
 
     const fileName = `${primaryKey ? entityValues[primaryKey.fields[0]] : crypto.randomUUID()}.json`
-    await writeFile(`${databasePath}${record.path}/${fileName}`, JSON.stringify(entityValues, null, 2))
+    await writeJson(`${record.path}/${fileName}`, entityValues)
 
     record.entries.push(fileName)
-    await writeFile(`${databasePath}${record.path}.json`, JSON.stringify(record, null, 2))
+    await writeJson(`${record.path}.json`, record)
 
     for (const key of record.keys) {
       await updateIndex(record.path, key, computeKeyValue(key.fields, entityValues), fileName, keyValueType(record, key))

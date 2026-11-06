@@ -40,3 +40,29 @@ milliseconds.
 | files on disk | 129 | 1,119 |
 | bytes of data | 50 KB | 438 KB |
 
+
+### task 2: storage module (2026-11-06, Node v24.21.0, 11th Gen Intel(R) Core(TM) i5-1135G7 @ 2.40GHz)
+
+No behaviour change was intended, and none shows: the Node numbers are within run-to-run variation of the baseline. The
+browser rows came out up to 2x faster than the baseline, but the browser code path is the same `fetch()` call. Run back
+to back at 300 rows, the code before and after this task matched (browser join 1: 2.3 s before, 2.2 s after; browser
+read all: 782 ms and 712 ms), so the gap is the machine's state between the two runs. Compare later tasks against
+this run as well as the baseline.
+
+| Operation | 100 rows | 1000 rows |
+|---|---:|---:|
+| insert each | 4.4 s | 363.1 s |
+| insert per row | 44 ms | 363 ms |
+| read all | 39 ms | 320 ms |
+| indexed where | 4.2 ms | 9.6 ms |
+| join 1 | 153 ms | 3.3 s |
+| join 2 | 214 ms | 4.0 s |
+| update 1 by key | 35 ms | 332 ms |
+| update many by index | 29 ms | 2.7 s |
+| delete 1 by key | 77 ms | 655 ms |
+| browser read all | 558 ms | 2.1 s |
+| browser indexed where | 27 ms | 43 ms |
+| browser join 1 | 1.6 s | 8.9 s |
+| browser join 2 | 1.9 s | 13.2 s |
+| files on disk | 129 | 1,119 |
+| bytes of data | 50 KB | 438 KB |
