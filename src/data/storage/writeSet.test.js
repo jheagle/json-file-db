@@ -135,6 +135,42 @@ describe('withWriteSet', () => {
     })
   })
 
+  test('a folder removed and then written into in the same task keeps only the new content', async () => {
+    await makeDirectory('users')
+    await writeJson('users/old.json', { old: true })
+    await withWriteSet(async () => {
+      await removeDirectory('users')
+      await makeDirectory('users')
+      await writeJson('users/new.json', { new: true })
+      expect(fileExists('users/old.json')).toBe(false)
+    })
+    expect(fs.readdirSync(`${databasePath}users`)).toEqual(['new.json'])
+  })
+
+  test('a failed rename removes its temporary file and throws the rename error', async () => {
+    const files = require('fs/promises')
+    const rename = jest.spyOn(files, 'rename').mockRejectedValueOnce(new Error('rename failed'))
+    try {
+      await expect(writeJson('users.json', { id: 1 })).rejects.toThrow('rename failed')
+    } finally {
+      rename.mockRestore()
+    }
+    expect(temporaryFiles()).toEqual([])
+    expect(onDisk('users.json')).toBe(false)
+  })
+
+  test('a failed clean-up after a failed rename still throws the rename error', async () => {
+    const files = require('fs/promises')
+    const rename = jest.spyOn(files, 'rename').mockRejectedValueOnce(new Error('rename failed'))
+    const rm = jest.spyOn(files, 'rm').mockRejectedValueOnce(new Error('rm failed'))
+    try {
+      await expect(writeJson('users.json', { id: 1 })).rejects.toThrow('rename failed')
+    } finally {
+      rename.mockRestore()
+      rm.mockRestore()
+    }
+  })
+
   test('writes leave no temporary files behind, inside a task or not', async () => {
     await writeJson('a.json', { a: 1 })
     await withWriteSet(() => writeJson('b.json', { b: 1 }))

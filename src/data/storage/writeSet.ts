@@ -38,7 +38,9 @@ const insideAny = (location: string, folders: Set<string>): boolean => {
 
 /**
  * Write `text` to `location` so that the file is always either its old or its new content, never half of one: the
- * text goes to a temporary file next to it, which then replaces it (a rename is atomic within one folder).
+ * text goes to a temporary file next to it, which then replaces it (a rename is atomic within one folder). That holds
+ * when the process stops part way (a crash, a kill); there's no fsync, so after a power cut the file system may still
+ * lose a recent write. When the write or rename fails, the temporary file is removed and the original error thrown.
  * @param location
  * @param text
  */
@@ -49,25 +51,44 @@ export const writeAtomically = async (location: string, text: string): Promise<v
     await files.writeFile(temporary, text)
     await files.rename(temporary, location)
   } catch (error) {
-    await files.rm(temporary, { force: true })
+    // Cleaning up is best effort: its own failure must not hide why the write failed
+    await files.rm(temporary, { force: true }).catch(() => undefined)
     throw error
   }
 }
 
 /**
- * Put a write set's changes in storage: removed folders first, then new folders, then every written file once (in
- * the order each was last written, so a record's entry list and indexes come after the entries they list), then the
- * deleted files. Deleting last means a delete changes the record file and indexes before its entry files go, so a
- * crash part way leaves an unlisted file behind, never a listed file that's missing. Each change also goes into the
- * read cache, which holds what's in storage.
+ * Remove a folder from storage and from the read cache.
+ * @param location
+ */
+const removeFolder = async (location: string): Promise<void> => {
+  cacheRemove(location, true)
+  await nodeFiles().rm(location, { recursive: true, force: true })
+  cacheRemove(location, true)
+}
+
+/**
+ * Put a write set's changes in storage, in an order where a stop part way leaves at worst an unlisted file or folder
+ * behind, never a record file or index that lists something missing:
+ * - folders the statement removed and then wrote into again (none today), so the new content survives;
+ * - new folders;
+ * - every written file once, in the order each was last written (a record's entry list and indexes come after the
+ *   entries they list);
+ * - deleted files (a delete has already rewritten the record file and indexes; `drop` removes its record file here);
+ * - the other removed folders (`drop`'s entries and indexes, after its record file is gone).
+ * Each change also goes into the read cache, which holds what's in storage.
  * @param writeSet
  */
 const commit = async (writeSet: WriteSet): Promise<void> => {
   const files = nodeFiles()
-  for (const folder of writeSet.removedFolders) {
-    cacheRemove(folder, true)
-    await files.rm(folder, { recursive: true, force: true })
-    cacheRemove(folder, true)
+  const writtenInto = (folder: string): boolean => {
+    const prefix = folderPrefix(folder)
+    return [...writeSet.madeFolders].some(made => made === folder || made.startsWith(prefix)) ||
+      [...writeSet.files].some(([location, text]) => text !== null && location.startsWith(prefix))
+  }
+  const removedFolders = [...writeSet.removedFolders]
+  for (const folder of removedFolders.filter(writtenInto)) {
+    await removeFolder(folder)
   }
   for (const folder of writeSet.madeFolders) {
     await files.mkdir(folder, { recursive: true })
@@ -84,6 +105,9 @@ const commit = async (writeSet: WriteSet): Promise<void> => {
       await files.rm(location, { force: true })
       cacheRemove(location)
     }
+  }
+  for (const folder of removedFolders.filter(folder => !writtenInto(folder))) {
+    await removeFolder(folder)
   }
 }
 

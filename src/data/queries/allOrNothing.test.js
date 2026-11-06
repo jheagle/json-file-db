@@ -112,6 +112,25 @@ describe('each statement is all or nothing', () => {
     expect(snapshot()).toEqual(before)
   })
 
+  test('drop removes its record file before its entries and indexes, so a stop part way never lists missing files', async () => {
+    await createTables()
+    await query("insert items values _id = 'i1', kind_id = 'k1', code = 'a', day = 'mon'")
+    const files = require('fs/promises')
+    const rm = jest.spyOn(files, 'rm')
+    const rename = jest.spyOn(files, 'rename')
+    try {
+      await query('drop items')
+      const steps = [...rm.mock.calls.map(([location], call) => ({ order: rm.mock.invocationCallOrder[call], step: `rm ${location}` })),
+        ...rename.mock.calls.map(([, location], call) => ({ order: rename.mock.invocationCallOrder[call], step: `write ${location}` }))]
+        .sort((a, b) => a.order - b.order).map(({ step }) => step.replace(databasePath, ''))
+      expect(steps).toEqual(['write __RECORDS.json', 'rm items.json', 'rm items', 'rm __indexes/items'])
+    } finally {
+      rm.mockRestore()
+      rename.mockRestore()
+    }
+    expect(fs.existsSync(`${databasePath}items`)).toBe(false)
+  })
+
   test('drop and create in one call leave a working, empty record', async () => {
     await createTables()
     await query("insert items values _id = 'i1', kind_id = 'k1', code = 'a', day = 'mon'")
