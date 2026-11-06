@@ -3,7 +3,7 @@ import { insertEntity } from './insertEntity'
 import { fileExists, setUp } from 'test-filesystem'
 import { configure } from '../utilities/config'
 
-const { readFile } = require('fs/promises')
+const { readFile, rm } = require('fs/promises')
 
 const databasePath = 'insert-entity-database/'
 configure({ databasePath })
@@ -41,6 +41,17 @@ describe('insertEntity', () => {
 
     const indexFile = JSON.parse(await readFile(`${databasePath}__indexes/foo/pk__id.json`, 'utf8'))
     expect(indexFile).toEqual([{ value: inserted._id, record: [`${inserted._id}.json`] }])
+  })
+
+  test('creates the record\'s folder when it is missing, as in a fresh git clone of an empty database', async () => {
+    await create('foo', definition, keys)
+    // git doesn't keep empty folders: a committed database with no entries comes back without foo/
+    await rm(`${databasePath}foo`, { recursive: true })
+    expect(await fileExists(`${databasePath}foo`)).toBe(false)
+
+    const dataSet = await insertEntity('foo', [{ bar: 'baz' }], {})
+    const fileName = `${dataSet.foo[0]._id}.json`
+    expect(JSON.parse(await readFile(`${databasePath}foo/${fileName}`, 'utf8'))).toEqual(dataSet.foo[0])
   })
 
   test('inserts multiple entities from one call', async () => {
