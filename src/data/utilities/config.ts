@@ -3,13 +3,15 @@ export type RuntimeSettings = {
   relativePath: string
   enforceForeignKeys: boolean
   readConcurrency: number
+  format: 'compact' | 'pretty'
 }
 
 const defaults: RuntimeSettings = {
   databasePath: 'database/',
   relativePath: '',
   enforceForeignKeys: true,
-  readConcurrency: 16
+  readConcurrency: 16,
+  format: 'compact'
 }
 
 let settings: RuntimeSettings = { ...defaults }
@@ -52,6 +54,10 @@ export const trackDatabaseCall = (): (() => void) => {
  *
  * readConcurrency (default 16) is how many entry files a read has in flight at once (see retrieveFiles): in a browser,
  * how many requests run together.
+ *
+ * format (default 'compact') is how files are written: 'compact' (no whitespace: smaller files that parse faster) or
+ * 'pretty' (indented by 2 spaces, for reading data in diffs). Either is read; formatDatabase rewrites a whole database
+ * in one.
  *
  * Changing databasePath while calls are still running or queued throws (see trackDatabaseCall): await them first.
  * @param newSettings

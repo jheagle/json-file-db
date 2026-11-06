@@ -264,3 +264,28 @@ connections per host, so the browser levels off from about 8; HTTP/2 hosts such 
 | 16 | 151 ms | 168 ms | 664 ms | 761 ms |
 | 32 | 146 ms | 166 ms | 674 ms | 767 ms |
 | 64 | 144 ms | 155 ms | 689 ms | 781 ms |
+
+### task 6: compact JSON (2026-11-06, Node v24.21.0, 11th Gen Intel(R) Core(TM) i5-1135G7 @ 2.40GHz)
+
+Files are written compact by default (`format: 'pretty'` keeps them indented). The data is 18% smaller: 359 KB instead of
+438 KB at 1,000 rows (39 KB instead of 50 KB at 100). Times are unchanged within noise: with this many small files,
+each file's read (and in a browser, its request) costs more than parsing the whitespace, so the size win shows on the
+wire and on disk, not in these timings. Fewer files is task 7.
+
+| Operation | 100 rows | 1000 rows |
+|---|---:|---:|
+| insert each | 507 ms | 5.9 s |
+| insert per row | 5.1 ms | 5.9 ms |
+| read all | 18 ms | 147 ms |
+| indexed where | 6.7 ms | 4.4 ms |
+| join 1 | 20 ms | 167 ms |
+| join 2 | 21 ms | 181 ms |
+| update 1 by key | 17 ms | 152 ms |
+| update many by index | 3.7 ms | 18 ms |
+| delete 1 by key | 23 ms | 162 ms |
+| browser read all | 109 ms | 697 ms |
+| browser indexed where | 11 ms | 20 ms |
+| browser join 1 | 90 ms | 712 ms |
+| browser join 2 | 109 ms | 719 ms |
+| files on disk | 129 | 1,119 |
+| bytes of data | 39 KB | 359 KB |

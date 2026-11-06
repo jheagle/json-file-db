@@ -178,6 +178,31 @@ export const pendingExists = (location: string): boolean | undefined => {
 }
 
 /**
+ * The files under `folder` as the running statement sees them: `onDisk` (full locations) without what it deleted or
+ * removed, plus what it wrote there. `onDisk` as it is when no statement is running.
+ * @param folder - The folder's full location (see storagePath).
+ * @param onDisk - The full locations of the files under it in storage.
+ */
+export const pendingListing = (folder: string, onDisk: string[]): string[] => {
+  const writeSet = currentWriteSet()
+  if (!writeSet) {
+    return onDisk
+  }
+  const prefix = folderPrefix(folder)
+  const listed = new Set(onDisk.filter(location => !insideAny(location, writeSet.removedFolders)))
+  for (const [location, text] of writeSet.files) {
+    if (location.startsWith(prefix)) {
+      if (text === null) {
+        listed.delete(location)
+      } else {
+        listed.add(location)
+      }
+    }
+  }
+  return [...listed]
+}
+
+/**
  * Keep `text` as the new content of `location` in the running statement's write set. False when no statement is
  * running, so the caller writes to storage itself.
  * @param location

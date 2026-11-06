@@ -456,7 +456,8 @@ configure({
   databasePath: 'database/',   // where the JSON files live (default 'database/')
   relativePath: '',            // URL prefix prepended to databasePath when reading via fetch() in a browser
   enforceForeignKeys: true,    // RESTRICT delete/update of a record other entities still reference (default true)
-  readConcurrency: 16          // how many entry files a read has in flight at once (default 16)
+  readConcurrency: 16,         // how many entry files a read has in flight at once (default 16)
+  format: 'compact'            // how files are written: 'compact' or 'pretty' (default 'compact')
 })
 ```
 
@@ -467,12 +468,34 @@ Reads fetch several entry files at once, `readConcurrency` at a time, and keep t
 file is one request: 16 suits HTTP/2 static hosts (such as GitHub Pages), while over HTTP/1.1 a browser only opens about
 6 connections per host anyway. `readConcurrency: 1` reads one file at a time, as every read did before this setting.
 
+### File format: `format` and `formatDatabase()`
+
+Files are written as compact JSON by default: about a fifth smaller than indented JSON, and an editor shows them
+formatted anyway. `format: 'pretty'` writes them indented by 2 spaces instead, for reading data in diffs (for example in
+pull requests). Either format is always read, so a database can hold both: one written before this setting keeps its
+indented files until they change.
+
+`formatDatabase()` rewrites a whole database in one format (the configured one by default), leaving files already in
+it alone, and resolves to how many JSON files it found and rewrote:
+
+```js
+const { configure, formatDatabase } = require('json-fs-query')
+
+configure({ databasePath: 'database/', format: 'pretty' })
+await formatDatabase()           // { files: 1119, rewritten: 1119 }
+await formatDatabase('compact')  // back to compact, whatever the setting
+```
+
+It reads and checks every file before writing any: one that isn't valid JSON fails the call with its path and nothing
+is changed. Node only, like every write.
+
 ## Several calls at once
 
-Calls to `query()`, `create()`, `drop()` and `describe()` on one database (one `databasePath`) run one at a time, in
-the order they were made, so concurrent requests (for example in a web server) can't overwrite each other's
-changes. All the queries in one `query()` string run together, with no other call in between. This covers one Node
-process: two processes writing to the same folder (say a server and a CLI) are not protected from each other.
+Calls to `query()`, `create()`, `drop()`, `describe()` and `formatDatabase()` on one database (one `databasePath`)
+run one at a time, in the order they were made, so concurrent requests (for example in a web server) can't overwrite
+each other's changes. All the queries in one `query()` string run together, with no other call in between. This
+covers one Node process: two processes writing to the same folder (say a server and a CLI) are not protected from
+each other.
 
 `configure()` can't point `databasePath` at another folder while calls are still running or queued (it throws:
 await them first), since each call reads the setting again at every step. The same folder written another way
