@@ -3,13 +3,15 @@ export type RuntimeSettings = {
   relativePath: string
   enforceForeignKeys: boolean
   readConcurrency: number
+  format: 'compact' | 'pretty'
 }
 
 const defaults: RuntimeSettings = {
   databasePath: 'database/',
   relativePath: '',
   enforceForeignKeys: true,
-  readConcurrency: 16
+  readConcurrency: 16,
+  format: 'compact'
 }
 
 let settings: RuntimeSettings = { ...defaults }
@@ -53,11 +55,19 @@ export const trackDatabaseCall = (): (() => void) => {
  * readConcurrency (default 16) is how many entry files a read has in flight at once (see retrieveFiles): in a browser,
  * how many requests run together.
  *
+ * format (default 'compact') is how files are written: 'compact' (no whitespace: smaller files that parse faster) or
+ * 'pretty' (indented by 2 spaces, for reading data in diffs). Either is read; formatDatabase rewrites a whole database
+ * in one.
+ *
  * Changing databasePath while calls are still running or queued throws (see trackDatabaseCall): await them first.
  * @param newSettings
  * @throws {Error} When databasePath would point to another folder while database calls are in progress.
+ * @throws {Error} When format is neither 'compact' nor 'pretty'.
  */
 export const configure = (newSettings: Partial<RuntimeSettings>): void => {
+  if (typeof newSettings.format !== 'undefined' && newSettings.format !== 'compact' && newSettings.format !== 'pretty') {
+    throw new Error(`Unknown format "${newSettings.format}": use 'compact' or 'pretty'`)
+  }
   if (activeCalls > 0 && typeof newSettings.databasePath !== 'undefined' &&
     resolveDatabasePath(newSettings.databasePath) !== resolveDatabasePath(settings.databasePath)) {
     throw new Error(`Can't change databasePath while ${activeCalls} database call(s) are still running or queued: await them first`)
