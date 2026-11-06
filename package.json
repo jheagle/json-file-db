@@ -24,7 +24,8 @@
     "watch": "gulp watchFull",
     "watch:test": "gulp watchTest",
     "lint": "gulp lint",
-    "prepublishOnly": "npm run build"
+    "prepublishOnly": "npm run build",
+    "benchmark": "node scripts/benchmark.cjs"
   },
   "repository": {
     "type": "git",
@@ -46,6 +47,7 @@
     "@babel/core": "^8.1.0",
     "gulp": "^5.0.1",
     "js-build-tools": "^8.0.0",
+    "playwright": "~1.64.1",
     "release-it": "^21.1.1",
     "test-filesystem": "^2.0.2",
     "typedoc": "^0.28.20"

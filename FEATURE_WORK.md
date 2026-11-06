@@ -51,6 +51,9 @@ reviewing data in pull requests. The big wins are fewer file operations and fewe
   times insert (one row per query, and many rows in one query), full read, indexed `where`, a one-join and a two-join
   read, update and delete; reads also in a real browser over `fetch()` (Playwright, from js-build-tools). Writes a
   markdown table; `BENCHMARKS.md` keeps the baseline and each task's result.
+  Baseline (3.1.4, 1,000 rows): insert 389 ms per row, one join 5.2 s in Node / 15 s in a browser, two joins 26 s in a
+  browser, full read 4.3 s in a browser, indexed `where` 8 ms / 55 ms. Playwright is pinned to `~1.64.1`, the version
+  whose browsers are installed on this machine (1.65 wants a newer Chromium build and fails to launch).
 
 ### One storage layer (the existing "gather fs into one storage module" task)
 
