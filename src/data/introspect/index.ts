@@ -2,12 +2,14 @@ import { create as createRecord } from './create'
 import { drop as dropRecord } from './drop'
 import { describe as describeRecord } from './describe'
 import { withDatabaseLock } from '../utilities/databaseLock'
+import { withWriteSet } from '../storage'
 
-// The public versions take the database lock (see withDatabaseLock); code inside the package imports the files directly
+// The public versions take the database lock (see withDatabaseLock), and create and drop change storage all at once
+// or not at all (see withWriteSet); code inside the package imports the files directly
 export const create = (...args: Parameters<typeof createRecord>): ReturnType<typeof createRecord> =>
-  withDatabaseLock(() => createRecord(...args))
+  withDatabaseLock(() => withWriteSet(() => createRecord(...args)))
 export const drop = (...args: Parameters<typeof dropRecord>): ReturnType<typeof dropRecord> =>
-  withDatabaseLock(() => dropRecord(...args))
+  withDatabaseLock(() => withWriteSet(() => dropRecord(...args)))
 export const describe = (...args: Parameters<typeof describeRecord>): ReturnType<typeof describeRecord> =>
   withDatabaseLock(() => describeRecord(...args))
 

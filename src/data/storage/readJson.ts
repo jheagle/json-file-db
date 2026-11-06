@@ -2,17 +2,25 @@ import * as jsEnv from 'browser-or-node'
 import { storagePath } from './storagePath'
 import { nodeFiles } from './nodeFiles'
 import { cachedRead } from './readCache'
+import { pendingFile } from './writeSet'
 
 /**
  * Read and parse one JSON file of the database: from disk in Node, over `fetch()` in a browser (see storagePath for
- * where it's looked for). During a call, a file already read is answered from the read cache (see withReadCache).
+ * where it's looked for). During a statement, a file it has written or deleted is answered from its write set (see
+ * withWriteSet); otherwise, during a call, a file already read is answered from the read cache (see withReadCache).
  * @param path - A path inside the database, such as `users.json`.
  * @throws {Error} When the file can't be read or isn't valid JSON (the error from the file system, fetch or JSON.parse).
  */
 export const readJson = async (path: string): Promise<any> => {
   const location = storagePath(path)
-  const text = await cachedRead(location, () => jsEnv.isNode
-    ? nodeFiles().readFile(location, 'utf8')
-    : fetch(location).then(response => response.text()))
+  const pending = pendingFile(location)
+  if (pending === null) {
+    throw new Error(`ENOENT: no such file or directory, open '${location}' (deleted by this statement)`)
+  }
+  const text = typeof pending === 'string'
+    ? pending
+    : await cachedRead(location, () => jsEnv.isNode
+      ? nodeFiles().readFile(location, 'utf8')
+      : fetch(location).then(response => response.text()))
   return JSON.parse(text)
 }

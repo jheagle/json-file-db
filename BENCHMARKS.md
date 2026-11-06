@@ -201,3 +201,29 @@ they are still 1,000 sequential requests, which the parallel reads task addresse
 | browser join 2 | 474 ms | 2.5 s |
 | files on disk | 129 | 1,119 |
 | bytes of data | 50 KB | 438 KB |
+
+### task 4: write set, all-or-nothing statements (2026-11-06, Node v24.21.0, 11th Gen Intel(R) Core(TM) i5-1135G7 @ 2.40GHz)
+
+Each statement's writes are collected and put in storage once it succeeds (each file once, written to a temporary file
+and renamed), or not at all when it fails. No change in these numbers, as expected: every statement here writes one row,
+and the temporary file and rename cost nothing measurable. The batching shows on statements that write many rows: a
+20-row insert writes its record file and each index once instead of 20 times (tested in `allOrNothing.test.js`), which
+the query language can only do once multi-row insert (task 8) lands.
+
+| Operation | 100 rows | 1000 rows |
+|---|---:|---:|
+| insert each | 508 ms | 6.3 s |
+| insert per row | 5.1 ms | 6.3 ms |
+| read all | 31 ms | 309 ms |
+| indexed where | 3.4 ms | 7.3 ms |
+| join 1 | 36 ms | 323 ms |
+| join 2 | 38 ms | 333 ms |
+| update 1 by key | 30 ms | 293 ms |
+| update many by index | 3.1 ms | 22 ms |
+| delete 1 by key | 36 ms | 302 ms |
+| browser read all | 228 ms | 2.1 s |
+| browser indexed where | 13 ms | 41 ms |
+| browser join 1 | 252 ms | 2.2 s |
+| browser join 2 | 266 ms | 2.2 s |
+| files on disk | 129 | 1,119 |
+| bytes of data | 50 KB | 438 KB |
