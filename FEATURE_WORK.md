@@ -1,0 +1,108 @@
+# Feature work: performance, storage and usability
+
+Epic branch: `feature/performance`. Each task is its own branch and PR into this branch; tick it here after it merges.
+Before this merges to `main`, this file is copied into the epic PR's description and deleted.
+
+## Why
+
+Importing Joshua's real workout history into workout-planner (2026-11-06) was the first real-sized use, and it showed
+json-fs-query isn't usable at that size yet:
+
+| Measured on the imported workout database (1,452 workouts, 119 exercises, 1,871 files) | Time |
+|---|---|
+| Insert 1,446 rows (one `insert` per row) | ~13 min |
+| `read workouts` (every row) | 0.5 s |
+| `read workouts.exercises on workouts.exercise_id = exercises._id` (one join) | ~10 s |
+| workout-planner's muscle-priority query (3 joins) | 9-11 s, was 0.05 s with 6 workouts |
+| Same query, any indexed `where` on one record | 3-13 ms (fine) |
+
+**Causes**, from the code:
+- **Nothing is cached.** Every lookup reads its file from disk again. A join re-reads the joined record's index and
+  entry files once per row: 1,452 lookups for 119 exercises.
+- **Nothing is batched.** Inserting a row reads the record file and the indexes it checks, writes the entry, then
+  rewrites the whole record file and reads and rewrites every index file. That's ~6 whole-file operations per row on
+  files that grow with the table, so total work grows with the square of the row count. A multi-row insert still writes
+  once per row.
+- **Reads are sequential.** A full read awaits each entry file in turn: in a browser, 1,452 HTTP requests one after
+  another.
+- **Many small files.** 866 KB of data takes 8.1 MB on disk (each file uses a whole 4 KB block).
+
+**Pretty or compact JSON** (measured on the same database): compact is 14-20% smaller and parses ~7% faster; gzip on the
+wire (GitHub Pages does it) almost erases the difference (indexes 127 KB pretty vs 125 KB compact). So compact files are
+a small, real win and the default here (an IDE shows them formatted); a `pretty` setting keeps readable diffs for anyone
+reviewing data in pull requests. The big wins are fewer file operations and fewer files.
+
+## Goals
+
+- workout-planner with the full history: the import in seconds, muscle priority well under a second.
+- Measured before and after every change: a benchmark script, with the numbers kept in `BENCHMARKS.md`.
+- Positioning (README): **a git-native JSON data store for static sites**. Data lives as readable, diffable files in
+  git, with a schema, keys and foreign keys enforced, a SQL-like query language, and reads straight from static hosting
+  (no server).
+- No change to what queries return. Old databases (pretty files, array indexes) keep working; files are rewritten in
+  the new format as they change, or all at once with a command.
+
+## Work split (in order)
+
+### Measure
+
+- [ ] **1. Benchmark script + baseline.** `npm run benchmark`: builds a scratch database with a realistic shape (a parent
+  record and a child record with a primary key, an index and a foreign key) at several sizes (100, 1,000, 5,000 rows), and
+  times insert (one row per query, and many rows in one query), full read, indexed `where`, a one-join and a two-join
+  read, update and delete; reads also in a real browser over `fetch()` (Playwright, from js-build-tools). Writes a
+  markdown table; `BENCHMARKS.md` keeps the baseline and each task's result.
+
+### One storage layer (the existing "gather fs into one storage module" task)
+
+- [ ] **2. Storage module.** Every file read, write, delete and listing (create, drop, insert, update, delete, indexes,
+  registry, `fetch` in the browser) goes through `src/data/storage/`. No behaviour change; this is the seam for 3-5,
+  for transactions later, and for the swappable storage layer idea.
+- [ ] **3. Per-query read cache.** Inside one `query()` call (the existing database lock already scopes it), each file
+  is read once and kept in memory; writes in the same call update the cache. Fixes joins re-reading the same files.
+  Indexes are held in memory as maps (value -> entry files) instead of arrays searched with `find`.
+- [ ] **4. Write set: batched, all-or-nothing writes.** A query's writes are collected (path -> new content, or delete)
+  and applied once at the end: a 1,000-row insert writes the record file and each index once, not 1,000 times. Every row
+  is checked before anything is written, so a failed multi-row insert or update changes nothing (step 3 of the
+  transactions spike). Files are written atomically (temporary file, then rename), so a crash never leaves a half-written
+  file (step 2 of the spike).
+- [ ] **5. Parallel reads.** Entry files are read concurrently (with a limit), in Node and over `fetch()`.
+
+### Formats
+
+- [ ] **6. Compact JSON by default.** Generated files (indexes, record files, `__RECORDS.json`) and entry files are
+  written compact; `configure({ format: 'pretty' })` keeps them pretty. Reading accepts both. A `json-fs-query format`
+  helper (or exported function) rewrites a whole database in the chosen format.
+- [ ] **7. Packed tables for static hosting.** A build step writes each record's rows (and its indexes) into one file;
+  the browser reads a whole record in one request when the packed file exists, and falls back to entry files when it
+  doesn't. The entry files stay the copy that's edited and reviewed in git.
+
+### Usability (found during the workout and blog imports)
+
+- [ ] **8. Multi-row insert syntax**, e.g. `insert workouts values (date = '2026-11-01', ...), (date = '2026-11-02', ...)`,
+  so a batch is one statement (fast with 4).
+- [ ] **9. `null` in an optional field.** Inserting `null` into an optional (not nullable) field fails today; treat it
+  as leaving the field out, or say so in the error.
+- [ ] **10. Clearer errors.** A malformed join (`read workouts on ...` without `workouts.<record>`) fails with
+  `Could not read .json`; say what's wrong in query terms.
+- [ ] **11. `alter` for fields**: add, drop and rename a field on an existing record (no way today but editing JSON by
+  hand).
+
+### Close
+
+- [ ] **12. Docs and positioning.** README opening (what it's for, when to use it, when to use SQLite instead), the
+  benchmark numbers, a static-site example.
+- [ ] **13. Before merging ✱:** re-sync with `main`, full suite, benchmarks against the baseline, workout-planner's full
+  history imported and its tests passing, then a release PR.
+
+## Out of scope (tracked separately in TASKS.md)
+
+- The **types epic** (`number` with decimals, dates, decimal/bigint, enum, ...): already planned on its own. Weights in
+  workout-planner stay text (`"70.5lbs"`) until then.
+- **Transactions** (`begin` / `commit` / `rollback`, a crash journal): 4's write set is the base they build on.
+- Aggregates, outer joins, multiple databases, the CLI epic.
+- A multi-process lock (two programs writing one database at once).
+
+## Release
+
+Probably a minor version (3.x): queries return what they did, old databases keep working. If 6 or 7 change the files
+in a way older versions can't read, that makes it a major (4.0.0); decided when we get there.
