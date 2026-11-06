@@ -11,7 +11,7 @@ import { keyValueType } from '../utilities/fieldType'
 import { recordDefinition } from '../introspect/definitions/record'
 import { getSetting } from '../utilities/config'
 
-const { writeFile } = require('fs/promises')
+const { writeFile, mkdir } = require('fs/promises')
 
 /**
  * Build one entity's stored values from the raw input values, generating any autoGenerate
@@ -96,6 +96,10 @@ export const insertEntity = async (entity: string = '', values: Object[] = [], d
   if (!Object.prototype.hasOwnProperty.call(dataSet, entity)) {
     dataSet[entity] = []
   }
+
+  // The record's folder can be missing even though the record exists: git doesn't keep empty folders, so a database
+  // committed before its first insert comes back from a fresh clone without it
+  await mkdir(`${databasePath}${record.path}`, { recursive: true })
 
   for (const rowValues of values) {
     const entityValues = await buildEntityValues(entity, record, rowValues)
