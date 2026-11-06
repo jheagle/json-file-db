@@ -61,7 +61,7 @@ reviewing data in pull requests. The big wins are fewer file operations and fewe
   registry, `fetch` in the browser) goes through `src/data/storage/`. No behaviour change; this is the seam for 3-5,
   for transactions later, and for the swappable storage layer idea. Done in #113: benchmark unchanged, as intended.
   No `listFiles` yet, since nothing lists a folder today; it comes with its first use (6).
-- [ ] **3. Per-query read cache.** Inside one `query()` call (the existing database lock already scopes it), each file
+- [x] **3. Per-query read cache.** Inside one `query()` call (the existing database lock already scopes it), each file
   is read once and kept in memory; writes in the same call update the cache. Fixes joins re-reading the same files.
   Indexes are held in memory as maps (value -> entry files) instead of arrays searched with `find`.
   The maps moved to 3b: profiled after the cache, index lookups cost nothing measurable, the joins themselves do.
@@ -72,6 +72,12 @@ reviewing data in pull requests. The big wins are fewer file operations and fewe
   Indexes only decide which files are read. Same results as today: typed comparison, null never matching, joined-row
   order, independent copies of joined rows. Built so the join type is one decision in one place (what a row with no
   match gets), the base for the outer / left / right joins epic (TASKS.md), which then only adds the types.
+  Found while characterizing joins: on `main`, the index path for `where` + join crashed on joins through a linking
+  record and returned only the first row's matches on multi-step joins; fixed on `main` first (#115) by removing it.
+- [ ] **3c. Key checks through indexes.** One insert into a 1,000-row table reads all 1,000 rows and all 100 parent
+  rows: `keyUnique` (primary / unique keys, and `auto` ids) and `foreignKeyExists` read the whole table though those
+  keys have indexes, and `hasDependents` (delete) does the same. Answer them from the key's index (one file), held as a
+  map for repeated lookups in one call. This is what makes an import grow with the square of its size.
 - [ ] **4. Write set: batched, all-or-nothing writes.** A query's writes are collected (path -> new content, or delete)
   and applied once at the end: a 1,000-row insert writes the record file and each index once, not 1,000 times. Every row
   is checked before anything is written, so a failed multi-row insert or update changes nothing (step 3 of the
