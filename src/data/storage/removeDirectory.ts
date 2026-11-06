@@ -8,6 +8,8 @@ import { cacheRemove } from './readCache'
  */
 export const removeDirectory = async (path: string): Promise<void> => {
   const location = storagePath(path)
+  // Forgotten before and after: a read that starts while rm runs would otherwise keep a removed file's old text
   cacheRemove(location, true)
   await nodeFiles().rm(location, { recursive: true, force: true })
+  cacheRemove(location, true)
 }

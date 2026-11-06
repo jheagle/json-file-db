@@ -22,8 +22,9 @@ const currentScope = (): CacheScope | undefined => scopes.get(storagePath())
  * attaches rows to the rows it read) never changes what the next reader gets.
  *
  * withDatabaseLock runs every public call (query, create, drop, describe) inside one, so the cache lasts one call. In
- * Node calls on one database never overlap (the lock queues them). In a browser they can, and then share the cache
- * until the last one ends, which is safe because nothing is written there.
+ * Node calls on one database never overlap (the lock queues them). In a browser they can, and a read can't tell which
+ * call it belongs to, so each call that starts empties the cache: calls still running carry on (only reading their
+ * files again), and nothing is older than the newest call, however long calls keep overlapping.
  * @param task
  */
 export const withReadCache = async <T>(task: () => Promise<T>): Promise<T> => {
@@ -31,6 +32,9 @@ export const withReadCache = async <T>(task: () => Promise<T>): Promise<T> => {
   const scope = scopes.get(database) || { calls: 0, files: new Map() }
   scopes.set(database, scope)
   scope.calls++
+  if (scope.calls > 1) {
+    scope.files = new Map()
+  }
   try {
     return await task()
   } finally {

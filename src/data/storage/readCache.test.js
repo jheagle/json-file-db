@@ -141,3 +141,36 @@ describe('the read cache in query()', () => {
     expect(rows[0].note).toBe('edited by hand')
   })
 })
+
+describe('removing while a read is in flight', () => {
+  test('a read that starts while a file is being removed leaves nothing cached once it is gone', async () => {
+    await writeJson('a.json', { a: 1 })
+    const rm = fsPromises.rm
+    await withReadCache(async () => {
+      let readDuringRemove
+      jest.spyOn(fsPromises, 'rm').mockImplementation(async (...args) => {
+        // A read that starts while rm runs still finds the file
+        readDuringRemove = readJson('a.json')
+        await readDuringRemove
+        return rm(...args)
+      })
+      await removeFile('a.json')
+      expect(await readDuringRemove).toEqual({ a: 1 })
+      await expect(readJson('a.json')).rejects.toThrow()
+    })
+  })
+
+  test('the same for a file in a folder being removed', async () => {
+    await makeDirectory('folder')
+    await writeJson('folder/b.json', { b: 1 })
+    const rm = fsPromises.rm
+    await withReadCache(async () => {
+      jest.spyOn(fsPromises, 'rm').mockImplementation(async (...args) => {
+        await readJson('folder/b.json')
+        return rm(...args)
+      })
+      await removeDirectory('folder')
+      await expect(readJson('folder/b.json')).rejects.toThrow()
+    })
+  })
+})
