@@ -66,3 +66,33 @@ this run as well as the baseline.
 | browser join 2 | 1.9 s | 13.2 s |
 | files on disk | 129 | 1,119 |
 | bytes of data | 50 KB | 438 KB |
+
+### task 3: read cache (2026-11-06, Node v24.21.0, 11th Gen Intel(R) Core(TM) i5-1135G7 @ 2.40GHz)
+
+Each file is read once per `query()` call. Against task 2's run from the same day, at 1,000 rows: inserts 363 -> 196 ms
+per row (each insert's unique and foreign key checks read the same tables more than once), update many by index
+2.7 s -> 341 ms, one join 3.3 -> 2.3 s and two joins 4.0 -> 2.3 s in Node, and in a browser one join 8.9 -> 3.6 s and
+two joins 13.2 -> 3.6 s. A one-join read now reads each file once (1,102 reads, was 3,104).
+
+The joins are still slow because of CPU work, not reads: profiled, 1.7 s of the 2.3 s is the join cloning every loaded
+row once for each row it joins, which grows with the square of the row count. That is the next task, the join engine.
+Indexed where's 17 ms is noise of this run: timed back to back on the same 1,000-row database, it was 9 ms before the
+cache and 10 ms after.
+
+| Operation | 100 rows | 1000 rows |
+|---|---:|---:|
+| insert each | 2.3 s | 196.3 s |
+| insert per row | 23 ms | 196 ms |
+| read all | 33 ms | 310 ms |
+| indexed where | 3.4 ms | 17 ms |
+| join 1 | 59 ms | 2.3 s |
+| join 2 | 58 ms | 2.3 s |
+| update 1 by key | 34 ms | 306 ms |
+| update many by index | 21 ms | 341 ms |
+| delete 1 by key | 66 ms | 590 ms |
+| browser read all | 227 ms | 2.1 s |
+| browser indexed where | 11 ms | 45 ms |
+| browser join 1 | 271 ms | 3.6 s |
+| browser join 2 | 280 ms | 3.6 s |
+| files on disk | 129 | 1,119 |
+| bytes of data | 50 KB | 438 KB |
