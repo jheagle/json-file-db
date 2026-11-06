@@ -77,6 +77,7 @@ describe('finding a row\'s file through the primary key index', () => {
   test('an index that misses a row still finds it, by looking at every row', async () => {
     // p5 left out of the primary key index, as a hand edit might
     fs.writeFileSync(indexPath('people'), JSON.stringify(JSON.parse(fs.readFileSync(indexPath('people'), 'utf8')).filter(entry => entry.value !== 'p5')))
+    // the index leads nowhere for p5, so only the scan can find its file (without it: "Could not find entry")
     await query("update people set name = 'Five' where name = 'Person 5'")
     await query("delete people where name = 'Five'")
     expect(await names()).toHaveLength(19)

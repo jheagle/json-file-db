@@ -8,7 +8,8 @@ import { keyDefinition } from '../introspect/definitions/key'
  *
  * Undefined when the key has no index, or its file can't be read or parsed: the caller then looks through every row.
  * The files are candidates: callers read each one and check its value, and look through the rows for any value the
- * index didn't lead to, so an index that's out of step with the rows costs time, never a wrong result.
+ * index didn't lead to, so an index that's out of step with the rows costs time, not a wrong result (for primary
+ * key values, which inserts and updates keep unique; see removeMatchingEntries for a hand-edited exception).
  * @param record
  * @param key
  * @param matches

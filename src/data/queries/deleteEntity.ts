@@ -37,6 +37,9 @@ const assertNoDependents = async (entity: string, primaryKey: keyDefinition, toD
  * key value(s) - a single field, or a composite of several for a multi-field primary key. The
  * primary key's index says which files those are (each is read to confirm it); any deleted value
  * the index didn't lead to, or a record without one, is found by looking at every entry, as before.
+ * Inserts and updates keep primary key values unique, so each value is one row: only a database
+ * edited by hand into two rows of one value, with an index listing just one, would keep the other
+ * (looking at every entry used to delete both).
  * @param entity
  * @param record
  * @param primaryKey
