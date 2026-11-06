@@ -49,13 +49,27 @@ describe('reads with several files in flight', () => {
     expect(oneAtATime[0].map(row => row._id).slice(0, 4)).toEqual(['i0', 'i7', 'i14', 'i21'])
   })
 
-  test('a missing entry file fails a full read with the first missing file, as before', async () => {
+  // The messages 3.2.0 gives for these (checked against the published package), for every path that reads entry files
+  const missingFileCases = [
+    ['read items', 'Could not read entity i14.json'],
+    ["read items where day = 'd2'", 'Could not read items/i14.json'],
+    ["read items where day = 'd3'", 'Could not read items/i21.json'],
+    ['read items.parents on items.parent_id = parents._id', 'Could not read entity i14.json'],
+    ["read items.parents on items.parent_id = parents._id where parents.name = 'Parent 2'", 'Could not read entity i14.json'],
+    ["read parents.items on parents._id = items.parent_id where day = 'd0'", 'Could not read entity p3.json']
+  ]
+
+  test.each([1, 16])('a missing entry file fails each kind of read with the first missing file, as before (readConcurrency %i)', async readConcurrency => {
     await fill()
     fs.rmSync(`${databasePath}items/i21.json`)
     fs.rmSync(`${databasePath}items/i14.json`)
+    fs.rmSync(`${databasePath}parents/p3.json`)
+    configure({ readConcurrency })
     const error = jest.spyOn(console, 'error').mockImplementation(() => undefined)
     try {
-      await expect(query('read items')).rejects.toThrow('Could not read entity i14.json')
+      for (const [text, message] of missingFileCases) {
+        await expect(query(text)).rejects.toThrow(message)
+      }
     } finally {
       error.mockRestore()
     }
