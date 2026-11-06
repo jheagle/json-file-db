@@ -64,6 +64,8 @@ describe('each statement is all or nothing', () => {
       expect(count('__indexes/items/pk__id.json')).toBe(1)
       expect(count('__indexes/items/unique_code.json')).toBe(1)
       expect(count('__indexes/items/index_day.json')).toBe(1)
+      expect(count('__indexes/items/fk_kind_id.json')).toBe(1)
+      // The 20 entries, the record file and the 4 indexes above, nothing else
       expect(writes).toHaveLength(20 + 1 + 4)
     } finally {
       writeFile.mockRestore()

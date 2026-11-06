@@ -131,6 +131,29 @@ export const pendingFile = (location: string): string | null | undefined => {
 }
 
 /**
+ * Whether the file or folder at `location` exists as far as the running statement knows: true for a file it wrote, a
+ * folder it made, or a folder holding something it wrote or made; false for a file it deleted or anything in a folder
+ * it removed; `undefined` when the statement hasn't touched it (or no statement is running), so storage decides.
+ * @param location - The full location (see storagePath).
+ */
+export const pendingExists = (location: string): boolean | undefined => {
+  const writeSet = currentWriteSet()
+  if (!writeSet) {
+    return undefined
+  }
+  if (writeSet.files.has(location)) {
+    return writeSet.files.get(location) !== null
+  }
+  const prefix = folderPrefix(location)
+  const madeInside = (path: string): boolean => path === location || path.startsWith(prefix)
+  if ([...writeSet.madeFolders].some(madeInside) ||
+    [...writeSet.files].some(([path, text]) => text !== null && path.startsWith(prefix))) {
+    return true
+  }
+  return insideAny(location, writeSet.removedFolders) ? false : undefined
+}
+
+/**
  * Keep `text` as the new content of `location` in the running statement's write set. False when no statement is
  * running, so the caller writes to storage itself.
  * @param location

@@ -1,5 +1,5 @@
 import { storagePath } from './storagePath'
-import { pendingFile } from './writeSet'
+import { pendingExists } from './writeSet'
 
 /**
  * Whether a file (or folder) of the database exists, counting what the running statement has written or deleted so
@@ -8,9 +8,9 @@ import { pendingFile } from './writeSet'
  */
 export const fileExists = (path: string): boolean => {
   const location = storagePath(path)
-  const pending = pendingFile(location)
+  const pending = pendingExists(location)
   if (pending !== undefined) {
-    return pending !== null
+    return pending
   }
   const { existsSync } = require('fs')
   return existsSync(location)

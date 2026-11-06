@@ -27,6 +27,21 @@ describe('withWriteSet', () => {
     expect(diskJson('users/1.json')).toEqual({ id: 1 })
   })
 
+  test('fileExists sees a folder made during the task, and one holding a file written during it', async () => {
+    await withWriteSet(async () => {
+      await makeDirectory('users')
+      await makeDirectory('__indexes/users')
+      await writeJson('posts.json', {})
+      expect(fileExists('users')).toBe(true)
+      expect(fileExists('__indexes')).toBe(true)
+      expect(onDisk('users')).toBe(false)
+      await removeDirectory('users')
+      expect(fileExists('users')).toBe(false)
+    })
+    expect(onDisk('users')).toBe(false)
+    expect(onDisk('__indexes/users')).toBe(true)
+  })
+
   test('a task that throws changes nothing in storage', async () => {
     await writeJson('users.json', { entries: ['1.json'] })
     await makeDirectory('users')
