@@ -6,6 +6,9 @@ export type RuntimeSettings = {
   format: 'compact' | 'pretty'
   // No fixed default: true in a browser, false in Node (see usesPackedReads)
   packedReads?: boolean
+  // The folder holding several databases, and the one in use (see activeDatabasePath)
+  databasesPath?: string
+  database?: string
 }
 
 const defaults: RuntimeSettings = {
@@ -19,6 +22,44 @@ const defaults: RuntimeSettings = {
 let settings: RuntimeSettings = { ...defaults }
 
 let activeCalls = 0
+
+const databaseNameMatch: RegExp = /^[a-z0-9_-]+$/i
+
+const withSlash = (path: string): string => path.endsWith('/') ? path : `${path}/`
+
+/**
+ * The folder of the database in use: `<databasesPath>/<database>/` once both are configured (see configure and the
+ * `use` statement), otherwise databasePath, as before there could be several.
+ */
+export const activeDatabasePath = (): string => settings.databasesPath && settings.database
+  ? `${withSlash(settings.databasesPath)}${settings.database}/`
+  : getSetting('databasePath', 'database/')
+
+/**
+ * The folder whose calls are queued together (see withDatabaseLock): with several databases, all of them, since a
+ * call can switch between them (`use`) part way; otherwise the one database.
+ */
+export const lockPath = (): string => settings.databasesPath ? withSlash(settings.databasesPath) : activeDatabasePath()
+
+/**
+ * The folder holding the databases, for create database, drop database, use and show databases.
+ * @throws {Error} When databasesPath isn't configured.
+ */
+export const databasesFolder = (): string => {
+  if (!settings.databasesPath) {
+    throw new Error("Several databases need a folder to hold them: configure({ databasesPath: 'databases/' }) first")
+  }
+  return withSlash(settings.databasesPath)
+}
+
+/**
+ * Switch the database in use, from inside a call (the `use` statement, which holds the lock for every database in
+ * databasesPath, so no other call is running): configure() refuses to while calls run.
+ * @param name
+ */
+export const switchDatabase = (name: string): void => {
+  settings = { ...settings, database: name }
+}
 
 /**
  * The folder a databasePath points to, so that `database/`, `./database` and its absolute path count as one database.
@@ -73,11 +114,25 @@ export const configure = (newSettings: Partial<RuntimeSettings>): void => {
   if (typeof newSettings.format !== 'undefined' && newSettings.format !== 'compact' && newSettings.format !== 'pretty') {
     throw new Error(`Unknown format "${newSettings.format}": use 'compact' or 'pretty'`)
   }
-  if (activeCalls > 0 && typeof newSettings.databasePath !== 'undefined' &&
-    resolveDatabasePath(newSettings.databasePath) !== resolveDatabasePath(settings.databasePath)) {
-    throw new Error(`Can't change databasePath while ${activeCalls} database call(s) are still running or queued: await them first`)
+  if (typeof newSettings.database !== 'undefined' && newSettings.database !== null && !databaseNameMatch.test(newSettings.database)) {
+    throw new Error(`Invalid database name ${JSON.stringify(newSettings.database)}: names use letters, digits, _ and - only`)
   }
-  settings = { ...settings, ...newSettings }
+  const next = { ...settings, ...newSettings }
+  if (next.database && !next.databasesPath) {
+    throw new Error("A database name needs the folder that holds the databases: configure({ databasesPath: 'databases/', database: '...' })")
+  }
+  if (activeCalls > 0) {
+    const before = { active: resolveDatabasePath(activeDatabasePath()), lock: resolveDatabasePath(lockPath()) }
+    const previous = settings
+    settings = next
+    const changed = resolveDatabasePath(activeDatabasePath()) !== before.active || resolveDatabasePath(lockPath()) !== before.lock
+    settings = previous
+    if (changed) {
+      const named = ['databasePath', 'databasesPath', 'database'].filter(key => typeof newSettings[key] !== 'undefined').join(' / ')
+      throw new Error(`Can't change ${named} while ${activeCalls} database call(s) are still running or queued: await them first`)
+    }
+  }
+  settings = next
 }
 
 /**

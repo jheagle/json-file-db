@@ -15,6 +15,7 @@ import { maskArrays, maskStrings, unmaskStrings } from './maskStrings'
 import { createMatch, parseCreate, ParsedCreate } from './parseCreate'
 import { parseSchemaStatement, schemaStatementMatch } from './parseSchemaStatement'
 import { alterMatch, parseAlter, ParsedAlter } from './parseAlter'
+import { databaseStatementMatch, parseDatabaseStatement } from './parseDatabaseStatement'
 import { splitClauses } from './splitClauses'
 import { startsQueryMatch } from './startsQuery'
 
@@ -64,6 +65,7 @@ export type ParsedQuery = {
   offset: ParsedOffset | undefined
   create: ParsedCreate | undefined
   alter?: ParsedAlter
+  ifNotExists?: boolean
   ifExists: boolean | undefined
 }
 
@@ -93,6 +95,11 @@ export const parseQuery = (query: string): ParsedQuery => {
   // No find* step may see inside a string or an array: each one becomes a placeholder holding its value
   query = maskArrays(maskStrings(query))
 
+  // Statements about databases (create / drop database, use, show databases) come first: they share their first words
+  // with the record statements
+  if (databaseStatementMatch.test(query)) {
+    return Object.assign(parsedQuery, parseDatabaseStatement(query))
+  }
   // A create statement has its own shape (a bracketed list of fields and keys), so it gets its own parser
   if (createMatch.test(query)) {
     const { entity, create } = parseCreate(query)
