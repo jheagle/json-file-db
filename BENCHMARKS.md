@@ -289,3 +289,34 @@ wire and on disk, not in these timings. Fewer files is task 7.
 | browser join 2 | 109 ms | 719 ms |
 | files on disk | 129 | 1,119 |
 | bytes of data | 39 KB | 359 KB |
+
+### task 7: packed tables (2026-11-06, Node v24.21.0, 11th Gen Intel(R) Core(TM) i5-1135G7 @ 2.40GHz)
+
+`packDatabase()` writes each record's rows into one file (`__packed/<record>.json`), and a browser reads a record from
+it in one request when a read needs more rows than one round of requests (16) and the packed file matches the record
+(Node keeps reading the entry files). The new "browser packed" rows are the same reads after packing: at 1,000 rows a
+full read takes 17 ms instead of 0.83 s, and two joins 48 ms instead of 0.92 s (26 s in the baseline). Packing 1,000 rows
+takes about a quarter of a second. Files and bytes are counted before packing.
+
+| Operation | 100 rows | 1000 rows |
+|---|---:|---:|
+| insert each | 558 ms | 6.9 s |
+| insert per row | 5.6 ms | 6.9 ms |
+| read all | 22 ms | 160 ms |
+| indexed where | 3.5 ms | 4.6 ms |
+| join 1 | 20 ms | 185 ms |
+| join 2 | 22 ms | 187 ms |
+| update 1 by key | 19 ms | 159 ms |
+| update many by index | 3.5 ms | 20 ms |
+| delete 1 by key | 25 ms | 208 ms |
+| browser read all | 144 ms | 830 ms |
+| browser indexed where | 14 ms | 27 ms |
+| browser join 1 | 130 ms | 860 ms |
+| browser join 2 | 147 ms | 918 ms |
+| pack | 69 ms | 270 ms |
+| browser packed read all | 18 ms | 17 ms |
+| browser packed indexed where | 20 ms | 15 ms |
+| browser packed join 1 | 39 ms | 26 ms |
+| browser packed join 2 | 55 ms | 48 ms |
+| files on disk | 129 | 1,119 |
+| bytes of data | 39 KB | 359 KB |

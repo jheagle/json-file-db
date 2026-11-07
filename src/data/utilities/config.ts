@@ -4,6 +4,8 @@ export type RuntimeSettings = {
   enforceForeignKeys: boolean
   readConcurrency: number
   format: 'compact' | 'pretty'
+  // No fixed default: true in a browser, false in Node (see usesPackedReads)
+  packedReads?: boolean
 }
 
 const defaults: RuntimeSettings = {
@@ -58,6 +60,9 @@ export const trackDatabaseCall = (): (() => void) => {
  * format (default 'compact') is how files are written: 'compact' (no whitespace: smaller files that parse faster) or
  * 'pretty' (indented by 2 spaces, for reading data in diffs). Either is read; formatDatabase rewrites a whole database
  * in one.
+ *
+ * packedReads (default: true in a browser, false in Node) is whether reads use a record's packed file (see
+ * packDatabase) when it has one that matches the record, instead of reading each entry file.
  *
  * Changing databasePath while calls are still running or queued throws (see trackDatabaseCall): await them first.
  * @param newSettings

@@ -15,6 +15,7 @@ import { keyDefinition } from '../introspect/definitions/key'
 import { getSetting } from '../utilities/config'
 import { keyIndexFiles } from '../utilities/keyIndexFiles'
 import { writeJson } from '../storage'
+import { discardPacked } from '../utilities/packedTable'
 
 /**
  * Same reasoning as deleteEntity: a record object carries no memory of which entry file it came
@@ -230,6 +231,9 @@ export const updateEntity = async (entity: string = '', values: Object = {}, dat
     planned.push({ fileName, oldData, newData })
   }
   assertUniqueWithinUpdate(entity, record, planned, typedValues)
+  if (planned.length) {
+    await discardPacked(record.path)
+  }
 
   for (const { fileName, oldData, newData } of planned) {
     await reconcileIndexes(record, oldData, newData, typedValues, fileName)
