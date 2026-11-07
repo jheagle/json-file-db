@@ -5,6 +5,7 @@ import { updateEntity } from '../queries/updateEntity'
 import { createRecord } from '../queries/createRecord'
 import { dropRecord } from '../queries/dropRecord'
 import { describeRecord } from '../queries/describeRecord'
+import { alter as alterRecord } from '../introspect/alter'
 import { showRecords } from '../queries/showRecords'
 import { joinEntity } from '../queries/joinEntity'
 import { mergeJoins } from '../queries/mergeJoins'
@@ -47,7 +48,7 @@ export const runQuery = async (parsed) => {
   // Checked before anything is read: which entity each condition is on, and whether it needs per-pair evaluation
   const perPair = typeof parsed.where !== 'undefined' && conditionEntities(parsed)
   // Writes and schema changes need the filesystem; say so plainly in a browser
-  if (['insert', 'update', 'delete', 'create', 'drop'].includes(parsed.command)) {
+  if (['insert', 'update', 'delete', 'create', 'drop', 'alter'].includes(parsed.command)) {
     requireNode(`"${parsed.command}"`)
   }
   // Schema statements act on the database, not on entries (for create there is no record to read yet)
@@ -58,6 +59,8 @@ export const runQuery = async (parsed) => {
       return { [parsed.entity]: await dropRecord(parsed.entity, parsed.ifExists) }
     case 'describe':
       return { [parsed.entity]: await describeRecord(parsed.entity) }
+    case 'alter':
+      return { [parsed.entity]: await alterRecord(parsed.entity, parsed.alter) }
     case 'show':
       return { [parsed.entity]: await showRecords() }
   }

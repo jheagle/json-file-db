@@ -14,6 +14,7 @@ import { findOffset, ParsedOffset } from './findOffset'
 import { maskArrays, maskStrings, unmaskStrings } from './maskStrings'
 import { createMatch, parseCreate, ParsedCreate } from './parseCreate'
 import { parseSchemaStatement, schemaStatementMatch } from './parseSchemaStatement'
+import { alterMatch, parseAlter, ParsedAlter } from './parseAlter'
 import { splitClauses } from './splitClauses'
 import { startsQueryMatch } from './startsQuery'
 
@@ -62,6 +63,7 @@ export type ParsedQuery = {
   limit: ParsedLimit | undefined
   offset: ParsedOffset | undefined
   create: ParsedCreate | undefined
+  alter?: ParsedAlter
   ifExists: boolean | undefined
 }
 
@@ -98,6 +100,11 @@ export const parseQuery = (query: string): ParsedQuery => {
   }
   if (schemaStatementMatch.test(query)) {
     return Object.assign(parsedQuery, parseSchemaStatement(query))
+  }
+  // So does alter: one change to a record's fields
+  if (alterMatch.test(query)) {
+    const { entity, alter } = parseAlter(query)
+    return Object.assign(parsedQuery, { command: 'alter', entity, alter })
   }
 
   // Clauses come at most once each, in a fixed order (see clauseOrder); each step reads only its own clause's body
