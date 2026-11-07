@@ -410,6 +410,30 @@ it, that is an error. A record that another record's foreign key references can'
 (unless `enforceForeignKeys` is turned off, see Configuration). `describe` resolves to `{ path, definition, keys }`
 (the `describe()` function gives only the fields), and `show records` to an array of names.
 
+### Changing a record's fields: `alter`
+
+```sql
+alter workouts add note string optional                -- a new field (written as in create)
+alter workouts add status string default 'planned'     -- existing rows get the default
+alter workouts drop note                               -- removed from the definition and every row
+alter workouts rename date to day                      -- in every row, its keys and indexes, and foreign keys to it
+alter workouts modify status string optional           -- the field's new optional / null / default
+```
+
+Each `alter` makes one change, all or nothing (several, separated by `;`, run in turn), and resolves to the record's
+new fields. The `alter()` function takes the same changes as objects, e.g.
+`alter('workouts', { action: 'add', field: { name: 'note', type: 'string', optional: true } })`.
+
+- **add**: existing rows get the field's default, or a new id for an `auto` field. A required field with neither is
+  refused while the record has rows (they'd be missing it): give it a default, or make it optional.
+- **drop**: refused while a key of the record uses the field, or another record's foreign key references it.
+- **rename**: a key's index file named after the field moves to the new name; foreign keys that reference the field
+  (in any record) are renamed with it.
+- **modify**: the type, and whether the field is `auto`, can't change (that's for a later version). Making it required
+  fills rows that are missing it from the new default, and is refused without one; making it not nullable removes the
+  `null`s when it stays optional, and otherwise fills them from the default. When a key uses the field, filled rows go
+  through the same checks as an `update` (a unique key refuses the same default twice).
+
 ### Reading a query over several lines: `queryStatus()`
 
 For a prompt which reads a query line by line (like the CLI), `queryStatus()` says whether the text so far is ready to
