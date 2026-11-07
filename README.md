@@ -45,9 +45,16 @@ JSON can leave a key out or store it as `null`:
 | Definition | Left out | `null` |
 |---|---|---|
 | `{ name: 'note', type: 'string' }` | error | error |
-| `{ name: 'note', type: 'string', optional: true }` | allowed | error |
+| `{ name: 'note', type: 'string', optional: true }` | allowed | same as left out |
 | `{ name: 'note', type: 'string', nullable: true }` | error | stored as `null` |
 | `{ name: 'note', type: 'string', optional: true, nullable: true }` | allowed | stored as `null` |
+
+An optional field that isn't nullable can never hold `null`, so a `null` given for it means "no value": `insert ...
+note = null` stores the row without `note` (a default fills it in, as for a field left out), and `update ... set
+note = null` removes `note` from the rows it changes, which is how an optional field is cleared (not a field of the
+primary key: rows are found by it). As in SQL, a default only fills in a field when a row is inserted, so clearing a
+field with a default leaves it out rather than setting the default. Nullable fields store `null`, and required fields
+that aren't nullable reject it.
 
 `useDefault: true, defaultValue: …` fills in a field that is left out. `create()` checks the default against the
 field's type (a `null` default needs `nullable: true`) and throws if it doesn't fit. Primary key fields can't be

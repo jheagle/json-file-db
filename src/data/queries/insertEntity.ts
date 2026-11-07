@@ -295,7 +295,9 @@ const generateKey = async (statement: InsertStatement, field: string): Promise<s
 
 /**
  * Build one entity's stored values from the raw input values, generating any autoGenerate
- * fields and applying field defaults, then throw if a required field still has no value.
+ * fields and applying field defaults, then throw if a required field still has no value. A null
+ * in an optional field that isn't nullable means the same as leaving it out (the field can't
+ * hold null, so nothing is lost): it isn't stored, and a default fills it in as for a field left out.
  * @param statement
  * @param rowValues
  */
@@ -303,6 +305,9 @@ const buildEntityValues = async (statement: InsertStatement, rowValues: Object =
   const entityValues = {}
   for (const field of statement.record.definition) {
     let value = rowValues[field.name]
+    if (value === null && field.optional && !field.nullable) {
+      value = undefined
+    }
     if (field.autoGenerate) {
       value = await generateKey(statement, field.name)
     } else if (Object.prototype.hasOwnProperty.call(field, 'default')) {
