@@ -235,6 +235,12 @@ export const updateEntity = async (entity: string = '', values: Object = {}, dat
     throw new Error(`Cannot update "${entity}" without a primary key`)
   }
   const typedValues = applyFieldTypes(record, values)
+  // A row is found by its primary key, so none of its fields can be cleared (an optional one could be, by null)
+  for (const field of primaryKey.fields) {
+    if (Object.prototype.hasOwnProperty.call(typedValues, field) && typeof typedValues[field] === 'undefined') {
+      throw new Error(`Cannot clear "${field}" on ${entity}: it's part of the primary key`)
+    }
+  }
 
   // Check every row first and write only once all of them pass, so a row that fails leaves the others unchanged too
   const planned = []

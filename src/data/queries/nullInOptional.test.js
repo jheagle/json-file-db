@@ -68,6 +68,32 @@ describe('null in an optional field that is not nullable', () => {
     expect(parents).toEqual([])
   })
 
+  test('a field of the primary key can never be cleared, even an optional one', async () => {
+    await query('create keyed (k string optional, v string, primary key (k))')
+    await query("insert keyed values (k = 'a', v = 'x')")
+    await expect(query("update keyed set k = null where k = 'a'")).rejects.toThrow('Cannot clear "k" on keyed: it\'s part of the primary key')
+    const [[row]] = await query("read keyed where k = 'a'")
+    expect(row).toEqual({ k: 'a', v: 'x' })
+  })
+
+  test('clearing a field with a default leaves it out (a default only applies on insert)', async () => {
+    await query("create things (_id string, kind string optional default 'plain', primary key (_id))")
+    await query("insert things values (_id = 't1', kind = 'fancy')")
+    const [[cleared]] = await query("update things set kind = null where _id = 't1'")
+    expect(cleared).toEqual({ _id: 't1' })
+  })
+
+  test('clearing one field of a composite unique key is never a duplicate, and frees the pair', async () => {
+    await query('create seats (_id string, team string optional, seat int, primary key (_id), unique (team, seat))')
+    await query("insert seats values (_id = 's1', team = 'red', seat = 1), (_id = 's2', team = 'blue', seat = 1)")
+    await query('update seats set team = null where seat = 1')
+    const [[reused]] = await query("insert seats values (_id = 's3', team = 'red', seat = 1)")
+    expect(reused._id).toBe('s3')
+    await expect(query("insert seats values (_id = 's4', team = 'red', seat = 1)")).rejects.toThrow('Duplicate value for unique key "team, seat" on seats')
+    const [cleared] = await query('read seats where team does not exist')
+    expect(cleared.map(row => row._id).sort()).toEqual(['s1', 's2'])
+  })
+
   test('a nullable field set to null still stores null', async () => {
     await fill()
     await query("update items set note = null where _id = 'i1'")
