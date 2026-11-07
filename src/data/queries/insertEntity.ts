@@ -14,6 +14,7 @@ import { recordDefinition } from '../introspect/definitions/record'
 import { keyDefinition } from '../introspect/definitions/key'
 import { makeDirectory, readJson, writeJson } from '../storage'
 import { discardPacked } from '../utilities/packedTable'
+import { assertFieldsDefined } from '../utilities/knownFields'
 
 /**
  * Whether a record holds a non-null value, as indexHas answers it: undefined when it can't say (no index on the
@@ -388,6 +389,10 @@ export const insertEntity = async (entity: string = '', values: Object[] = [], d
   await makeDirectory(record.path)
   if (!values.length) {
     return dataSet
+  }
+  // A field the record doesn't define would otherwise be dropped without a word
+  for (const rowValues of values) {
+    assertFieldsDefined(entity, record, Object.keys(rowValues || {}), 'insert')
   }
   await discardPacked(record.path)
 

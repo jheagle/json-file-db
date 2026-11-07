@@ -76,6 +76,12 @@ Keywords (`where`, `and`, `sort`, `limit`, `create`, `show records`...), command
 `delete`), sort directions (`asc`, `desc`) and comparators can be written in any case: `READ t` and `sort a ASC` work.
 Record and field names are case-sensitive.
 
+Every record and field a query names must exist, as in SQL. A field means the queried record's own unless it's written
+`<record>.<field>`, and it has to be one that record defines (it doesn't have to be stored in every row: an optional
+field is fine). Otherwise the query fails before reading or writing anything, naming what's wrong and what's there:
+`Record "workout" doesn't exist`, or `Unknown field "rep" in where: workouts has _id, exercise_id, date, reps`. In
+`select`, the joined record's name stands for its whole row.
+
 ### Inserting several rows
 
 One `insert` can add many rows: put each row's values in brackets, separated by commas.
@@ -465,6 +471,16 @@ Queries that worked in 2.x can be errors now (each error names the problem), and
 - Text a clause can't read is reported against that clause, as `Unexpected "b" after "sort a"` or
   `Missing a whole number after limit: x`. In 2.x these were `Unrecognized query value: ...`. Check any code that
   matches on that message.
+
+### Upgrading from 3.2
+
+- A field a record doesn't define is an error everywhere a query names one. In 3.2 `insert` dropped it without a word,
+  `update ... set` stored it outside the record's definition, and `where`, `sort`, `group by`, `select`, `on` and
+  `merge` quietly matched nothing (or left rows unsorted). A field that's only missing from some rows is fine, as long
+  as the record defines it.
+- A record that doesn't exist is `Record "<name>" doesn't exist` (in a browser, `... doesn't exist, or <name>.json
+  can't be read`), as `drop` and `describe` already said, instead of `Could not read <name>.json`. A join written
+  without the record to join (`read workouts on ...`) says so, instead of `Could not read .json`.
 
 ## Configuration
 

@@ -21,6 +21,7 @@ import { fieldType } from './fieldType'
 import { conditionsOf } from './conditionTree'
 import { conditionEntities } from './conditionEntities'
 import { requireNode } from './requireNode'
+import { assertKnownFields } from './knownFields'
 
 /**
  * Give each condition and sort clause its field's declared type, so where and sortBy compare by it
@@ -67,6 +68,8 @@ export const runQuery = async (parsed) => {
     recordData[parsed.joinEntity] = await retrieveRecord(parsed.joinEntity)
   }
 
+  // Every field the query names must be one its record defines: a misspelled one would otherwise match nothing
+  await assertKnownFields(parsed, recordData)
   await typeClauses(parsed, recordData)
 
   let dataSet: any = { [parsed.entity]: [] }

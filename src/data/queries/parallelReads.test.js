@@ -56,7 +56,7 @@ describe('reads with several files in flight', () => {
     ["read items where day = 'd3'", 'Could not read items/i21.json'],
     ['read items.parents on items.parent_id = parents._id', 'Could not read entity i14.json'],
     ["read items.parents on items.parent_id = parents._id where parents.name = 'Parent 2'", 'Could not read entity i14.json'],
-    ["read parents.items on parents._id = items.parent_id where day = 'd0'", 'Could not read entity p3.json']
+    ["read parents.items on parents._id = items.parent_id where items.day = 'd0'", 'Could not read entity p3.json']
   ]
 
   test.each([1, 16])('a missing entry file fails each kind of read with the first missing file, as before (readConcurrency %i)', async readConcurrency => {
