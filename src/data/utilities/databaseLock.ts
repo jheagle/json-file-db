@@ -1,5 +1,5 @@
 import * as jsEnv from 'browser-or-node'
-import { getSetting, resolveDatabasePath, trackDatabaseCall } from './config'
+import { lockPath, resolveDatabasePath, trackDatabaseCall } from './config'
 import { withReadCache } from '../storage'
 
 const queues: Map<string, Promise<void>> = new Map()
@@ -24,7 +24,7 @@ export const withDatabaseLock = async <T>(task: () => Promise<T>): Promise<T> =>
   if (!jsEnv.isNode) {
     return withReadCache(task)
   }
-  const database = resolveDatabasePath(getSetting('databasePath', 'database/'))
+  const database = resolveDatabasePath(lockPath())
   const ended = trackDatabaseCall()
   const previous = queues.get(database) || Promise.resolve()
   let release: () => void

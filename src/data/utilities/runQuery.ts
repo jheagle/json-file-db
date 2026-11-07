@@ -6,6 +6,7 @@ import { createRecord } from '../queries/createRecord'
 import { dropRecord } from '../queries/dropRecord'
 import { describeRecord } from '../queries/describeRecord'
 import { alter as alterRecord } from '../introspect/alter'
+import { createDatabase, dropDatabase, showDatabases, useDatabase } from '../queries/databaseStatements'
 import { showRecords } from '../queries/showRecords'
 import { joinEntity } from '../queries/joinEntity'
 import { mergeJoins } from '../queries/mergeJoins'
@@ -61,6 +62,14 @@ export const runQuery = async (parsed) => {
       return { [parsed.entity]: await describeRecord(parsed.entity) }
     case 'alter':
       return { [parsed.entity]: await alterRecord(parsed.entity, parsed.alter) }
+    case 'create database':
+      return { [parsed.entity]: await createDatabase(parsed.entity, parsed.ifNotExists) }
+    case 'drop database':
+      return { [parsed.entity]: await dropDatabase(parsed.entity, parsed.ifExists) }
+    case 'use':
+      return { [parsed.entity]: await useDatabase(parsed.entity) }
+    case 'show databases':
+      return { [parsed.entity]: await showDatabases() }
     case 'show':
       return { [parsed.entity]: await showRecords() }
   }

@@ -526,7 +526,9 @@ configure({
   enforceForeignKeys: true,    // RESTRICT delete/update of a record other entities still reference (default true)
   readConcurrency: 16,         // how many entry files a read has in flight at once (default 16)
   format: 'compact',           // how files are written: 'compact' or 'pretty' (default 'compact')
-  packedReads: undefined       // use packed files (see packDatabase); default true in a browser, false in Node
+  packedReads: undefined,      // use packed files (see packDatabase); default true in a browser, false in Node
+  databasesPath: undefined,    // a folder holding several databases (see Several databases)
+  database: undefined          // the one of them in use
 })
 ```
 
@@ -536,6 +538,27 @@ it doesn't fit a particular workflow, mirroring MySQL's own toggleable `foreign_
 Reads fetch several entry files at once, `readConcurrency` at a time, and keep the record's order. In a browser each
 file is one request: 16 suits HTTP/2 static hosts (such as GitHub Pages), while over HTTP/1.1 a browser only opens about
 6 connections per host anyway. `readConcurrency: 1` reads one file at a time, as every read did before this setting.
+
+### Several databases: `databasesPath`, `use`
+
+One program can keep several databases (say, real data and a test copy) in one folder and switch between them:
+
+```js
+configure({ databasesPath: 'databases/', database: 'real' })   // databases/real/ is the one in use
+```
+
+```sql
+create database copy;             -- a new, empty databases/copy/ (it doesn't switch to it)
+use copy;                         -- the rest of this query, and the calls after it, use databases/copy/
+show databases;                   -- ['real', 'copy'], in the order they were created
+drop database if exists copy;     -- deletes it and everything in it (not the one in use: use another first)
+```
+
+`use` does what `configure({ database })` does, and both work in a browser (reading only), for any database listed in
+`databases/__DATABASES.json`, the list `create database` and `drop database` keep (a browser can't list a folder).
+With `databasesPath` set, calls on all its databases queue together (see Several calls at once), so a `use` part way
+through a call is safe. Without it, `databasePath` names the one database, as before. A record can still be called
+`database`: `create database (...)` and a bare `drop database` act on that record.
 
 ### File format: `format` and `formatDatabase()`
 
