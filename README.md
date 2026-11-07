@@ -417,7 +417,7 @@ alter workouts add note string optional                -- a new field (written a
 alter workouts add status string default 'planned'     -- existing rows get the default
 alter workouts drop note                               -- removed from the definition and every row
 alter workouts rename date to day                      -- in every row, its keys and indexes, and foreign keys to it
-alter workouts modify status string optional           -- the field's new optional / null / default
+alter workouts modify status string optional default 'planned'  -- the field's whole new definition
 ```
 
 Each `alter` makes one change, all or nothing (several, separated by `;`, run in turn), and resolves to the record's
@@ -429,10 +429,12 @@ new fields. The `alter()` function takes the same changes as objects, e.g.
 - **drop**: refused while a key of the record uses the field, or another record's foreign key references it.
 - **rename**: a key's index file named after the field moves to the new name; foreign keys that reference the field
   (in any record) are renamed with it.
-- **modify**: the type, and whether the field is `auto`, can't change (that's for a later version). Making it required
-  fills rows that are missing it from the new default, and is refused without one; making it not nullable removes the
-  `null`s when it stays optional, and otherwise fills them from the default. When a key uses the field, filled rows go
-  through the same checks as an `update` (a unique key refuses the same default twice).
+- **modify**: gives the field's whole new definition, as MySQL's `MODIFY` does: anything it leaves out is cleared, so
+  repeat a default to keep it (`modify status string optional` removes `default 'planned'`, as leaving out `optional`
+  makes the field required). The type, and whether the field is `auto`, can't change (that's for a later version).
+  Making it required fills rows that are missing it from the new default, and is refused without one; making it not
+  nullable removes the `null`s when it stays optional, and otherwise fills them from the default. When a key uses the
+  field, filled rows go through the same checks as an `update` (a unique key refuses the same default twice).
 
 ### Reading a query over several lines: `queryStatus()`
 

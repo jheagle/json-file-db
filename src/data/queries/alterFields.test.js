@@ -152,11 +152,36 @@ describe('alter modify', () => {
     expect(['i1', 'i2', 'i3'].map(id => row(id).note)).toEqual(['x', null, 'none'])
   })
 
-  test('making a field not nullable removes its nulls when it stays optional, and needs a default when not', async () => {
+  test('making a field not nullable removes its nulls when it stays optional', async () => {
     await fill()
     await query('alter items modify note string optional')
     expect(row('i2')).not.toHaveProperty('note')
     expect(row('i1').note).toBe('x')
+  })
+
+  test('making a field required and not nullable is refused while a row holds null, and fills the nulls from a default', async () => {
+    await query(`create things (_id string, note string null, primary key (_id));
+      insert things values (_id = 't1', note = 'x'), (_id = 't2', note = null)`)
+    await refused('alter things modify note string', 'Can\'t make "note" not null on things: 1 row(s) hold null (give it a default to fill them in, or make it optional)')
+    await query("alter things modify note string default 'none'")
+    const [rows] = await query('read things')
+    expect(rows.map(found => found.note)).toEqual(['x', 'none'])
+  })
+
+  test('modify gives the whole new definition: a default it doesn\'t repeat is removed', async () => {
+    await query("create things (_id string, status string optional default 'planned', primary key (_id))")
+    await query('alter things modify status string optional')
+    const [[added]] = await query("insert things values _id = 't1'")
+    expect(added).toEqual({ _id: 't1' })
+    await query("alter things modify status string optional default 'planned'")
+    const [[again]] = await query("insert things values _id = 't2'")
+    expect(again.status).toBe('planned')
+  })
+
+  test('filling a field a key uses on a record with no primary key is refused (rows are found by it)', async () => {
+    await query(`create loose (code string optional, unique (code));
+      insert loose values (code = 'a'); insert loose values (code = null)`)
+    await refused("alter loose modify code string default 'z'", 'Can\'t change "code" on loose\'s rows: a key uses it, and rows are found by the primary key, which loose doesn\'t have')
   })
 
   test('filling a field a key uses goes through its checks: a unique key rejects the same default twice', async () => {
@@ -192,6 +217,18 @@ describe('alter', () => {
     expect(row('i1').sets).toBe(1)
     expect(fs.existsSync(`${databasePath}__packed/items.json`)).toBe(false)
     expect(fs.existsSync(`${databasePath}__packed/kinds.json`)).toBe(true)
+  })
+
+  test.each([
+    ['a rename to a path', 'items', { action: 'rename', name: 'day', to: '../../x' }, '"../../x"'],
+    ['a field name with a slash', 'items', { action: 'add', field: { name: 'a/b', type: 'string', optional: true } }, '"a/b"'],
+    ['a field with no name', 'items', { action: 'add', field: { type: 'string', optional: true } }, 'undefined'],
+    ['a record name that is a path', '../items', { action: 'drop', name: 'day' }, '"../items"']
+  ])('the alter() function refuses %s, before reading or writing anything', async (_, record, change, shown) => {
+    await fill()
+    const before = snapshot()
+    await expect(alter(record, change)).rejects.toThrow(`Invalid name ${shown} in alter: names use letters, digits, _ and - only`)
+    expect(snapshot()).toEqual(before)
   })
 
   test.each([

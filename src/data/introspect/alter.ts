@@ -3,7 +3,7 @@ import { recordDefinition } from './definitions/record'
 import { keyDefinition } from './definitions/key'
 import { assertValidDefinition } from './create'
 import { ParsedAlter } from '../utilities/parsers/parseAlter'
-import { keyLookup } from '../utilities/parsers/parseCreate'
+import { keyLookup, nameMatch } from '../utilities/parsers/parseCreate'
 import { retrieveRecord } from '../utilities/retrieveRecord'
 import { retrieveFiles } from '../utilities/retrieveFiles'
 import { retrieveEntry } from '../utilities/retrieveRecords'
@@ -210,7 +210,8 @@ const renameField = async (entity: string, record: recordDefinition, name: strin
 
 /**
  * Change a field's definition: whether it's optional or nullable, and its default (its type, and whether it's auto,
- * stay). Rows that would no longer fit are filled with the new default, or the change is refused: a field made
+ * stay). The statement gives the whole new definition, as MySQL's MODIFY does: what it leaves out is cleared, so a
+ * default it doesn't repeat is removed, as `optional` or `null` left out make the field required or not nullable. Rows that would no longer fit are filled with the new default, or the change is refused: a field made
  * required needs a value in every row, and one made not nullable can't hold null (an optional one then has no value,
  * as null means in an optional field).
  */
@@ -256,6 +257,13 @@ export const alter = async (entity: string, change: ParsedAlter): Promise<fieldD
   requireNode('alter')
   if (entity === '__RECORDS') {
     throw new Error('__RECORDS is reserved for the list of records')
+  }
+  // The same names the query language allows: a name becomes a key in every row and part of index file paths, so
+  // one like `../x` from a direct call must not get that far
+  const names = [entity, ...('field' in change ? [change.field?.name] : []), ...('name' in change ? [change.name] : []), ...('to' in change ? [change.to] : [])]
+  const invalid = names.findIndex(name => typeof name !== 'string' || !nameMatch.test(name))
+  if (invalid !== -1) {
+    throw new Error(`Invalid name ${JSON.stringify(names[invalid]) ?? 'undefined'} in alter: names use letters, digits, _ and - only`)
   }
   const record = await retrieveRecord(entity)
   switch (change.action) {
