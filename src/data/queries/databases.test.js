@@ -68,6 +68,36 @@ describe('several databases', () => {
     await expect(query('use copy')).rejects.toThrow('Database "copy" doesn\'t exist')
   })
 
+  test('a folder that is there but not listed is named as such, and if not exists lists it', async () => {
+    several()
+    await query('create database real')
+    fs.mkdirSync(`${folder}copied`)
+    await expect(query('create database copied')).rejects.toThrow('Database "copied" already exists as a folder that isn\'t listed: create database if not exists copied lists it')
+    expect(await query('create database if not exists copied; show databases')).toEqual([null, ['real', 'copied']])
+  })
+
+  test('create database lists the name before it makes the folder, so a stop part way leaves a usable database', async () => {
+    several()
+    const files = require('fs/promises')
+    const original = files.mkdir.bind(files)
+    const mkdir = jest.spyOn(files, 'mkdir')
+    mkdir.mockImplementation(async (location, options) => {
+      if (String(location).endsWith('half')) {
+        throw new Error('stopped')
+      }
+      return original(location, options)
+    })
+    try {
+      await expect(query('create database half')).rejects.toThrow('stopped')
+    } finally {
+      mkdir.mockRestore()
+    }
+    expect(await query('show databases')).toEqual([['half']])
+    expect(fs.existsSync(`${folder}half`)).toBe(false)
+    await query("use half; create notes (_id string, primary key (_id)); insert notes values _id = 'n1'")
+    expect(fs.existsSync(`${folder}half/notes/n1.json`)).toBe(true)
+  })
+
   test('a record named "database" is still a record', async () => {
     several()
     await query('create database real; use real; create database (a string optional); insert database values a = \'x\'')

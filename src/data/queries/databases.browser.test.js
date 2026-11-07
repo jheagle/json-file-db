@@ -41,6 +41,18 @@ describe('several databases (browser)', () => {
     expect(rows).toEqual([{ _id: 'n1' }])
   })
 
+  test('use refuses to switch while another call is running in the page, and works once it is done', async () => {
+    let finish
+    const slow = new Promise(resolve => { finish = resolve })
+    const fetch = global.fetch
+    global.fetch = jest.fn(async url => url === 'dbs/real/notes.json' ? slow.then(() => fetch(url)) : fetch(url))
+    const running = query('read notes').catch(error => error)
+    await expect(query('use copy')).rejects.toThrow('Can\'t use "copy" while other calls are running in this page: await them first, or pick the database with configure({ database }) between calls')
+    finish()
+    await running
+    expect(await query('use copy; read notes')).toEqual(['copy', [{ _id: 'n1' }]])
+  })
+
   test('use of a database not in the list says so, and creating or dropping one needs Node', async () => {
     await expect(query('use other')).rejects.toThrow('Database "other" doesn\'t exist (or isn\'t listed in __DATABASES.json)')
     await expect(query('create database other')).rejects.toThrow('only works in Node')

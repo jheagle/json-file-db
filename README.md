@@ -557,7 +557,10 @@ drop database if exists copy;     -- deletes it and everything in it (not the on
 `use` does what `configure({ database })` does, and both work in a browser (reading only), for any database listed in
 `databases/__DATABASES.json`, the list `create database` and `drop database` keep (a browser can't list a folder).
 With `databasesPath` set, calls on all its databases queue together (see Several calls at once), so a `use` part way
-through a call is safe. Without it, `databasePath` names the one database, as before. A record can still be called
+through a call is safe. A browser runs calls side by side instead, with one database in use for the page, so there
+`use` refuses while another call is running: await it, or switch with `configure({ database })` between calls. A
+database folder copied in by hand (to copy a database) isn't listed yet: `create database if not exists <name>` lists
+it. Without `databasesPath`, `databasePath` names the one database, as before. A record can still be called
 `database`: `create database (...)` and a bare `drop database` act on that record.
 
 ### File format: `format` and `formatDatabase()`
