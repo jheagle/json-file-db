@@ -80,7 +80,9 @@ Every record and field a query names must exist, as in SQL. A field means the qu
 `<record>.<field>`, and it has to be one that record defines (it doesn't have to be stored in every row: an optional
 field is fine). Otherwise the query fails before reading or writing anything, naming what's wrong and what's there:
 `Record "workout" doesn't exist`, or `Unknown field "rep" in where: workouts has _id, exercise_id, date, reps`. In
-`select`, the joined record's name stands for its whole row.
+`select`, the joined record's name stands for its rows, `<record>.<field>` picks the queried record's own field (named
+as written: use `as` to rename it) or a merged record's, and a joined record's single field is an error, since its rows
+are a list (merge it to put its fields on each row).
 
 ### Inserting several rows
 
@@ -478,6 +480,8 @@ Queries that worked in 2.x can be errors now (each error names the problem), and
   `update ... set` stored it outside the record's definition, and `where`, `sort`, `group by`, `select`, `on` and
   `merge` quietly matched nothing (or left rows unsorted). A field that's only missing from some rows is fine, as long
   as the record defines it.
+- `select <record>.<field>` for the queried record picks its field; in 3.2 it gave nothing. For a joined record
+  without `merge`, it's an error saying to select the record (its rows) or merge it.
 - A record that doesn't exist is `Record "<name>" doesn't exist` (in a browser, `... doesn't exist, or <name>.json
   can't be read`), as `drop` and `describe` already said, instead of `Could not read <name>.json`. A join written
   without the record to join (`read workouts on ...`) says so, instead of `Could not read .json`.

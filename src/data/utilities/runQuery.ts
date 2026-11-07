@@ -129,7 +129,7 @@ export const runQuery = async (parsed) => {
   dataSet[parsed.entity] = sortBy(dataSet[parsed.entity], parsed.sortClauses)
   dataSet[parsed.entity] = groupBy(dataSet[parsed.entity], parsed.groupBy)
   dataSet[parsed.entity] = limitOffset(dataSet[parsed.entity], parsed.offset, parsed.limit)
-  dataSet[parsed.entity] = selectFields(dataSet[parsed.entity], parsed.selectClauses, Boolean(parsed.groupBy?.length))
+  dataSet[parsed.entity] = selectFields(dataSet[parsed.entity], parsed.selectClauses, Boolean(parsed.groupBy?.length), parsed.entity)
 
   return dataSet
 }

@@ -71,6 +71,33 @@ describe('clearer errors', () => {
     expect(fs.readFileSync(`${databasePath}workouts.json`, 'utf8')).toBe(before)
   })
 
+  test('an unknown field in set or insert fails before any row is read', async () => {
+    await fill()
+    const readFile = jest.spyOn(require('fs/promises'), 'readFile')
+    try {
+      await expect(query('update workouts set nosuch = 1 where reps > 0')).rejects.toThrow('Unknown field "nosuch" in set')
+      await expect(query("insert workouts values _id = 'w9', nosuch = 1")).rejects.toThrow('Unknown field "nosuch" in insert')
+      const rowsRead = readFile.mock.calls.map(([location]) => String(location)).filter(location => location.includes('workouts/'))
+      expect(rowsRead).toEqual([])
+    } finally {
+      readFile.mockRestore()
+    }
+  })
+
+  test('select <record>.<field> picks the queried record\'s field, and a merged record\'s', async () => {
+    await fill()
+    const [own, merged] = await query(`read workouts select workouts.date, reps as r;
+      read workouts select date, exercises.name merge workouts.exercise_id with exercises._id`)
+    expect(own).toEqual([{ 'workouts.date': '2026-11-01', r: 5 }])
+    expect(merged).toEqual([{ date: '2026-11-01', 'exercises.name': 'Squat' }])
+  })
+
+  test('select can\'t pick one field of a joined record\'s rows, and says what can', async () => {
+    await fill()
+    await expect(query('read workouts.exercises select date, exercises.name on workouts.exercise_id = exercises._id'))
+      .rejects.toThrow('Can\'t select "exercises.name": a joined record\'s rows are a list under its name (select exercises), and its fields are on each row only when merged (merge ... with exercises.<field>)')
+  })
+
   test('a field the record defines is fine even when no row has it, and select can name the joined record', async () => {
     await fill()
     const [missing, joined] = await query(`read workouts where note does not exist;

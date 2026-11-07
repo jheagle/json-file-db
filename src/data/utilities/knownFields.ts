@@ -28,23 +28,29 @@ export const assertFieldsDefined = (entity: string, record: recordDefinition, fi
 }
 
 /**
- * Throw unless every field a read, update or delete names (in `where`, `sort`, `group by`, `select`, `on` and `merge`)
- * is defined by its record: the queried record for a plain name, the named one for `<record>.<field>` (any record, as a
- * join through another one names it). In `select`, the joined record's name stands for its whole row, as joins attach
- * it.
+ * Throw unless every field a query names (in `where`, `sort`, `group by`, `select`, `on`, `merge`, and an insert's or
+ * update's values) is defined by its record, before anything is read: the queried record for a plain name, the named
+ * one for `<record>.<field>` (any record, as a join through another one names it). In `select`, the joined record's
+ * name stands for its rows, and `<record>.<field>` names the queried record's own field or a merged record's (a joined
+ * record's rows are a list, with no one value to pick).
  * @param parsed - The parsed query.
  * @param recordData - Records already read, by name (more are read as they're named, and kept here).
  * @throws {Error} `Unknown field ...` (see assertFieldsDefined), or `Record "<name>" doesn't exist` for a record that
  *   doesn't.
  */
 export const assertKnownFields = async (parsed, recordData: { [entity: string]: recordDefinition }): Promise<void> => {
-  const named: Array<{ property: string, clause: string }> = [
+  // A merged record's fields are on each row as `<record>.<field>`, so select can name them; a joined one's rows are a
+  // list, with no one value to pick
+  const merged = new Set((parsed.mergeJoins || []).map(merge => splitEntityProperty(merge.propertyB).entity))
+  const named: Array<{ property: string, clause: string, own?: boolean }> = [
     ...conditionsOf(parsed.where).map(condition => ({ property: condition.property, clause: 'where' })),
     ...(parsed.sortClauses || []).map(sort => ({ property: sort.property, clause: 'sort' })),
     ...(parsed.groupBy || []).map(property => ({ property, clause: 'group by' })),
     ...(parsed.selectClauses || [])
       .filter(select => select.property !== parsed.joinEntity)
       .map(select => ({ property: select.property, clause: 'select' })),
+    ...(parsed.insertValues || []).flatMap(row => Object.keys(row || {}).map(property => ({ property, clause: 'insert', own: true }))),
+    ...Object.keys(parsed.updateValues || {}).map(property => ({ property, clause: 'set', own: true })),
     ...(parsed.joinClauses || []).flatMap(join => [
       { property: join.propertyA, clause: 'on' },
       { property: join.propertyB, clause: 'on' }
@@ -54,14 +60,19 @@ export const assertKnownFields = async (parsed, recordData: { [entity: string]: 
       { property: merge.propertyB, clause: 'merge' }
     ])
   ]
-  for (const { property, clause } of named) {
+  for (const { property, clause, own } of named) {
     if (typeof property !== 'string') {
       continue
     }
     let entity = parsed.entity
     let field = property
-    if (isEntityProperty(property)) {
+    // Insert and set values are always the queried record's own fields, whatever their name
+    if (!own && isEntityProperty(property)) {
       ({ entity, property: field } = splitEntityProperty(property))
+    }
+    if (clause === 'select' && entity !== parsed.entity && !merged.has(entity)) {
+      throw new Error(`Can't select "${property}": a joined record's rows are a list under its name (select ${entity}), ` +
+        `and its fields are on each row only when merged (merge ... with ${entity}.<field>)`)
     }
     if (!Object.prototype.hasOwnProperty.call(recordData, entity)) {
       recordData[entity] = await retrieveRecord(entity)
