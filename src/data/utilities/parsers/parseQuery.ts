@@ -125,5 +125,10 @@ export const parseQuery = (query: string): ParsedQuery => {
       throw leftoverError(rest, `${keyword} ${body.slice(0, body.length - rest.length).trim()}`)
     }
   }
+  // `on` joins the record named after the queried one: without it there's nothing to join (this used to fail later,
+  // reading a record with no name, as "Could not read .json")
+  if ((parsedQuery.joinClauses || []).length && !parsedQuery.joinEntity) {
+    throw new Error(`"on" needs the record to join, after the one read: ${parsedQuery.command} ${parsedQuery.entity}.<record> on ...`)
+  }
   return parsedQuery
 }

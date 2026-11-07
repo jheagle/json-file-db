@@ -16,6 +16,7 @@ import { getSetting } from '../utilities/config'
 import { keyIndexFiles } from '../utilities/keyIndexFiles'
 import { writeJson } from '../storage'
 import { discardPacked } from '../utilities/packedTable'
+import { assertFieldsDefined } from '../utilities/knownFields'
 
 /**
  * Same reasoning as deleteEntity: a record object carries no memory of which entry file it came
@@ -234,6 +235,8 @@ export const updateEntity = async (entity: string = '', values: Object = {}, dat
   if (!primaryKey) {
     throw new Error(`Cannot update "${entity}" without a primary key`)
   }
+  // A field the record doesn't define would otherwise be stored outside its definition
+  assertFieldsDefined(entity, record, Object.keys(values || {}), 'set')
   const typedValues = applyFieldTypes(record, values)
   // A row is found by its primary key, so none of its fields can be cleared (an optional one could be, by null)
   for (const field of primaryKey.fields) {
