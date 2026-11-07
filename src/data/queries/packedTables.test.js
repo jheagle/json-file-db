@@ -22,18 +22,21 @@ const fill = async () => {
   for (let parent = 0; parent < 4; parent++) {
     await query(`insert parents values _id = 'p${parent}', name = 'Parent ${parent}'`)
   }
-  for (let item = 0; item < 20; item++) {
-    await query(`insert items values _id = 'i${(item * 7) % 20}', parent_id = 'p${item % 4}', day = 'd${item % 3}', value = ${item}`)
+  // 40 rows, 20 a day: more than one round of reads (readConcurrency 16), which is when a packed file is used
+  for (let item = 0; item < 40; item++) {
+    await query(`insert items values _id = 'i${(item * 7) % 40}', parent_id = 'p${item % 4}', day = 'd${item % 2}', value = ${item}`)
   }
 }
 
 const reads = [
   'read items',
-  "read items where day = 'd2'",
+  "read items where day = 'd1'",
   "read items where day = 'd1' and value > 5 sort value desc",
+  "read items where _id = 'i7'",
   'read items.parents on items.parent_id = parents._id',
   "read items.parents on items.parent_id = parents._id where day = 'd0'",
-  "read parents.items on parents._id = items.parent_id where parents.name = 'Parent 2'"
+  "read parents.items on parents._id = items.parent_id where parents.name = 'Parent 2'",
+  'read parents.items on parents._id = items.parent_id'
 ].join(';\n')
 
 const packed = name => JSON.parse(fs.readFileSync(`${databasePath}__packed/${name}.json`, 'utf8'))
@@ -61,24 +64,55 @@ const entryReads = async (record, task) => {
 describe('packed tables', () => {
   test('packDatabase writes each record\'s entries, rows (in the record\'s order) and indexes into one compact file', async () => {
     await fill()
-    expect(await packDatabase()).toEqual({ records: 2, rows: 24 })
+    expect(await packDatabase()).toEqual({ records: 2, rows: 44 })
     const items = packed('items')
     const record = JSON.parse(fs.readFileSync(`${databasePath}items.json`, 'utf8'))
+    expect(Object.keys(items)).toEqual(['entries', 'rows'])
     expect(items.entries).toEqual(record.entries)
     expect(items.rows).toEqual(record.entries.map(file => JSON.parse(fs.readFileSync(`${databasePath}items/${file}`, 'utf8'))))
-    expect(Object.keys(items.indexes).sort()).toEqual(['fk_parent_id.json', 'index_day.json', 'pk__id.json'])
-    expect(items.indexes['index_day.json']).toEqual(JSON.parse(fs.readFileSync(`${databasePath}__indexes/items/index_day.json`, 'utf8')))
     expect(fs.readFileSync(`${databasePath}__packed/items.json`, 'utf8')).not.toContain('\n')
   })
 
-  test('reads using packed files return exactly what reading the entry files returns, without reading them', async () => {
+  test('reads using packed files return exactly what reading the entry files returns', async () => {
     await fill()
     const fromFiles = await query(reads)
     await packDatabase()
     configure({ packedReads: true })
-    let fromPacks
-    expect(await entryReads('items', async () => { fromPacks = await query(reads) })).toEqual([])
-    expect(fromPacks).toEqual(fromFiles)
+    expect(await query(reads)).toEqual(fromFiles)
+  })
+
+  test('a read of more rows than one round of reads takes them from the packed file, not the entry files', async () => {
+    await fill()
+    await packDatabase()
+    configure({ packedReads: true })
+    expect(await entryReads('items', () => query("read items; read items where day = 'd1'"))).toEqual([])
+  })
+
+  test('a lookup of a few rows reads their entry files, not the whole packed file', async () => {
+    await fill()
+    await packDatabase()
+    markPackedRows('items')
+    configure({ packedReads: true })
+    let found
+    expect(await entryReads('items', async () => { [found] = await query("read items where _id = 'i7'") }))
+      .toEqual([`${databasePath}items/i7.json`])
+    expect(found[0].fromPack).toBeUndefined()
+  })
+
+  test('a file an index lists but the record does not is still read from its entry file', async () => {
+    await fill()
+    await packDatabase()
+    configure({ packedReads: true })
+    // An index edited by hand to list a file the record and its packed file don't have
+    fs.writeFileSync(`${databasePath}items/stray.json`, JSON.stringify({ _id: 'stray', parent_id: 'p0', day: 'd1', value: 500 }))
+    const index = JSON.parse(fs.readFileSync(`${databasePath}__indexes/items/index_day.json`, 'utf8'))
+    index.find(entry => entry.value === 'd1').record.push('stray.json')
+    fs.writeFileSync(`${databasePath}__indexes/items/index_day.json`, JSON.stringify(index))
+    let found
+    expect(await entryReads('items', async () => { [found] = await query("read items where day = 'd1'") }))
+      .toEqual([`${databasePath}items/stray.json`])
+    expect(found).toHaveLength(21)
+    expect(found.map(row => row._id)).toContain('stray')
   })
 
   test('Node reads the entry files by default, even when there is a packed file', async () => {
@@ -103,7 +137,7 @@ describe('packed tables', () => {
     fs.writeFileSync(`${databasePath}items.json`, JSON.stringify(record))
     configure({ packedReads: true })
     const [rows] = await query('read items')
-    expect(rows).toHaveLength(21)
+    expect(rows).toHaveLength(41)
     expect(rows.some(row => row.fromPack)).toBe(false)
   })
 
@@ -143,7 +177,7 @@ describe('packed tables', () => {
     await fill()
     await packDatabase()
     fs.writeFileSync(`${databasePath}__packed/gone.json`, '{}')
-    expect(await packDatabase()).toEqual({ records: 2, rows: 24 })
+    expect(await packDatabase()).toEqual({ records: 2, rows: 44 })
     expect(hasPack('gone')).toBe(false)
   })
 

@@ -2,7 +2,6 @@ import { fileExists, jsonText, listFiles, makeDirectory, readText, removeFile, w
 import { retrieveRecord } from '../utilities/retrieveRecord'
 import { retrieveFiles } from '../utilities/retrieveFiles'
 import { retrieveEntry } from '../utilities/retrieveRecords'
-import { retrieveFile } from '../utilities/retrieveFile'
 import { packedPath, packedTable } from '../utilities/packedTable'
 import { showRecords } from '../queries/showRecords'
 import { requireNode } from '../utilities/requireNode'
@@ -18,7 +17,7 @@ export type packCheck = {
 }
 
 /**
- * The packed file a record should have, read from its entry and index files (never from a packed file), as the compact
+ * The packed file a record should have, read from its entry files (never from a packed file), as the compact
  * text packDatabase writes.
  * @param name - The record's name.
  */
@@ -26,15 +25,7 @@ const packedText = async (name: string): Promise<{ path: string, text: string, r
   const record = await retrieveRecord(name)
   const entries: string[] = record.entries || []
   const rows = await retrieveFiles(entries.map(file => `${record.path}/${file}`), retrieveEntry)
-  const indexes = {}
-  for (const key of record.keys || []) {
-    if (key.lookup) {
-      indexes[key.lookup] = entries.length && fileExists(`__indexes/${record.path}/${key.lookup}`)
-        ? await retrieveFile(`__indexes/${record.path}/${key.lookup}`)
-        : []
-    }
-  }
-  const packed: packedTable = { entries, rows, indexes }
+  const packed: packedTable = { entries, rows }
   return { path: packedPath(record.path), text: jsonText(packed, 'compact'), rows: entries.length }
 }
 
@@ -50,8 +41,8 @@ const orphanedPacks = async (names: string[]): Promise<string[]> => {
 
 /**
  * Write every record of the configured database into one packed file (`__packed/<record>.json`, compact JSON): its
- * rows in the record's order and its indexes. A browser then reads a record in one request instead of one per row
- * (see packedReads in configure); a static site runs this as a build step, after its data changes. The entry files
+ * rows in the record's order. A browser then reads a record in one request instead of one per row when it needs more
+ * rows than one round of requests (see packedReads in configure); a static site runs this as a build step, after its data changes. The entry files
  * stay the copy that's edited and reviewed; any insert, update or delete through json-fs-query removes the record's
  * packed file, and reads only use one that matches its record, so a packed file is never read in place of a change
  * made through json-fs-query. Packed files of records that no longer exist are removed.
@@ -76,7 +67,7 @@ export const packDatabase = async (): Promise<packResult> => {
 }
 
 /**
- * Which records' packed files don't match their entry and index files (missing, or packed before a change made by
+ * Which records' packed files don't match their entry files (missing, or packed before a change made by
  * hand), and which packed files belong to no record, without changing anything: for a build or test to check that
  * packDatabase has run since the data last changed. Node only.
  */

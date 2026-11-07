@@ -4,13 +4,13 @@ import { getSetting } from './config'
 import { recordDefinition } from '../introspect/definitions/record'
 
 /**
- * One record packed into one file by packDatabase: its entry files' names and rows (in the record's order) and its
- * index files, so a browser reads a whole record in one request instead of one per row.
+ * One record packed into one file by packDatabase: its entry files' names and rows, in the record's order, so a browser
+ * reads a whole record in one request instead of one per row. Indexes stay in their own (small) files: a lookup that
+ * needs a few rows reads the index and those rows, not the whole record.
  */
 export type packedTable = {
   entries: string[]
   rows: any[]
-  indexes: { [lookup: string]: any }
 }
 
 /**

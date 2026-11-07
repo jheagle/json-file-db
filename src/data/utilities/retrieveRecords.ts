@@ -3,6 +3,7 @@ import { retrieveRecord } from './retrieveRecord'
 import { retrieveFiles } from './retrieveFiles'
 import { retrievePacked } from './packedTable'
 import { recordDefinition } from '../introspect/definitions/record'
+import { getSetting } from './config'
 
 /**
  * Read one entry file, failing with the message a missing entry has always had.
@@ -18,15 +19,17 @@ export const retrieveEntry = async (path: string): Promise<any> => {
 }
 
 /**
- * The rows of some of a record's entry files, in the order of `files`: from the record's packed file when there's one
- * that matches the record (see retrievePacked), otherwise (and for any file the packed file doesn't hold) from the
- * entry files, several at a time (see retrieveFiles).
+ * The rows of some of a record's entry files, in the order of `files`. When they're more than one round of reads
+ * (`readConcurrency`, see retrieveFiles) and the record has a packed file that matches it (see retrievePacked), they
+ * come from the packed file in one read; otherwise, and for any file the packed file doesn't hold (an index can list a
+ * file the record doesn't), from the entry files, several at a time. So a lookup of a few rows never downloads a whole
+ * record, and a record of a few rows is never asked for a packed file.
  * @param record
  * @param files - Entry file names, such as `1.json`.
  * @param read - Reads one entry file (default retrieveEntry).
  */
 export const retrieveEntryRows = async (record: recordDefinition, files: string[], read: (path: string) => Promise<any> = retrieveEntry): Promise<any[]> => {
-  const packed = await retrievePacked(record)
+  const packed = files.length > getSetting('readConcurrency', 16) ? await retrievePacked(record) : undefined
   if (!packed) {
     return retrieveFiles(files.map(file => `${record.path}/${file}`), read)
   }

@@ -14,11 +14,9 @@ import path from 'path'
 let folder
 let requests
 
-const rows = [
-  { _id: 'a', day: 'mon', value: 1 },
-  { _id: 'b', day: 'tue', value: 2 },
-  { _id: 'c', day: 'mon', value: 3 }
-]
+// 20 rows: more than one round of reads (readConcurrency 16), which is when a packed file is used
+const rows = Array.from({ length: 20 }, (_, position) => ({ _id: `r${position}`, day: position % 2 ? 'tue' : 'mon', value: position }))
+const entries = rows.map(row => `${row._id}.json`)
 const record = {
   path: 'items',
   definition: [
@@ -30,11 +28,11 @@ const record = {
     { type: 'primary', fields: ['_id'], lookup: 'pk__id.json' },
     { type: 'index', fields: ['day'], lookup: 'index_day.json' }
   ],
-  entries: ['a.json', 'b.json', 'c.json']
+  entries
 }
 const indexes = {
   'pk__id.json': rows.map(row => ({ value: row._id, record: [`${row._id}.json`] })),
-  'index_day.json': [{ value: 'mon', record: ['a.json', 'c.json'] }, { value: 'tue', record: ['b.json'] }]
+  'index_day.json': ['mon', 'tue'].map(day => ({ value: day, record: rows.filter(row => row.day === day).map(row => `${row._id}.json`) }))
 }
 
 const write = (file, content) => {
@@ -43,6 +41,7 @@ const write = (file, content) => {
 }
 
 const writePack = content => write('__packed/items.json', content)
+const entryRequests = () => requests.filter(url => url.startsWith('items/'))
 
 beforeEach(() => {
   folder = fs.mkdtempSync(path.join(os.tmpdir(), 'packed-browser-'))
@@ -67,37 +66,47 @@ afterEach(() => {
 
 describe('packed tables (browser)', () => {
   test('a full read requests the record file and its packed file, not one request per row', async () => {
-    writePack({ entries: record.entries, rows, indexes })
+    writePack({ entries, rows })
     const [found] = await query('read items')
     expect(found).toEqual(rows)
     expect(requests).toEqual(['items.json', '__packed/items.json'])
   })
 
-  test('an indexed where takes its index and rows from the packed file', async () => {
-    writePack({ entries: record.entries, rows, indexes })
-    const [found] = await query("read items where day = 'mon'")
-    expect(found.map(row => row._id)).toEqual(['a', 'c'])
-    expect(requests.filter(url => url.startsWith('items/') || url.startsWith('__indexes/'))).toEqual([])
+  test('a lookup of a few rows requests the index and those rows, not the whole packed file', async () => {
+    writePack({ entries, rows })
+    const [found] = await query("read items where _id = 'r7'")
+    expect(found).toEqual([rows[7]])
+    expect(requests).toEqual(['items.json', '__indexes/items/pk__id.json', 'items/r7.json'])
   })
 
   test('without a packed file, reads request the entry files as before', async () => {
     const [found] = await query('read items')
     expect(found).toEqual(rows)
-    expect(requests).toEqual(['items.json', '__packed/items.json', 'items/a.json', 'items/b.json', 'items/c.json'])
+    expect(requests.slice(0, 2)).toEqual(['items.json', '__packed/items.json'])
+    expect(entryRequests()).toEqual(entries.map(file => `items/${file}`))
   })
 
   test('a packed file whose entries no longer match the record is not used', async () => {
-    writePack({ entries: ['a.json', 'b.json'], rows: rows.slice(0, 2), indexes })
+    writePack({ entries: entries.slice(0, 19), rows: rows.slice(0, 19) })
     const [found] = await query('read items')
     expect(found).toEqual(rows)
-    expect(requests).toContain('items/c.json')
+    expect(entryRequests()).toHaveLength(20)
   })
 
   test('packedReads: false reads the entry files even when there is a packed file', async () => {
-    writePack({ entries: record.entries, rows: rows.map(row => ({ ...row, fromPack: true })), indexes })
+    writePack({ entries, rows: rows.map(row => ({ ...row, fromPack: true })) })
     configure({ packedReads: false })
     const [found] = await query('read items')
     expect(found).toEqual(rows)
     expect(requests).not.toContain('__packed/items.json')
+  })
+
+  test('a record of a few rows is read from its entry files without asking for a packed file', async () => {
+    const small = { ...record, path: 'small', entries: entries.slice(0, 3) }
+    write('small.json', small)
+    rows.slice(0, 3).forEach(row => write(`small/${row._id}.json`, row))
+    const [found] = await query('read small')
+    expect(found).toEqual(rows.slice(0, 3))
+    expect(requests).toEqual(['small.json', 'small/r0.json', 'small/r1.json', 'small/r2.json'])
   })
 })

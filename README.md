@@ -527,9 +527,9 @@ public API either way), but throw if actually called there, rather than being si
 ### Packed tables: one request per record
 
 Read over `fetch()`, every entry file is one request, so reading 1,000 rows is 1,000 requests. `packDatabase()` writes
-each record's rows and indexes into one file, `__packed/<record>.json`, and a browser then reads the whole record in
-one request: at 1,000 rows a full read takes about 25 ms instead of 1 s (see `BENCHMARKS.md`). Run it in Node as a build
-step whenever the data changes, and serve (or commit) the `__packed/` folder with the rest of the database:
+each record's rows into one file, `__packed/<record>.json`, and a browser then reads the whole record in one request:
+at 1,000 rows a full read takes about 25 ms instead of 1 s (see `BENCHMARKS.md`). Run it in Node as a build step
+whenever the data changes, and serve (or commit) the `__packed/` folder with the rest of the database:
 
 ```js
 const { configure, packDatabase, checkPacked } = require('json-fs-query')
@@ -545,13 +545,19 @@ The entry files stay the copy that's edited and reviewed; a packed file is only 
   statement (a statement that changes no rows leaves it), so a browser never reads a packed file in place of a change.
 - A packed file is only used while its entries match the record file, so rows added or removed without json-fs-query
   fall back to the entry files.
-- A row edited by hand keeps the same entries, so its packed file still looks current: run `packDatabase()` after hand
-  edits. `checkPacked()` reports packed files that don't match their files (`stale`), and packed files of records that
-  no longer exist (`orphaned`, which `packDatabase()` removes).
+- A row edited by hand keeps the same entries, so its packed file still looks current and a browser reads the old
+  row: run `packDatabase()` after hand edits, and run `checkPacked()` in CI (or a test) so a forgotten one fails the
+  build. It reports packed files that don't match their entry files (`stale`), and packed files of records that no
+  longer exist (`orphaned`, which `packDatabase()` removes).
+
+A packed file is only read when a read needs more rows than one round of requests (`readConcurrency`, 16 by default).
+A lookup of a few rows (an indexed `where` on a key, say) reads the index and those rows as before, so it never
+downloads a whole record, and a record of 16 rows or fewer is never asked for a packed file. Indexes stay in their own
+files. A larger record without a packed file costs one extra request that comes back as not found, before its entry
+files are read as before.
 
 Browsers use packed files by default and Node doesn't (it reads the entry files, which are always current). Change it
-with `configure({ packedReads: true })` or `false`. A record without a packed file costs one extra request that comes
-back as not found, before its entry files are read as before.
+with `configure({ packedReads: true })` or `false`.
 
 ## Documentation
 
