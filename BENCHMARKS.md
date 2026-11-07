@@ -331,6 +331,10 @@ in one statement" row inserts the same rows as "insert each" into a database of 
 parser fix: masking the strings of a query rebuilt the whole query once per string, so parsing a 10,000-row insert took
 18 s; it now takes 0.3 s.
 
+Keys no index answers (a composite key such as a link table's `primary key (a_id, b_id)`, or an index file that's
+missing) are checked against the stored rows read once per statement, instead of once per inserted row: 500 links into
+a table of 5,000 take 1.4 s (13.6 s when each row looked at every stored row), 200 into 1,000 take 0.45 s (1.1 s).
+
 | Operation | 100 rows | 1000 rows |
 |---|---:|---:|
 | insert each | 571 ms | 6.7 s |

@@ -6,7 +6,8 @@ import { foreignKeyExists } from '../introspect/policies/foreignKeyExists'
 import { splitEntityProperty } from '../utilities/parsers/splitEntityProperty'
 import { computeKeyValue } from '../utilities/computeKeyValue'
 import { fieldType, keyValueType } from '../utilities/fieldType'
-import { sameValue } from '../utilities/compareAs'
+import { compareAs, comparableTypes, sameValue } from '../utilities/compareAs'
+import { retrieveRecords } from '../utilities/retrieveRecords'
 import { isSingleFieldKey } from '../utilities/isSingleFieldKey'
 import { IndexBuffer } from '../utilities/indexBuffer'
 import { recordDefinition } from '../introspect/definitions/record'
@@ -19,6 +20,64 @@ import { discardPacked } from '../utilities/packedTable'
  * property, or one that can't be read), and the caller looks at every row instead.
  */
 type Lookup = (value: any) => boolean | undefined
+
+/**
+ * The rows of a record that hold each combination of values for some fields, compared field by field by type, as
+ * where's = compares them: built from the rows in storage once per statement, for a key no index can answer (several
+ * fields, or no index file), instead of looking at every row in storage once per inserted row.
+ */
+class RowValues {
+  private readonly fields: string[]
+  private readonly types: Array<string | undefined>
+  private readonly seen: Set<string> = new Set()
+
+  constructor (record: recordDefinition, fields: string[]) {
+    this.fields = fields
+    this.types = fields.map(field => fieldType(record, field))
+  }
+
+  /**
+   * Whether these fields' values can be compared this way: every field of a comparable type (see compareAs).
+   * @param record
+   * @param fields
+   */
+  static usable (record: recordDefinition, fields: string[]): boolean {
+    return fields.every(field => comparableTypes.includes(fieldType(record, field)))
+  }
+
+  /**
+   * The values' key, or undefined when one is null or missing (where's = never matches those) or compareAs leaves it an
+   * object (compared by identity, so not by a key).
+   * @param row
+   */
+  private keyOf (row: Object): string | undefined {
+    const typed = []
+    for (let position = 0; position < this.fields.length; position++) {
+      const value = row[this.fields[position]]
+      if (value === null || typeof value === 'undefined') {
+        return undefined
+      }
+      const key = compareAs(this.types[position], value)
+      if (typeof key === 'object') {
+        return undefined
+      }
+      typed.push([typeof key, key])
+    }
+    return JSON.stringify(typed)
+  }
+
+  add (row: Object): void {
+    const key = this.keyOf(row)
+    if (typeof key !== 'undefined') {
+      this.seen.add(key)
+    }
+  }
+
+  has (row: Object): boolean {
+    const key = this.keyOf(row)
+    return typeof key !== 'undefined' && this.seen.has(key)
+  }
+}
 
 /**
  * One insert statement's view of the keys it checks, so that each index is read and parsed once for all its rows
@@ -38,6 +97,7 @@ class InsertStatement {
   private readonly buffers: Map<keyDefinition, IndexBuffer> = new Map()
   private readonly unreadable: Set<keyDefinition> = new Set()
   private readonly otherLookups: Map<string, Promise<Lookup>> = new Map()
+  private readonly scans: Map<string, Promise<RowValues | undefined>> = new Map()
 
   constructor (entity: string, record: recordDefinition) {
     this.entity = entity
@@ -110,6 +170,34 @@ class InsertStatement {
   }
 
   /**
+   * The values of these fields in every row of `entity` (read once per statement), plus, for the record being inserted
+   * into, every row this statement adds; undefined when a field's type can't be compared by key.
+   * @param entity
+   * @param fields
+   */
+  private scan (entity: string, fields: string[]): Promise<RowValues | undefined> {
+    const name = `${entity}\u0000${fields.join('\u0000')}`
+    if (!this.scans.has(name)) {
+      this.scans.set(name, (async (): Promise<RowValues | undefined> => {
+        const record = entity === this.entity ? this.record : await retrieveRecord(entity)
+        if (!RowValues.usable(record, fields)) {
+          return undefined
+        }
+        const values = new RowValues(record, fields)
+        // The record's rows in storage: this statement's own rows aren't there until the end, and are added as they come
+        for (const row of await retrieveRecords(entity)) {
+          values.add(row)
+        }
+        if (entity === this.entity) {
+          this.rows.forEach(row => values.add(row))
+        }
+        return values
+      })())
+    }
+    return this.scans.get(name)
+  }
+
+  /**
    * Whether one of this statement's rows already holds these values in every one of these fields (none of them null).
    * @param fields
    * @param values
@@ -132,6 +220,10 @@ class InsertStatement {
         return !found
       }
     }
+    const scanned = await this.scan(this.entity, fields)
+    if (scanned) {
+      return !scanned.has(values)
+    }
     return await keyUnique(this.entity, fields, fields.map(field => values[field])) && !this.claimed(fields, values)
   }
 
@@ -148,6 +240,10 @@ class InsertStatement {
     if (typeof found !== 'undefined') {
       return found
     }
+    const scanned = await this.scan(entity, [property])
+    if (scanned) {
+      return scanned.has({ [property]: value })
+    }
     return await foreignKeyExists(entity, property, value) || (own && this.claimed([property], { [property]: value }))
   }
 
@@ -156,8 +252,14 @@ class InsertStatement {
    * @param entityValues
    * @param fileName
    */
-  add (entityValues: Object, fileName: string): void {
+  async add (entityValues: Object, fileName: string): Promise<void> {
     this.rows.push(entityValues)
+    // Scans already built for this record hold the rows in storage; a row added now joins them
+    for (const [name, scanned] of this.scans) {
+      if (name.startsWith(`${this.entity}\u0000`)) {
+        (await scanned)?.add(entityValues)
+      }
+    }
     this.record.entries.push(fileName)
     for (const [key, buffer] of this.buffers) {
       buffer.add(computeKeyValue(key.fields, entityValues), fileName)
@@ -293,7 +395,7 @@ export const insertEntity = async (entity: string = '', values: Object[] = [], d
 
     const fileName = `${primaryKey ? entityValues[primaryKey.fields[0]] : crypto.randomUUID()}.json`
     await writeJson(`${record.path}/${fileName}`, entityValues)
-    statement.add(entityValues, fileName)
+    await statement.add(entityValues, fileName)
     dataSet[entity].push(entityValues)
   }
   await statement.write()

@@ -118,6 +118,38 @@ describe('multi-row insert', () => {
     expect(read).toHaveLength(50)
   })
 
+  test('a composite key compares each field by its type, against stored rows and earlier rows in the statement', async () => {
+    await query('create pairs (a string, n int, note string optional, primary key (a, n))')
+    await query("insert pairs values (a = 'x', n = 1), (a = 'x', n = 2)")
+    // n is an int, so '1' is the stored 1; a is a string, so 1 is '1'
+    await expect(query("insert pairs values (a = 'y', n = 5), (a = 'x', n = '1')")).rejects.toThrow('Duplicate value for primary key "a, n" on pairs')
+    await expect(query("insert pairs values (a = 1, n = 7), (a = '1', n = 7)")).rejects.toThrow('Duplicate value for primary key "a, n" on pairs')
+    const [inserted] = await query("insert pairs values (a = 'x', n = 3), (a = 'y', n = 1)")
+    expect(inserted).toHaveLength(2)
+    const [rows] = await query('read pairs')
+    expect(rows).toHaveLength(4)
+  })
+
+  test('a key whose index file is missing is checked against every stored row, read once for the statement', async () => {
+    await query(schema)
+    await query(multiRow(staffRows()))
+    fs.rmSync(`${databasePath}__indexes/staff/pk__id.json`)
+    fs.rmSync(`${databasePath}__indexes/kinds/pk__id.json`)
+    const before = snapshot()
+    await expect(query(multiRow([
+      { _id: 'new1', kind_id: 'k1', manager_id: null, code: 'n1', seat: 100, day: 'd0' },
+      { _id: 's7', kind_id: 'k1', manager_id: null, code: 'n2', seat: 101, day: 'd0' }
+    ]))).rejects.toThrow('Duplicate value for primary key "_id" on staff')
+    await expect(query(multiRow([{ _id: 'new1', kind_id: 'nope', manager_id: null, code: 'n1', seat: 100, day: 'd0' }])))
+      .rejects.toThrow('Foreign key "kind_id" on staff references a nonexistent kinds._id = nope')
+    expect(snapshot()).toEqual(before)
+    const [inserted] = await query(multiRow([
+      { _id: 'new1', kind_id: 'k2', manager_id: 's7', code: 'n1', seat: 100, day: 'd0' },
+      { _id: 'new2', kind_id: 'k1', manager_id: 'new1', code: 'n2', seat: 101, day: 'd0' }
+    ]))
+    expect(inserted.map(row => row._id)).toEqual(['new1', 'new2'])
+  })
+
   test('the rows of one statement are checked against the rows already stored', async () => {
     await query(schema)
     await query(multiRow([{ _id: 's1', kind_id: 'k1', manager_id: null, code: 'a', seat: 1, day: 'd0' }]))
