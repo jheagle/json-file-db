@@ -10,6 +10,7 @@ import { computeKeyValue } from '../utilities/computeKeyValue'
 import { keyValueType } from '../utilities/fieldType'
 import { recordDefinition } from '../introspect/definitions/record'
 import { makeDirectory, writeJson } from '../storage'
+import { discardPacked } from '../utilities/packedTable'
 
 /**
  * Build one entity's stored values from the raw input values, generating any autoGenerate
@@ -97,6 +98,9 @@ export const insertEntity = async (entity: string = '', values: Object[] = [], d
   // The record's folder can be missing even though the record exists: git doesn't keep empty folders, so a database
   // committed before its first insert comes back from a fresh clone without it
   await makeDirectory(record.path)
+  if (values.length) {
+    await discardPacked(record.path)
+  }
 
   for (const rowValues of values) {
     const entityValues = await buildEntityValues(entity, record, rowValues)

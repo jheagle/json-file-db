@@ -457,7 +457,8 @@ configure({
   relativePath: '',            // URL prefix prepended to databasePath when reading via fetch() in a browser
   enforceForeignKeys: true,    // RESTRICT delete/update of a record other entities still reference (default true)
   readConcurrency: 16,         // how many entry files a read has in flight at once (default 16)
-  format: 'compact'            // how files are written: 'compact' or 'pretty' (default 'compact')
+  format: 'compact',           // how files are written: 'compact' or 'pretty' (default 'compact')
+  packedReads: undefined       // use packed files (see packDatabase); default true in a browser, false in Node
 })
 ```
 
@@ -495,11 +496,11 @@ the result on its own, or set `format: 'pretty'` to keep writing indented files.
 
 ## Several calls at once
 
-Calls to `query()`, `create()`, `drop()`, `describe()` and `formatDatabase()` on one database (one `databasePath`)
-run one at a time, in the order they were made, so concurrent requests (for example in a web server) can't overwrite
-each other's changes. All the queries in one `query()` string run together, with no other call in between. This
-covers one Node process: two processes writing to the same folder (say a server and a CLI) are not protected from
-each other.
+Calls to `query()`, `create()`, `drop()`, `describe()`, `formatDatabase()`, `packDatabase()` and `checkPacked()` on
+one database (one `databasePath`) run one at a time, in the order they were made, so concurrent requests (for
+example in a web server) can't overwrite each other's changes. All the queries in one `query()` string run together,
+with no other call in between. This covers one Node process: two processes writing to the same folder (say a server
+and a CLI) are not protected from each other.
 
 `configure()` can't point `databasePath` at another folder while calls are still running or queued (it throws:
 await them first), since each call reads the setting again at every step. The same folder written another way
@@ -522,6 +523,35 @@ same functions as a global:
 Reads work in the browser via `fetch()` - `create`/`drop`, and any write through `query()` (`insert`/`update`/
 `delete`), need real filesystem access and only work in Node. They're still present in the browser build (same
 public API either way), but throw if actually called there, rather than being silently unavailable.
+
+### Packed tables: one request per record
+
+Read over `fetch()`, every entry file is one request, so reading 1,000 rows is 1,000 requests. `packDatabase()` writes
+each record's rows and indexes into one file, `__packed/<record>.json`, and a browser then reads the whole record in
+one request: at 1,000 rows a full read takes about 25 ms instead of 1 s (see `BENCHMARKS.md`). Run it in Node as a build
+step whenever the data changes, and serve (or commit) the `__packed/` folder with the rest of the database:
+
+```js
+const { configure, packDatabase, checkPacked } = require('json-fs-query')
+
+configure({ databasePath: 'database/' })
+await packDatabase()   // { records: 4, rows: 1452 }
+await checkPacked()    // { stale: [], orphaned: [] } - in a test, to catch a forgotten packDatabase()
+```
+
+The entry files stay the copy that's edited and reviewed; a packed file is only ever a copy of them:
+
+- Any `insert`, `update`, `delete` or `drop` through json-fs-query removes that record's packed file in the same
+  statement (a statement that changes no rows leaves it), so a browser never reads a packed file in place of a change.
+- A packed file is only used while its entries match the record file, so rows added or removed without json-fs-query
+  fall back to the entry files.
+- A row edited by hand keeps the same entries, so its packed file still looks current: run `packDatabase()` after hand
+  edits. `checkPacked()` reports packed files that don't match their files (`stale`), and packed files of records that
+  no longer exist (`orphaned`, which `packDatabase()` removes).
+
+Browsers use packed files by default and Node doesn't (it reads the entry files, which are always current). Change it
+with `configure({ packedReads: true })` or `false`. A record without a packed file costs one extra request that comes
+back as not found, before its entry files are read as before.
 
 ## Documentation
 
