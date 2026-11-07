@@ -320,3 +320,41 @@ takes about a quarter of a second. Files and bytes are counted before packing.
 | browser packed join 2 | 55 ms | 48 ms |
 | files on disk | 129 | 1,119 |
 | bytes of data | 39 KB | 359 KB |
+
+### task 8: multi-row insert (2026-11-06, Node v24.21.0, 11th Gen Intel(R) Core(TM) i5-1135G7 @ 2.40GHz)
+
+`insert children values (...), (...), ...` inserts many rows in one statement: each index is read once, every row is
+checked against them and the rows before it, and the record file and each index are written once. The new "insert all
+in one statement" row inserts the same rows as "insert each" into a database of its own: at 1,000 rows 0.48 s instead of
+6.7 s one at a time (6.5 minutes in the baseline). It stays linear: timed separately, one statement of 5,000 rows takes
+3.3 s and 10,000 rows 6.3 s (0.63 ms per row, almost all of it writing the entry files). Getting there also needed a
+parser fix: masking the strings of a query rebuilt the whole query once per string, so parsing a 10,000-row insert took
+18 s; it now takes 0.3 s.
+
+Keys no index answers (a composite key such as a link table's `primary key (a_id, b_id)`, or an index file that's
+missing) are checked against the stored rows read once per statement, instead of once per inserted row: 500 links into
+a table of 5,000 take 1.4 s (13.6 s when each row looked at every stored row), 200 into 1,000 take 0.45 s (1.1 s).
+
+| Operation | 100 rows | 1000 rows |
+|---|---:|---:|
+| insert each | 571 ms | 6.7 s |
+| insert per row | 5.7 ms | 6.7 ms |
+| read all | 18 ms | 164 ms |
+| indexed where | 3.1 ms | 5.5 ms |
+| join 1 | 20 ms | 181 ms |
+| join 2 | 22 ms | 181 ms |
+| update 1 by key | 20 ms | 163 ms |
+| update many by index | 3.6 ms | 22 ms |
+| delete 1 by key | 25 ms | 214 ms |
+| insert all in one statement | 55 ms | 478 ms |
+| browser read all | 124 ms | 829 ms |
+| browser indexed where | 12 ms | 24 ms |
+| browser join 1 | 130 ms | 849 ms |
+| browser join 2 | 141 ms | 981 ms |
+| pack | 63 ms | 252 ms |
+| browser packed read all | 17 ms | 13 ms |
+| browser packed indexed where | 21 ms | 14 ms |
+| browser packed join 1 | 57 ms | 25 ms |
+| browser packed join 2 | 79 ms | 42 ms |
+| files on disk | 129 | 1,119 |
+| bytes of data | 39 KB | 359 KB |

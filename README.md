@@ -69,6 +69,21 @@ Keywords (`where`, `and`, `sort`, `limit`, `create`, `show records`...), command
 `delete`), sort directions (`asc`, `desc`) and comparators can be written in any case: `READ t` and `sort a ASC` work.
 Record and field names are case-sensitive.
 
+### Inserting several rows
+
+One `insert` can add many rows: put each row's values in brackets, separated by commas.
+
+```sql
+insert workouts values (reps = 10, date = '2024-06-02'), (reps = 12, date = '2024-06-03'), (reps = 8, date = '2024-06-04')
+```
+
+It resolves to the inserted rows, in order. Each row is checked against the rows already stored and the rows before it
+in the statement (so two rows with the same primary or unique key fail, and a row's foreign key can point at a row
+earlier in the same insert). The statement is all or nothing: if any row fails, none is written. Every index is read once
+and the record file and each index are written once, so this is far faster than one `insert` per row: 1,000 rows take
+about half a second, against about 7 seconds one at a time (see `BENCHMARKS.md`). One row without brackets
+(`insert workouts values reps = 10, date = '2024-06-02'`) works as before.
+
 ### Strings
 
 Strings use single or double quotes. A string closes only with the quote it opened with, so the other quote is just
